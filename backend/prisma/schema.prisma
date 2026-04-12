@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  // NOTE: The 'url' property has been moved to prisma.config.ts for Prisma 7 compatibility
+}
+
+// --- 13.1 Users ---
+model User {
+  id                  String    @id @default(uuid())
+  role                String    @default("user") // admin, owner, tenant
+  full_name           String
+  mobile_number       String    @unique
+  email               String    @unique
+  password_hash       String
+  profile_photo_url   String?
+  city                String?
+  account_status      String    @default("active")
+  mobile_verified_at  DateTime?
+  email_verified_at   DateTime?
+  verification_status String    @default("pending")
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+
+  // Relationships
+  rooms               Room[]
+  saved_rooms         SavedRoom[]
+  bookings_as_tenant  Booking[]           @relation("TenantBookings")
+  bookings_as_owner   Booking[]           @relation("OwnerBookings")
+  sent_messages       Message[]           @relation("SentMessages")
+  received_messages   Message[]           @relation("ReceivedMessages")
+  conversations_tenant Conversation[]    @relation("TenantConversations")
+  conversations_owner  Conversation[]    @relation("OwnerConversations")
+  reviews_given       Review[]            @relation("Reviewer")
+  reviews_received    Review[]            @relation("Reviewee")
+  reports_filed       Report[]
+  points_transactions PointsTransaction[]
+  notifications       Notification[]
+  admin_actions       AdminAction[]
+
+  @@index([email])
+  @@index([mobile_number])
+}
+
+// --- 13.2 Rooms ---
+model Room {
+  id                      String    @id @default(uuid())
+  owner_id                String
+  owner                   User      @relation(fields: [owner_id], references: [id])
+  title                   String
+  description             String?
+  city                    String
+  locality                String
+  landmark                String?
+  approximate_latitude    Float?
+  approximate_longitude   Float?
+  room_type               String
+  furnished_status        String
+  size_value              Float
+  size_unit               String    @default("sqft")
+  rent_amount             Int
+  security_deposit_amount Int
+  available_for           String
+  availability_date       DateTime
+  rules_json              Json?
+  status                  String    @default("pending")
+  approved_at             DateTime?
+  rejected_reason         String?
+  created_at              DateTime  @default(now())
+  updated_at              DateTime  @updatedAt
+
+  // Relationships
+  images              RoomImage[]
+  amenities           RoomAmenity[]
+  saved_by_users      SavedRoom[]
+  bookings            Booking[]
+  conversations       Conversation[]
+  reviews             Review[]
+  points_transactions PointsTransaction[]
+
+  @@index([city])
+  @@index([status])
+  @@index([owner_id])
+}
+
+// --- 13.3 RoomImages ---
+model RoomImage {
+  id                String   @id @default(uuid())
+  room_id           String
+  room              Room     @relation(fields: [room_id], references: [id])
+  file_url          String
+  file_hash         String?
+  sort_order        Int      @default(0)
+  moderation_status String   @default("pending")
+  created_at        DateTime @default(now())
+}
+
+// --- 13.4 Amenities ---
+model Amenity {
+  id       String        @id @default(uuid())
+  name     String        @unique
+  category String
+  rooms    RoomAmenity[]
+}
+
+// --- 13.5 RoomAmenities ---
+model RoomAmenity {
+  room_id    String
+  room       Room    @relation(fields: [room_id], references: [id])
+  amenity_id String
+  amenity    Amenity @relation(fields: [amenity_id], references: [id])
+
+  @@id([room_id, amenity_id])
+}
+
+// --- 13.6 SavedRooms ---
+model SavedRoom {
+  id         String   @id @default(uuid())
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id])
+  room_id    String
+  room       Room     @relation(fields: [room_id], references: [id])
+  created_at DateTime @default(now())
+
+  @@unique([user_id, room_id]) // Prevents a user from saving the same room twice
+}
+
+// --- 13.7 Bookings ---
+model Booking {
+  id           String    @id @default(uuid())
+  room_id      String
+  room         Room      @relation(fields: [room_id], references: [id])
+  tenant_id    String
+  tenant       User      @relation("TenantBookings", fields: [tenant_id], references: [id])
+  owner_id     String
+  owner        User      @relation("OwnerBookings", fields: [owner_id], references: [id])
+  request_type String
+  status       String    @default("pending")
+  message      String?
+  owner_note   String?
+  expires_at   DateTime?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  reviews      Review[]
+
+  @@index([status])
+}
+
+// --- 13.9 Conversations ---
+model Conversation {
+  id                  String    @id @default(uuid())
+  room_id             String
+  room                Room      @relation(fields: [room_id], references: [id])
+  tenant_id           String
+  tenant              User      @relation("TenantConversations", fields: [tenant_id], references: [id])
+  owner_id            String
+  owner               User      @relation("OwnerConversations", fields: [owner_id], references: [id])
+  conversation_status String    @default("active")
+  created_at          DateTime  @default(now())
+  updated_at          DateTime  @updatedAt
+  messages            Message[]
+}
+
+// --- 13.8 Messages ---
+model Message {
+  id              String       @id @default(uuid())
+  conversation_id String
+  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  sender_id       String
+  sender          User         @relation("SentMessages", fields: [sender_id], references: [id])
+  receiver_id     String
+  receiver        User         @relation("ReceivedMessages", fields: [receiver_id], references: [id])
+  message_body    String
+  message_type    String       @default("text")
+  delivery_status String       @default("sent")
+  read_at         DateTime?
+  created_at      DateTime     @default(now())
+}
+
+// --- 13.10 Reviews ---
+model Review {
+  id                String   @id @default(uuid())
+  room_id           String
+  room              Room     @relation(fields: [room_id], references: [id])
+  reviewer_id       String
+  reviewer          User     @relation("Reviewer", fields: [reviewer_id], references: [id])
+  reviewee_id       String
+  reviewee          User     @relation("Reviewee", fields: [reviewee_id], references: [id])
+  booking_id        String
+  booking           Booking  @relation(fields: [booking_id], references: [id])
+  rating            Int
+  comment           String?
+  moderation_status String   @default("approved")
+  created_at        DateTime @default(now())
+  updated_at        DateTime @updatedAt
+}
+
+// --- 13.11 Reports ---
+model Report {
+  id           String    @id @default(uuid())
+  reporter_id  String
+  reporter     User      @relation(fields: [reporter_id], references: [id])
+  target_type  String    // room, user, review
+  target_id    String
+  reason_code  String
+  description  String?
+  status       String    @default("pending")
+  admin_action String?
+  resolved_at  DateTime?
+  created_at   DateTime  @default(now())
+}
+
+// --- 13.12 PointsTransactions ---
+model PointsTransaction {
+  id               String   @id @default(uuid())
+  owner_id         String
+  owner            User     @relation(fields: [owner_id], references: [id])
+  room_id          String?
+  room             Room?    @relation(fields: [room_id], references: [id])
+  transaction_type String
+  points           Int
+  reason_code      String
+  reference_id     String?
+  balance_after    Int
+  expires_at       DateTime?
+  created_at       DateTime @default(now())
+}
+
+// --- 13.13 Notifications ---
+model Notification {
+  id                String   @id @default(uuid())
+  user_id           String
+  user              User     @relation(fields: [user_id], references: [id])
+  notification_type String
+  title             String
+  body              String
+  is_read           Boolean  @default(false)
+  action_url        String?
+  created_at        DateTime @default(now())
+
+  @@index([user_id, is_read])
+}
+
+// --- 13.14 AdminActions ---
+model AdminAction {
+  id          String   @id @default(uuid())
+  admin_id    String
+  admin       User     @relation(fields: [admin_id], references: [id])
+  action_type String
+  target_type String
+  target_id   String
+  notes       String?
+  created_at  DateTime @default(now())
+}
