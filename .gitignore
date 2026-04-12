@@ -134,3 +134,23 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+
+# Ignore node_modules in ANY folder
+**/node_modules/
+
+# Ignore Next.js build output
+**/ .next/
+**/out/
+
+# Ignore Python stuff (if your backend is still Python)
+**/venv/
+**/__pycache__/
+*.pyc
+
+# Ignore environment secrets in any subfolder
+**/.env
+**/.env*.local
+
+# OS generated files
+.DS_Store
