@@ -1,11 +1,13 @@
-import express from "express";
+// import express from "express";
+import express, { Application } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
 dotenv.config();
 // import authRoutes from "./routes/auth.routes.js"; // Note the .js extension
 
-const app = express();
+// const app = express();
+const app: Application = express();
 
 // Middleware
 app.use(cors());
