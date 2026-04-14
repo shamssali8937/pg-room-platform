@@ -30,7 +30,7 @@ export default function LoginPage() {
             <ParticleBg />
             <Header />
 
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.001)_1px,transparent_1px)] bg-[size:40px_40px]" />
 
             <motion.div
                 initial={{ opacity: 0, y: 40 }}
