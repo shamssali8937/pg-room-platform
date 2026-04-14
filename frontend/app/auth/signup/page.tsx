@@ -5,10 +5,10 @@ import { Mail, Lock, User } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ParticleBg from "@/components/ParticleBg";
 import PasswordChecklist from "@/components/PasswordChecklist";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingInput from "@/components/FloatingInput";
 import PasswordStrength from "@/components/PasswordStrength";
+import Navbar from "@/components/Navbar";
 
 export default function SignupPage() {
     const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -16,7 +16,7 @@ export default function SignupPage() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center text-white relative pt-24 pb-20">
             <ParticleBg />
-            <Header />
+            <Navbar />
 
             <motion.div
                 initial={{ opacity: 0, y: 40 }}

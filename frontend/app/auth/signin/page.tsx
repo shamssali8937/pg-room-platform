@@ -3,11 +3,10 @@
 import { useState } from "react";
 import { Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
-
 import ParticleBg from "@/components/ParticleBg";
-import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import FloatingInput from "@/components/FloatingInput";
+import Navbar from "@/components/Navbar";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -28,7 +27,7 @@ export default function LoginPage() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center text-white relative pt-24 pb-20">
             <ParticleBg />
-            <Header />
+            <Navbar />
 
             <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.001)_1px,transparent_1px)] bg-[size:40px_40px]" />
 
