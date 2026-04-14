@@ -1,68 +1,71 @@
 "use client";
-import { Mail, Lock } from "lucide-react";
+
 import { useState } from "react";
+import { Mail, Lock } from "lucide-react";
 import { motion } from "framer-motion";
+
+import ParticleBg from "@/components/ParticleBg";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import FloatingInput from "@/components/FloatingInput";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+
+
+    const handleLogin = () => {
+        if (!email || !password) {
+            setError("Please fill all fields");
+            return;
+        }
+
+        setError("");
+        console.log("Login API call");
+    };
 
     return (
-        <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black text-white">
-            {/* Animated Gradient Background */}
-            <div className="absolute inset-0 bg-gradient-to-r from-purple-900 via-black to-blue-900 animate-pulse opacity-40" />
+        <div className="min-h-screen flex flex-col items-center justify-center text-white relative">
+            <ParticleBg />
+            <Header />
 
-            {/* Moving Glow Orbs */}
-            <div className="absolute w-[500px] h-[500px] bg-purple-600 rounded-full blur-[150px] opacity-30 animate-[spin_20s_linear_infinite] top-[-100px] left-[-100px]" />
-            <div className="absolute w-[400px] h-[400px] bg-blue-600 rounded-full blur-[120px] opacity-30 animate-[spin_25s_linear_infinite_reverse] bottom-[-100px] right-[-100px]" />
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.01)_1px,transparent_1px)] bg-[size:40px_40px]" />
 
-            {/* Card */}
             <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="relative z-10 w-full max-w-md p-8 rounded-3xl backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_0_60px_rgba(139,92,246,0.3)]"
+                className="z-10 w-full max-w-md p-10 rounded-3xl backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_0_80px_rgba(139,92,246,0.5)]"
             >
-                <h1 className="text-4xl font-extrabold text-center mb-6 bg-gradient-to-r from-purple-400 to-blue-400 text-transparent bg-clip-text">
-                    Login
-                </h1>
+                <h1 className="text-3xl text-center mb-6">Login</h1>
 
-                <div className="space-y-5">
-                    <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-3 rounded-xl focus-within:border-purple-400 transition">
-                        <Mail size={18} />
-                        <input
-                            type="email"
-                            placeholder="Email"
-                            className="bg-transparent outline-none w-full text-sm"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                        />
-                    </div>
+                <div className="space-y-4">
+                    <FloatingInput icon={Mail} type="email" value={email} onChange={(e: any) => setEmail(e.target.value)} label="Email" />
+                    <FloatingInput icon={Lock} type="password" value={password} onChange={(e: any) => setPassword(e.target.value)} label="Password" />
 
-                    <div className="flex items-center gap-3 bg-white/5 border border-white/10 p-3 rounded-xl focus-within:border-blue-400 transition">
-                        <Lock size={18} />
-                        <input
-                            type="password"
-                            placeholder="Password"
-                            className="bg-transparent outline-none w-full text-sm"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
+                    <div className="text-center text-sm text-purple-400 hover:underline cursor-pointer">
+                        Forgot Password?
                     </div>
+                    {/* {error && (
+                        <p className="text-red-400 text-sm text-center">{error}</p>
+                    )} */}
 
                     <motion.button
+                        onClick={handleLogin}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-600 font-semibold shadow-lg"
+                        className="cursor-pointer w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-600 font-semibold shadow-[0_0_20px_rgba(139,92,246,0.6)] hover:shadow-[0_0_40px_rgba(139,92,246,1)] transition"
                     >
                         Login
                     </motion.button>
-                </div>
 
-                <p className="text-center text-sm text-gray-400 mt-6">
-                    Don’t have an account? <a href="/signup" className="text-purple-400">Sign up</a>
-                </p>
+                    <p className="text-center text-sm text-gray-400 mt-6">
+                        Don’t have an account? <a href="/auth/signup" className="text-purple-400 hover:underline">Sign up</a>
+                    </p>
+                </div>
             </motion.div>
+
+            <Footer />
         </div>
     );
 }
