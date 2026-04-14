@@ -26,7 +26,7 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center text-white relative">
+        <div className="min-h-screen flex flex-col items-center justify-center text-white relative pt-24 pb-20">
             <ParticleBg />
             <Header />
 
@@ -35,7 +35,7 @@ export default function LoginPage() {
             <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="z-10 w-full max-w-md p-10 rounded-3xl backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_0_80px_rgba(139,92,246,0.5)]"
+                className="z-10 w-[90%] max-w-md p-10 rounded-3xl backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_0_80px_rgba(139,92,246,0.5)]"
             >
                 <h1 className="text-3xl text-center mb-6">Login</h1>
 

@@ -1,65 +1,91 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import FeaturedListings from "@/components/FeaturedListings";
+import LandpageFooter from "@/components/LandpageFooter";
+import Navbar from "@/components/Navbar";
+import ParticleBg from "@/components/ParticleBg";
+import { motion } from "framer-motion";
+import { useState } from "react";
+
+export default function HomePage() {
+  const [city, setCity] = useState("");
+  const [type, setType] = useState("");
+  const [budget, setBudget] = useState("");
+  const allListings = [
+    { title: "Luxury Room", city: "Karachi", type: "Single", price: 25000, img: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2" },
+    { title: "Sharing Room", city: "Lahore", type: "Sharing", price: 15000, img: "https://images.unsplash.com/photo-1560185007-cde436f6a4d0" },
+    { title: "Budget PG", city: "Islamabad", type: "PG", price: 10000, img: "https://images.unsplash.com/photo-1505691938895-1758d7feb511" },
+    { title: "Executive Room", city: "Karachi", type: "Single", price: 30000, img: "https://images.unsplash.com/photo-1586105251261-72a756497a11" },
+    { title: "Student Sharing", city: "Lahore", type: "Sharing", price: 12000, img: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267" },
+    { title: "Premium PG", city: "Islamabad", type: "PG", price: 20000, img: "https://images.unsplash.com/photo-1560449752-3fdc5f9b79f6" },
+  ];
+  const filtered = allListings.filter((item) => {
+    return (
+      (city ? item.city.toLowerCase().includes(city.toLowerCase()) : true) &&
+      (type ? item.type === type : true) &&
+      (budget ? item.price <= Number(budget) : true)
+    );
+  });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    // <div className="bg-black min-h-screen text-white">
+    <div className="bg-black min-h-screen text-white relative">
+      <div className="relative z-10">
+
+        <Navbar />
+
+        {/* HERO */}
+        <section className="pt-32 text-center px-6">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-5xl font-bold mb-4">
+            Find Your Perfect Room
+          </motion.h1>
+
+          <p className="text-gray-400 mb-6">Smart search with real filters</p>
+
+          <div className="flex flex-wrap justify-center gap-4">
+            <input placeholder="City" onChange={(e) => setCity(e.target.value)} className="p-3 rounded-lg bg-white/10" />
+            <input placeholder="Max Budget" onChange={(e) => setBudget(e.target.value)} className="p-3 rounded-lg bg-white/10" />
+            <select onChange={(e) => setType(e.target.value)} className="p-3 rounded-lg bg-white/10">
+              <option value="">All</option>
+              <option>Single</option>
+              <option>Sharing</option>
+              <option>PG</option>
+            </select>
+          </div>
+        </section>
+
+        <FeaturedListings data={filtered} />
+
+        {/* ABOUT */}
+        <motion.section id="about" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-20 text-center px-6">
+          <h2 className="text-3xl font-bold mb-4">About</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            PG Nexus, created by Shams Ali Mehdi, aims to revolutionize rental discovery in Pakistan with smart filters, verified listings, and modern UI/UX.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        </motion.section>
+
+        {/* CTA */}
+        <motion.section initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-20 text-center">
+          <h2 className="text-3xl font-bold mb-4">Post Your Room</h2>
+          <p className="text-gray-400 mb-4">
+            List your property, get verified, and reach thousands of potential tenants instantly.
+          </p>
+          <button className="px-8 py-3 bg-gradient-to-r from-purple-500 to-blue-600 rounded-xl">
+            Post Now
+          </button>
+        </motion.section>
+
+        <motion.section initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} className="mt-20 text-center px-6">
+          <h2 className="text-3xl font-bold mb-4">Why Trust Us?</h2>
+          <p className="text-gray-400 max-w-2xl mx-auto">
+            ✔ Verified Owners • ✔ Approved Listings • ✔ No Fake Ads • ✔ Secure Payments • ✔ Privacy Protection • ✔ Customer Support
+          </p>
+        </motion.section>
+
+        <LandpageFooter />
+      </div>
     </div>
   );
 }
+
+

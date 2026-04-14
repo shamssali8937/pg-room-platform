@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { Mail, Lock, User } from "lucide-react";
-import { motion } from "framer-motion";
-
+import { AnimatePresence, motion } from "framer-motion";
 import ParticleBg from "@/components/ParticleBg";
 import PasswordChecklist from "@/components/PasswordChecklist";
 import Header from "@/components/Header";
@@ -15,7 +14,7 @@ export default function SignupPage() {
     const [form, setForm] = useState({ name: "", email: "", password: "" });
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center text-white relative">
+        <div className="min-h-screen flex flex-col items-center justify-center text-white relative pt-24 pb-20">
             <ParticleBg />
             <Header />
 
@@ -31,13 +30,20 @@ export default function SignupPage() {
                     <FloatingInput icon={Mail} type="email" value={form.email} onChange={(e: any) => setForm({ ...form, email: e.target.value })} label="Email" />
                     <FloatingInput icon={Lock} type="password" value={form.password} onChange={(e: any) => setForm({ ...form, password: e.target.value })} label="Password" />
 
-                    {form.password.length > 0 && (
-                        <>
-                            <PasswordStrength password={form.password} />
-                            <PasswordChecklist password={form.password} />
-                        </>
-                    )}
-
+                    <AnimatePresence>
+                        {form.password.length > 0 && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0, y: -10 }}
+                                animate={{ opacity: 1, height: "auto", y: 0 }}
+                                exit={{ opacity: 0, height: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                                className="overflow-hidden"
+                            >
+                                <PasswordStrength password={form.password} />
+                                <PasswordChecklist password={form.password} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
