@@ -21,3 +21,7 @@ export const login = async (req: Request, res: Response) => {
         res.status(400).json({ message: error.message });
     }
 };
+
+export const logout = async (req: Request, res: Response) => {
+    res.json({ message: "Logged out successfully" });
+};
