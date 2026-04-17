@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
+import { MoveDirection, OutMode } from "@tsparticles/engine"; // ← add this import
 
 const ParticleBg = () => {
     const [init, setInit] = useState(false);
@@ -14,26 +15,50 @@ const ParticleBg = () => {
         });
     }, []);
 
-    // Memoize options so they aren't recalculated on re-renders
     const options = useMemo(() => ({
-        fullScreen: { enable: false }, // Keeps it within the absolute container
+        fullScreen: { enable: false },
         background: { color: "transparent" },
-        fpsLimit: 60, // Limit FPS to reduce GPU load
+        fpsLimit: 60,
         particles: {
-            number: { value: 40 }, // Reduced from 60 to 40 for performance
-            size: { value: 1.5 },
-            move: { enable: true, speed: 0.8 },
-            links: {
-                enable: true,
-                color: "#8b5cf6",
-                distance: 120,
-                opacity: 0.3
+            number: { value: 80 },
+            color: { value: ["#8b5cf6", "#a78bfa", "#c4b5fd"] },
+            shape: { type: "circle" },
+            opacity: {
+                value: { min: 0.1, max: 0.5 },
+                animation: {
+                    enable: true,
+                    speed: 0.5,
+                    minimumValue: 0.1,
+                    sync: false,
+                },
             },
-            color: { value: "#8b5cf6" },
+            size: {
+                value: { min: 1, max: 2 },
+            },
+            move: {
+                enable: true,
+                direction: MoveDirection.bottom, // ← enum instead of string
+                speed: { min: 0.5, max: 1.5 },
+                straight: true,
+                outModes: {
+                    default: OutMode.out,         // ← enum instead of string
+                },
+                angle: {
+                    value: 10,
+                    offset: 0,
+                },
+            },
+            links: { enable: false },
+        },
+        interactivity: {
+            events: {
+                onHover: { enable: false },
+                onClick: { enable: false },
+            },
         },
     }), []);
 
-    if (!init) return <div className="absolute inset-0 bg-black" />;
+    if (!init) return <div className="absolute inset-0" />;
 
     return (
         <Particles
@@ -44,5 +69,4 @@ const ParticleBg = () => {
     );
 };
 
-// CRITICAL: Prevent re-rendering when parent state changes
 export default React.memo(ParticleBg);
