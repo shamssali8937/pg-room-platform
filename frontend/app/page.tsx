@@ -51,7 +51,7 @@ const defaultListings = [
     price: 55000,
     location: "Faisal Town, Lahore",
     type: "grid",
-    image: "https://images.unsplash.com/photo-1536376074432-8d2a106a334f?auto=format&fit=crop&q=80&w=2070",
+    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1980",
   },
 ];
 
@@ -132,7 +132,7 @@ export default function Home() {
               <div className="md:col-span-2 group relative h-[520px] rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={featuredListing.image} alt="" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-                <div className="absolute top-8 right-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
+                <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
                   ₨ {featuredListing.price.toLocaleString()} / mo
                 </div>
                 <div className="absolute bottom-10 left-10">
@@ -152,7 +152,7 @@ export default function Home() {
               <div className="group relative h-[520px] rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={verticalListing.image} alt="" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-                <div className="absolute top-8 right-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
+                <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
                   ₨ {verticalListing.price.toLocaleString()}
                 </div>
                 <div className="absolute bottom-10 left-10">
@@ -182,7 +182,7 @@ export default function Home() {
         </section>
 
         {/* The Promise Section */}
-        <section className="bg-white/[0.02] backdrop-blur-sm py-32 border-y border-white/5">
+        <section id="features" className="bg-white/[0.02] backdrop-blur-sm py-32 border-y border-white/5">
           <div className="max-w-7xl mx-auto px-6">
             <div className="text-center mb-20">
               <h2 className="text-4xl font-bold text-white mb-4">The PG Nexus Promise</h2>
