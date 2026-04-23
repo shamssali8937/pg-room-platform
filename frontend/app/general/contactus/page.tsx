@@ -55,13 +55,13 @@ const locations = [
         city: "Karachi",
         subtitle: "The City of Lights",
         count: "8 Properties",
-        img: "https://images.unsplash.com/photo-1567157577867-05ccb1388e13?w=600&q=80",
+        img: "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&q=80",
     },
     {
         city: "Islamabad",
         subtitle: "The Modern Metropolis",
         count: "15 Properties",
-        img: "https://images.unsplash.com/photo-1604941797971-2d1086b1d2c0?w=600&q=80",
+        img: "https://images.unsplash.com/photo-1587974928442-77dc3e0dba72?w=600&q=80",
     },
 ];
 
