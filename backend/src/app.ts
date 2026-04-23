@@ -3,6 +3,8 @@ import express, { Application } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import roomRoutes from "./routes/room.routes.js";
 dotenv.config();
 // import authRoutes from "./routes/auth.routes.js"; // Note the .js extension
 
@@ -14,7 +16,8 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
-
+app.use("/api/users", userRoutes);
+app.use("/api/rooms", roomRoutes);
 // Verification Routes
 app.get("/", (req, res) => {
     res.status(200).json({

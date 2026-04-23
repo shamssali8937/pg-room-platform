@@ -1,65 +1,236 @@
-import Image from "next/image";
+"use client";
+import { useState } from "react";
+import Navbar from "@/components/Navbar";
+import LandpageFooter from "@/components/LandpageFooter";
+import ParticleBg from "@/components/ParticleBg";
+
+// React Icons
+import { HiOutlineLocationMarker, HiOutlineSearch } from "react-icons/hi";
+import { RiMoneyDollarCircleLine, RiHotelBedLine, RiShieldCheckLine, RiCustomerService2Line } from "react-icons/ri";
+import { FiArrowRight, FiPlusCircle, FiLock, FiEyeOff } from "react-icons/fi";
+import { MdVerified } from "react-icons/md";
+
+const defaultListings = [
+  {
+    id: 1,
+    title: "Penthouse Studio Suite",
+    price: 85000,
+    location: "Gulberg III, Lahore",
+    type: "featured",
+    image: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=2070",
+    featuredLabel: "Premium Luxury",
+  },
+  {
+    id: 2,
+    title: "Executive Sharing",
+    price: 25000,
+    location: "DHA Phase 6, Karachi",
+    type: "vertical",
+    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1980",
+    featuredLabel: null,
+  },
+  {
+    id: 3,
+    title: "Standard Room",
+    price: 18000,
+    location: "E-11, Islamabad",
+    type: "grid",
+    image: "https://images.unsplash.com/photo-1554995207-c18c203602cb?auto=format&fit=crop&q=80&w=2070",
+  },
+  {
+    id: 4,
+    title: "Elite PG Wing",
+    price: 35000,
+    location: "Bahria Town, Rawalpindi",
+    type: "grid",
+    image: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&q=80&w=2070",
+  },
+  {
+    id: 5,
+    title: "Smart Studio",
+    price: 55000,
+    location: "Faisal Town, Lahore",
+    type: "grid",
+    image: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1980",
+  },
+];
 
 export default function Home() {
+  const [listings] = useState(defaultListings);
+
+  const featuredListing = listings.find((l) => l.type === "featured");
+  const verticalListing = listings.find((l) => l.type === "vertical");
+  const gridListings = listings.filter((l) => l.type === "grid");
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
+      {/* --- GLOBAL PARTICLE BACKGROUND --- */}
+      <div className="fixed inset-0 z-[1] pointer-events-none">
+        <ParticleBg />
+        {/* Subtle radial overlay to focus light on center and keep edges deep */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,#0a0a0a_100%)] opacity-70" />
+      </div>
+
+      <div className="absolute top-[-100px] left-[-100px] w-[250px] h-[250px] md:top-[-200px] md:left-[-200px] md:w-[500px] md:h-[500px] bg-purple-500/20 blur-[80px] md:blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-100px] right-[-100px] w-[250px] h-[250px] md:bottom-[-200px] md:right-[-200px] md:w-[500px] md:h-[500px] bg-blue-500/20 blur-[80px] md:blur-[120px] rounded-full animate-pulse" />
+
+      {/* --- CONTENT LAYER --- */}
+      <div className="relative z-10 flex flex-col">
+        <Navbar />
+
+        {/* Hero Section */}
+        <section className="relative min-h-[70vh] sm:min-h-[80vh] md:min-h-[90vh] flex flex-col items-center justify-center px-4 sm:px-6 pt-24 sm:pt-28 md:pt-0">
+          <div className="relative text-center max-w-4xl mx-auto space-y-6 sm:space-y-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-extrabold tracking-tight text-white leading-tight">
+              Find Your <span className="bg-gradient-to-r from-[#ba9eff] to-[#699cff] bg-clip-text text-transparent">Perfect Room</span>
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base md:text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed">
+              Elevated living for the modern professional. Curated spaces that blend luxury, comfort, and community in the heart of the city.
+            </p>
+
+            {/* Search Bar */}
+            <div className="mt-10 backdrop-blur-2xl bg-white/[0.03] p-2 rounded-3xl md:rounded-full border border-white/10 shadow-2xl max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-1">
+              <div className="w-full md:w-1/3 flex items-center px-5 py-3 gap-3">
+                <HiOutlineLocationMarker className="text-[#ba9eff] text-xl shrink-0" />
+                <input className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium" placeholder="City" type="text" />
+              </div>
+              <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
+
+              <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
+                <RiMoneyDollarCircleLine className="text-[#ba9eff] text-xl shrink-0" />
+                <input className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium" placeholder="Budget" type="number" />
+              </div>
+              <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
+
+              <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
+                <RiHotelBedLine className="text-[#ba9eff] text-xl shrink-0" />
+                <select className="bg-transparent border-none focus:ring-0 text-gray-400 text-sm font-medium w-full appearance-none cursor-pointer">
+                  <option className="bg-[#1a1a1a]">Room Type</option>
+                  <option className="bg-[#1a1a1a]">Luxury Room</option>
+                  <option className="bg-[#1a1a1a]">Sharing</option>
+                </select>
+              </div>
+
+              <button className="w-full md:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] rounded-2xl md:rounded-full p-4 flex items-center justify-center hover:brightness-110 active:scale-95 transition-all cursor-pointer">
+                <HiOutlineSearch className="text-white text-xl" />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Elite Collections */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 md:py-24 w-full">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8 sm:mb-12">
+            <div>
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-3">Elite Collections</h2>
+              <p className="text-gray-400 text-sm sm:text-base">Handpicked premium stays across Pakistan</p>
+            </div>
+            <button className="text-[#699cff] hover:text-[#ba9eff] font-semibold flex items-center gap-2 group transition-all text-sm uppercase tracking-wider cursor-pointer">
+              Explore All <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+            {featuredListing && (
+              <div className="md:col-span-2 group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
+                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={featuredListing.image} alt="" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
+                  ₨ {featuredListing.price.toLocaleString()} / mo
+                </div>
+                <div className="absolute bottom-10 left-10">
+                  <div className="flex items-center gap-2 text-[#ba9eff] mb-3">
+                    <MdVerified className="text-lg" />
+                    <span className="text-xs font-bold uppercase tracking-[0.2em]">{featuredListing.featuredLabel}</span>
+                  </div>
+                  <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">{featuredListing.title}</h3>
+                  <p className="text-gray-300 flex items-center gap-2">
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.location}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {verticalListing && (
+              <div className="group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
+                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={verticalListing.image} alt="" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+                <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
+                  ₨ {verticalListing.price.toLocaleString()}
+                </div>
+                <div className="absolute bottom-10 left-10">
+                  <h3 className="text-2xl font-bold text-white mb-2">{verticalListing.title}</h3>
+                  <p className="text-gray-300 flex items-center gap-2 text-sm">
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.location}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {gridListings.map((item) => (
+              <div key={item.id} className="backdrop-blur-sm bg-white/[0.02] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border border-white/5 hover:bg-white/[0.05] transition-all group cursor-pointer">
+                <div className="relative h-56 rounded-2xl overflow-hidden mb-6">
+                  <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={item.image} alt="" />
+                  <div className="absolute bottom-4 right-4 backdrop-blur-md bg-black/60 px-4 py-1.5 rounded-xl text-xs font-bold text-white border border-white/10">
+                    ₨ {item.price.toLocaleString()}
+                  </div>
+                </div>
+                <h4 className="text-xl font-bold text-white mb-2 group-hover:text-[#ba9eff] transition-colors">{item.title}</h4>
+                <p className="text-gray-400 text-sm flex items-center gap-2">
+                  <HiOutlineLocationMarker className="text-[#699cff]" /> {item.location}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* The Promise Section */}
+        <section id="features" className="bg-white/[0.02] backdrop-blur-sm py-16 sm:py-20 md:py-32 border-y border-white/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
+            <div className="text-center mb-12 sm:mb-16 md:mb-20">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3 sm:mb-4">The PG Nexus Promise</h2>
+              <p className="text-gray-400 max-w-xl mx-auto text-sm sm:text-base">Luxury is in the details, and security is in our DNA.</p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 md:gap-12">
+              {[
+                { icon: <RiShieldCheckLine />, title: "Verified Owners" },
+                { icon: <FiLock />, title: "Safe Payments" },
+                { icon: <FiEyeOff />, title: "No Hidden Fees" },
+                { icon: <RiCustomerService2Line />, title: "24/7 Support" },
+              ].map((item, idx) => (
+                <div key={idx} className="group text-center">
+                  <div className="w-16 h-16 bg-[#ba9eff]/10 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:bg-[#ba9eff]/20 transition-all duration-300">
+                    <div className="text-[#ba9eff] text-3xl">{item.icon}</div>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-500 text-sm leading-relaxed px-4">Experience the gold standard in premium hospitality.</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 sm:py-20 md:py-32 w-full">
+          <div className="relative rounded-[2rem] sm:rounded-[2.5rem] md:rounded-[3.5rem] overflow-hidden bg-white/[0.02] backdrop-blur-md border border-white/10 py-12 sm:py-16 md:py-24 px-6 sm:px-8 md:px-12 text-center">
+            <div className="absolute -top-24 -right-24 w-64 h-64 bg-[#699cff]/10 blur-[100px] rounded-full"></div>
+            <div className="relative z-10 max-w-2xl mx-auto space-y-5 sm:space-y-6 md:space-y-8">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">Have a Room to List?</h2>
+              <p className="text-gray-400 text-sm sm:text-base md:text-lg">Join Pakistan&apos;s most elite network of verified hosts and reach thousands of tenants.</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-4">
+                <button className="w-full sm:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] px-8 sm:px-12 py-3 sm:py-4 rounded-2xl text-white font-bold text-sm sm:text-lg hover:shadow-[0_0_30px_rgba(132,85,239,0.3)] transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95">
+                  Post Your Room <FiPlusCircle className="text-xl" />
+                </button>
+                <button className="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 rounded-2xl text-white font-bold text-sm sm:text-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer active:scale-95">
+                  Learn More
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <LandpageFooter />
+      </div>
+    </main>
   );
 }

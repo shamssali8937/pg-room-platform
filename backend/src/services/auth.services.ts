@@ -1,6 +1,10 @@
 import { prisma } from "../config/prisma.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
 import { generateToken } from "../utils/jwt.js";
+import { sendEmail } from "../utils/mail.js";
+import crypto from "crypto";
+import { generateOTP, getOTPExpiry } from "../utils/otp.js";
+
 
 export const signupService = async (data: any) => {
     const { email, password, full_name, mobile_number, role } = data;
@@ -15,6 +19,8 @@ export const signupService = async (data: any) => {
 
     const hashedPassword = await hashPassword(password);
 
+    const emailToken = crypto.randomBytes(32).toString("hex");
+
     const user = await prisma.user.create({
         data: {
             email,
@@ -22,21 +28,29 @@ export const signupService = async (data: any) => {
             full_name,
             mobile_number,
             role,
+            email_verify_token: emailToken,
         },
     });
 
-    // remove password before returning
-    const { password_hash, ...safeUser } = user;
+    const verifyLink = `http://localhost:5000/api/auth/verify-email?token=${emailToken}`;
 
-    return safeUser;
+    await sendEmail(
+        email,
+        "Verify your email",
+        `<h3>Click to verify:</h3><a href="${verifyLink}">${verifyLink}</a>`
+    );
+
+    return { message: "Signup successful. Verify your email." };
 };
-
 export const loginService = async (email: string, password: string) => {
     const user = await prisma.user.findUnique({
         where: { email },
     });
 
     if (!user) throw new Error("User not found");
+    if (!user.email_verified_at) {
+        throw new Error("Email not verified");
+    }
 
     const isValid = await comparePassword(password, user.password_hash);
 
@@ -50,4 +64,81 @@ export const loginService = async (email: string, password: string) => {
     const { password_hash, ...safeUser } = user;
 
     return { token, user: safeUser };
+};
+
+export const sendPhoneOTPService = async (mobile_number: string) => {
+    const user = await prisma.user.findUnique({
+        where: { mobile_number },
+    });
+
+    if (!user) throw new Error("User not found");
+
+    const otp = generateOTP();
+
+    await prisma.user.update({
+        where: { mobile_number },
+        data: {
+            phone_otp: otp,
+            phone_otp_expiry: getOTPExpiry(),
+        },
+    });
+
+    // console.log("OTP:", otp); // FREE METHOD
+
+    return { message: "OTP sent" };
+};
+
+export const verifyPhoneOTPService = async (
+    mobile_number: string,
+    otp: string
+) => {
+    const user = await prisma.user.findUnique({
+        where: { mobile_number },
+    });
+
+    if (!user) throw new Error("User not found");
+
+    if (
+        user.phone_otp !== otp ||
+        new Date() > (user.phone_otp_expiry as Date)
+    ) {
+        throw new Error("Invalid or expired OTP");
+    }
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            mobile_verified_at: new Date(),
+            phone_otp: null,
+        },
+    });
+
+    return { message: "Phone verified successfully" };
+};
+
+export const verifyEmailService = async (token: string) => {
+    if (!token) {
+        throw new Error("Token is required");
+    }
+
+    const user = await prisma.user.findFirst({
+        where: { email_verify_token: String(token) },
+    });
+
+    if (!user) {
+        throw new Error("Invalid token");
+    }
+
+    const updatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            email_verified_at: new Date(),
+            email_verify_token: null,
+        },
+    });
+
+    return {
+        message: "Email verified successfully",
+        userId: updatedUser.id,
+    };
 };
