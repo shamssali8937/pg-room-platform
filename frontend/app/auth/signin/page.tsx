@@ -7,6 +7,7 @@ import ParticleBg from "@/components/ParticleBg";
 import LandpageFooter from "@/components/LandpageFooter";
 import FloatingInput from "@/components/FloatingInput";
 import Navbar from "@/components/Navbar";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -14,6 +15,7 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,8 +29,12 @@ export default function LoginPage() {
 
         try {
             // Your API call here
-            console.log("Login API call", { email, password });
-            await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulating delay
+            // console.log("Login API call", { email, password });
+            // await new Promise((resolve) => setTimeout(resolve, 1500)); // Simulating delay
+            if (email === "shams@gmail.com" && password === "shams") {
+                router.push("/admin/dashboard")
+            }
+
         } catch (err) {
             setError("Invalid credentials. Please try again.");
         } finally {
