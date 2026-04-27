@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import {
@@ -16,9 +17,9 @@ import {
 const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard", href: "/admin/dashboard" },
     { icon: Users, label: "Users", id: "users", href: "/admin/users" },
-    { icon: Building2, label: "Listings", id: "listings", href: "/admin/dashboard" },
-    { icon: BarChart3, label: "Reports", id: "reports", href: "/admin/dashboard" },
-    { icon: Star, label: "Points", id: "points", href: "/admin/dashboard" },
+    { icon: Building2, label: "Listings", id: "listings", href: "/admin/listings" },
+    { icon: BarChart3, label: "Reports", id: "reports", href: "/admin/reports" },
+    { icon: Star, label: "Points", id: "points", href: "/admin/points" },
 ];
 
 interface SidebarProps {
@@ -28,9 +29,21 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeId = "dashboard", isOpen = false, onClose }: SidebarProps) {
+    const touchStartX = useRef(0);
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX;
+    };
+
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        const diff = touchStartX.current - e.changedTouches[0].clientX;
+        // Swipe left to close (threshold 60px)
+        if (diff > 60 && onClose) onClose();
+    };
+
     return (
         <>
-            {/* Mobile overlay */}
+            {/* Mobile overlay — click anywhere outside to close */}
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -38,13 +51,15 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[45] lg:hidden"
                     />
                 )}
             </AnimatePresence>
 
             {/* Sidebar */}
             <aside
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
                 className={`fixed left-0 top-0 h-full w-[280px] bg-[#0e0e0e] flex flex-col border-r border-white/5 z-50 py-8 shadow-[4px_0_24px_rgba(0,0,0,0.5)]
                     transition-transform duration-300 ease-in-out
                     ${isOpen ? "translate-x-0" : "-translate-x-full"}
@@ -66,8 +81,8 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
                         </div>
                     </div>
                     {/* Close button — mobile only */}
-                    <button onClick={onClose} className="lg:hidden text-zinc-500 hover:text-white transition-colors p-1">
-                        <X size={20} />
+                    <button onClick={onClose} className="lg:hidden text-zinc-500 hover:text-white transition-colors p-2 -mr-2 rounded-lg hover:bg-white/5 active:scale-90">
+                        <X size={22} />
                     </button>
                 </div>
 

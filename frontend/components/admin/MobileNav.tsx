@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { LayoutDashboard, Building2, Users, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Building2, Users, BarChart3, Star } from "lucide-react";
 
 const items = [
     { icon: LayoutDashboard, id: "dashboard", href: "/admin/dashboard" },
-    { icon: Building2, id: "listings", href: "/admin/dashboard" },
+    { icon: Building2, id: "listings", href: "/admin/listings" },
     { icon: Users, id: "users", href: "/admin/users" },
-    { icon: BarChart3, id: "reports", href: "/admin/dashboard" },
+    { icon: BarChart3, id: "reports", href: "/admin/reports" },
+    { icon: Star, id: "points", href: "/admin/points" },
 ];
 
 interface MobileNavProps {

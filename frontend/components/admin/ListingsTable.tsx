@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, Eye, X } from "lucide-react";
 import { mockListings, type Listing } from "./mockData";
@@ -39,7 +40,7 @@ export default function ListingsTable({ searchQuery }: ListingsTableProps) {
         <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center justify-between">
                 <h4 className="text-xl font-bold tracking-tight text-white">Pending Listing Approvals</h4>
-                <button className="text-purple-400 text-sm font-semibold hover:text-purple-300 hover:underline underline-offset-4 transition-all">View All</button>
+                <Link href="/admin/listings" className="text-purple-400 text-sm font-semibold hover:text-purple-300 hover:underline underline-offset-4 transition-all">View All</Link>
             </div>
 
             <div className="bg-zinc-900/60 rounded-xl overflow-hidden border border-white/[0.04]">
