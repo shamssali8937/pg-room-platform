@@ -6,13 +6,23 @@ import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import UserTable from "@/components/admin/UserTable";
 import { Filter, Download } from "lucide-react";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
-export default function UsersPage() {
+function UsersContent() {
+    const { isDark } = useAdminTheme();
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
+    const pageBg = isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900";
+    const headingColor = isDark ? "text-white" : "text-slate-900";
+    const subText = isDark ? "text-zinc-500" : "text-slate-500";
+    const btnClass = isDark
+        ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"
+        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm";
+
     return (
-        <div className="bg-[#0e0e0e] text-white min-h-screen">
+        <div className={`${pageBg} min-h-screen transition-colors duration-300`}>
             <Sidebar activeId="users" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Topbar
                 searchQuery={searchQuery}
@@ -21,23 +31,23 @@ export default function UsersPage() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="ml-0 lg:ml-[280px] pt-24 lg:pt-32 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header Section */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
-                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter text-white mb-2" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${headingColor}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                             User Management
                         </h2>
-                        <p className="text-zinc-500 max-w-lg text-sm">
+                        <p className={`max-w-lg text-sm ${subText}`}>
                             Manage PG Nexus ecosystem participants. Review verification requests and handle account standing actions.
                         </p>
                     </div>
                     <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-                        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-zinc-800/60 rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-700/60 transition-colors border border-white/5 text-white">
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}>
                             <Filter size={14} />
                             <span className="hidden sm:inline">Advanced</span> Filters
                         </button>
-                        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-zinc-800/60 rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-700/60 transition-colors border border-white/5 text-white">
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}>
                             <Download size={14} />
                             <span className="hidden sm:inline">Export</span> CSV
                         </button>
@@ -56,5 +66,13 @@ export default function UsersPage() {
                 <UserTable searchQuery={searchQuery} />
             </main>
         </div>
+    );
+}
+
+export default function UsersPage() {
+    return (
+        <AdminThemeProvider>
+            <UsersContent />
+        </AdminThemeProvider>
     );
 }

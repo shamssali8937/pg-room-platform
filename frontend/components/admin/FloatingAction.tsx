@@ -3,9 +3,22 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, X, FileText, AlertCircle, Send } from "lucide-react";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 
 export default function FloatingAction() {
     const [open, setOpen] = useState(false);
+    const { isDark } = useAdminTheme();
+
+    const modalBg = isDark
+        ? "bg-zinc-900 border-white/[0.08]"
+        : "bg-white border-slate-200 shadow-2xl";
+    const labelColor = isDark ? "text-zinc-400" : "text-slate-500";
+    const inputClass = isDark
+        ? "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-zinc-600 focus:ring-purple-500/60"
+        : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400 focus:ring-purple-400/50";
+    const titleColor = isDark ? "text-white" : "text-slate-900";
+    const subColor = isDark ? "text-zinc-500" : "text-slate-500";
+    const closeBtn = isDark ? "text-zinc-500 hover:text-white" : "text-slate-400 hover:text-slate-900";
 
     return (
         <>
@@ -36,7 +49,7 @@ export default function FloatingAction() {
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             transition={{ type: "spring", stiffness: 300, damping: 25 }}
                             onClick={(e) => e.stopPropagation()}
-                            className="bg-zinc-900 border border-white/[0.08] rounded-2xl w-full max-w-lg p-6 shadow-2xl"
+                            className={`border rounded-2xl w-full max-w-lg p-6 ${modalBg}`}
                         >
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
@@ -44,11 +57,11 @@ export default function FloatingAction() {
                                         <FileText size={18} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-bold text-white">Manual Review</h3>
-                                        <p className="text-xs text-zinc-500">Submit a listing for manual inspection</p>
+                                        <h3 className={`text-lg font-bold ${titleColor}`}>Manual Review</h3>
+                                        <p className={`text-xs ${subColor}`}>Submit a listing for manual inspection</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                                <button onClick={() => setOpen(false)} className={`transition-colors ${closeBtn}`}>
                                     <X size={18} />
                                 </button>
                             </div>
@@ -62,12 +75,12 @@ export default function FloatingAction() {
                                 className="space-y-4"
                             >
                                 <div>
-                                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 block">Listing ID</label>
-                                    <input type="text" placeholder="e.g. LST-001" className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-purple-500/60 transition-all" required />
+                                    <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${labelColor}`}>Listing ID</label>
+                                    <input type="text" placeholder="e.g. LST-001" className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 transition-all ${inputClass}`} required />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 block">Reason</label>
-                                    <select className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/60 transition-all">
+                                    <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${labelColor}`}>Reason</label>
+                                    <select className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 transition-all ${inputClass}`}>
                                         <option value="suspicious">Suspicious Activity</option>
                                         <option value="duplicate">Duplicate Listing</option>
                                         <option value="pricing">Price Manipulation</option>
@@ -76,8 +89,8 @@ export default function FloatingAction() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1.5 block">Notes</label>
-                                    <textarea rows={3} placeholder="Additional details..." className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-4 py-2.5 text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-purple-500/60 transition-all resize-none" />
+                                    <label className={`text-xs font-semibold uppercase tracking-wider mb-1.5 block ${labelColor}`}>Notes</label>
+                                    <textarea rows={3} placeholder="Additional details..." className={`w-full border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 transition-all resize-none ${inputClass}`} />
                                 </div>
 
                                 <div className="flex items-center gap-2 p-3 bg-yellow-500/5 border border-yellow-500/10 rounded-lg">

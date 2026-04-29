@@ -17,6 +17,7 @@ import {
     ChevronDown,
 } from "lucide-react";
 import { type ModerationListing, rejectionReasons } from "./mockData";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 
 interface ManualAuditModalProps {
     listing: ModerationListing | null;
@@ -56,6 +57,7 @@ export default function ManualAuditModal({
     const [rejectReason, setRejectReason] = useState(rejectionReasons[0]);
     const [notes, setNotes] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { isDark } = useAdminTheme();
 
     if (!listing) return null;
 
@@ -96,30 +98,27 @@ export default function ManualAuditModal({
                     exit={{ scale: 0.92, y: 30, opacity: 0 }}
                     transition={{ type: "spring", damping: 28, stiffness: 300 }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-full max-w-2xl bg-zinc-900 border border-white/[0.08] rounded-3xl overflow-hidden shadow-2xl shadow-black/60 my-auto"
+                    className={`w-full max-w-2xl border rounded-3xl overflow-hidden shadow-2xl shadow-black/60 my-auto ${isDark ? "bg-zinc-900 border-white/[0.08]" : "bg-white border-slate-200"}`}
                 >
                     {/* ── Header ── */}
-                    <div className="relative bg-gradient-to-r from-pink-500/20 via-purple-500/10 to-transparent px-5 sm:px-8 py-6 border-b border-white/[0.06]">
+                    <div className={`relative bg-gradient-to-r from-pink-500/20 via-purple-500/10 to-transparent px-5 sm:px-8 py-6 border-b ${isDark ? "border-white/[0.06]" : "border-slate-200"}`}>
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-4 min-w-0">
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pink-500 to-red-400 flex items-center justify-center flex-shrink-0">
                                     <ShieldCheck size={22} className="text-white" />
                                 </div>
                                 <div className="min-w-0">
-                                    <h2
-                                        className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate"
-                                        style={{ fontFamily: "Manrope, sans-serif" }}
-                                    >
+                                    <h2 className={`text-xl sm:text-2xl font-extrabold tracking-tight truncate ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                                         Manual Audit
                                     </h2>
-                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                    <p className={`text-xs mt-0.5 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
                                         #{listing.id} • {listing.title}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="w-9 h-9 rounded-full bg-zinc-800/80 border border-white/5 text-zinc-400 flex items-center justify-center hover:text-white hover:bg-zinc-700 transition-colors flex-shrink-0"
+                                className={`w-9 h-9 rounded-full border flex items-center justify-center transition-colors flex-shrink-0 ${isDark ? "bg-zinc-800/80 border-white/5 text-zinc-400 hover:text-white hover:bg-zinc-700" : "bg-slate-100 border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-200"}`}
                             >
                                 <X size={16} />
                             </button>
@@ -128,20 +127,20 @@ export default function ManualAuditModal({
 
                     <div className="p-5 sm:p-8 space-y-6 max-h-[70vh] overflow-y-auto">
                         {/* ── Listing Summary ── */}
-                        <div className="flex gap-4 bg-zinc-800/40 rounded-xl p-4 border border-white/[0.04]">
+                        <div className={`flex gap-4 rounded-xl p-4 border ${isDark ? "bg-zinc-800/40 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
                             <img
                                 src={listing.image}
                                 alt={listing.title}
                                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover flex-shrink-0 border border-white/[0.06]"
                             />
                             <div className="min-w-0 flex-1">
-                                <h3 className="text-base font-bold text-white truncate">{listing.title}</h3>
-                                <p className="text-xs text-zinc-500 flex items-center gap-1 mt-1">
+                                <h3 className={`text-base font-bold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{listing.title}</h3>
+                                <p className={`text-xs flex items-center gap-1 mt-1 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                     <MapPin size={11} /> {listing.location}
                                 </p>
-                                <p className="text-sm font-bold text-purple-400 mt-2">
+                                <p className="text-sm font-bold text-purple-500 mt-2">
                                     {listing.currency} {formattedPrice}
-                                    <span className="text-[10px] text-zinc-500 ml-1 font-medium uppercase">/month</span>
+                                    <span className={`text-[10px] ml-1 font-medium uppercase ${isDark ? "text-zinc-500" : "text-slate-400"}`}>/month</span>
                                 </p>
                                 <div className="flex items-center gap-2 mt-2">
                                     <img
@@ -149,7 +148,7 @@ export default function ManualAuditModal({
                                         alt={listing.host.name}
                                         className="w-5 h-5 rounded-full"
                                     />
-                                    <p className="text-[11px] text-zinc-400">{listing.host.name}</p>
+                                    <p className={`text-[11px] ${isDark ? "text-zinc-400" : "text-slate-500"}`}>{listing.host.name}</p>
                                 </div>
                             </div>
                         </div>
@@ -169,7 +168,7 @@ export default function ManualAuditModal({
                         {/* ── Document Verification ── */}
                         {listing.documents && listing.documents.length > 0 && (
                             <div>
-                                <h4 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold mb-3">
+                                <h4 className={`text-xs uppercase tracking-widest font-semibold mb-3 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                     Document Verification
                                 </h4>
                                 <div className="space-y-2">
@@ -179,9 +178,9 @@ export default function ManualAuditModal({
                                         return (
                                             <div
                                                 key={doc.name}
-                                                className="flex items-center justify-between bg-zinc-800/40 border border-white/[0.04] rounded-xl px-4 py-3"
+                                                className={`flex items-center justify-between border rounded-xl px-4 py-3 ${isDark ? "bg-zinc-800/40 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}
                                             >
-                                                <p className="text-sm text-zinc-300 font-medium">{doc.name}</p>
+                                                <p className={`text-sm font-medium ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{doc.name}</p>
                                                 <span
                                                     className={`flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider ${cfg.text} ${cfg.bg} px-2.5 py-1 rounded-lg`}
                                                 >
@@ -198,15 +197,15 @@ export default function ManualAuditModal({
                         {/* ── Checklist ── */}
                         <div>
                             <div className="flex items-center justify-between mb-3">
-                                <h4 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold">
+                                <h4 className={`text-xs uppercase tracking-widest font-semibold ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                     Audit Checklist
                                 </h4>
-                                <span className="text-[11px] text-zinc-400 font-medium">
+                                <span className={`text-[11px] font-medium ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
                                     {completedChecks}/{totalChecks} completed
                                 </span>
                             </div>
                             {/* Progress bar */}
-                            <div className="w-full h-1.5 bg-zinc-800 rounded-full mb-4">
+                            <div className={`w-full h-1.5 rounded-full mb-4 ${isDark ? "bg-zinc-800" : "bg-slate-200"}`}>
                                 <motion.div
                                     className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
                                     initial={{ width: 0 }}
@@ -224,14 +223,14 @@ export default function ManualAuditModal({
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
                                                 checked
                                                     ? "bg-emerald-500/10 border-emerald-500/20"
-                                                    : "bg-zinc-800/40 border-white/[0.04] hover:border-white/10"
+                                                    : isDark ? "bg-zinc-800/40 border-white/[0.04] hover:border-white/10" : "bg-slate-50 border-slate-200 hover:border-slate-300"
                                             }`}
                                         >
                                             <div
                                                 className={`w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 transition-all ${
                                                     checked
                                                         ? "bg-emerald-500 text-white"
-                                                        : "bg-zinc-700 border border-zinc-600"
+                                                        : isDark ? "bg-zinc-700 border border-zinc-600" : "bg-slate-200 border border-slate-300"
                                                 }`}
                                             >
                                                 {checked && <CheckCircle2 size={13} />}
@@ -242,7 +241,7 @@ export default function ManualAuditModal({
                                             />
                                             <span
                                                 className={`text-sm font-medium ${
-                                                    checked ? "text-emerald-300" : "text-zinc-300"
+                                                    checked ? "text-emerald-400" : isDark ? "text-zinc-300" : "text-slate-700"
                                                 }`}
                                             >
                                                 {item.label}
@@ -255,7 +254,7 @@ export default function ManualAuditModal({
 
                         {/* ── Verdict ── */}
                         <div>
-                            <h4 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold mb-3">
+                            <h4 className={`text-xs uppercase tracking-widest font-semibold mb-3 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                 Audit Verdict
                             </h4>
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -264,7 +263,7 @@ export default function ManualAuditModal({
                                     className={`py-3 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border ${
                                         verdict === "approve"
                                             ? "bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-500/20"
-                                            : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-emerald-500/30 hover:text-emerald-400"
+                                            : isDark ? "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-emerald-500/30 hover:text-emerald-400" : "bg-slate-100 text-slate-500 border-slate-200 hover:border-emerald-400 hover:text-emerald-500"
                                     }`}
                                 >
                                     <CheckCircle2 size={14} />
@@ -275,7 +274,7 @@ export default function ManualAuditModal({
                                     className={`py-3 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border ${
                                         verdict === "reject"
                                             ? "bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/20"
-                                            : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-red-500/30 hover:text-red-400"
+                                            : isDark ? "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-red-500/30 hover:text-red-400" : "bg-slate-100 text-slate-500 border-slate-200 hover:border-red-400 hover:text-red-500"
                                     }`}
                                 >
                                     <XCircle size={14} />
@@ -286,7 +285,7 @@ export default function ManualAuditModal({
                                     className={`py-3 px-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 border ${
                                         verdict === "suspend"
                                             ? "bg-amber-500 text-white border-amber-500 shadow-lg shadow-amber-500/20"
-                                            : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-amber-500/30 hover:text-amber-400"
+                                            : isDark ? "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:border-amber-500/30 hover:text-amber-400" : "bg-slate-100 text-slate-500 border-slate-200 hover:border-amber-400 hover:text-amber-500"
                                     }`}
                                 >
                                     <AlertTriangle size={14} />
@@ -305,14 +304,14 @@ export default function ManualAuditModal({
                                         className="overflow-hidden"
                                     >
                                         <div className="mt-3 relative">
-                                            <p className="text-[10px] uppercase tracking-widest text-zinc-500 mb-1.5 font-semibold">
+                                            <p className={`text-[10px] uppercase tracking-widest font-semibold mb-1.5 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                                 Rejection Reason
                                             </p>
                                             <div className="relative">
                                                 <select
                                                     value={rejectReason}
                                                     onChange={(e) => setRejectReason(e.target.value)}
-                                                    className="w-full bg-zinc-800 border border-white/5 rounded-xl text-sm py-3 px-4 text-white appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+                                                    className={`w-full border rounded-xl text-sm py-3 px-4 appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-purple-500/40 ${isDark ? "bg-zinc-800 border-white/5 text-white" : "bg-slate-50 border-slate-200 text-slate-900"}`}
                                                 >
                                                     {rejectionReasons.map((r) => (
                                                         <option key={r} value={r}>
@@ -320,10 +319,7 @@ export default function ManualAuditModal({
                                                         </option>
                                                     ))}
                                                 </select>
-                                                <ChevronDown
-                                                    size={14}
-                                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-                                                />
+                                                <ChevronDown size={14} className={`absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
                                             </div>
                                         </div>
                                     </motion.div>
@@ -333,27 +329,27 @@ export default function ManualAuditModal({
 
                         {/* ── Admin Notes ── */}
                         <div>
-                            <h4 className="text-xs uppercase tracking-widest text-zinc-500 font-semibold mb-2">
-                                Admin Notes <span className="text-zinc-600">(optional)</span>
+                            <h4 className={`text-xs uppercase tracking-widest font-semibold mb-2 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
+                                Admin Notes <span className={isDark ? "text-zinc-600" : "text-slate-400"}>(optional)</span>
                             </h4>
                             <textarea
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 placeholder="Add internal notes about this audit..."
                                 rows={3}
-                                className="w-full bg-zinc-800/60 border border-white/[0.04] rounded-xl text-sm py-3 px-4 text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all"
+                                className={`w-full border rounded-xl text-sm py-3 px-4 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all ${isDark ? "bg-zinc-800/60 border-white/[0.04] text-white placeholder:text-zinc-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
                             />
                         </div>
                     </div>
 
                     {/* ── Footer ── */}
-                    <div className="px-5 sm:px-8 py-5 border-t border-white/[0.06] flex flex-col sm:flex-row gap-3">
+                    <div className={`px-5 sm:px-8 py-5 border-t flex flex-col sm:flex-row gap-3 ${isDark ? "border-white/[0.06]" : "border-slate-200"}`}>
                         <button
                             onClick={handleSubmit}
                             disabled={!verdict || isSubmitting}
                             className={`flex-1 py-3 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
                                 !verdict
-                                    ? "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                                    ? isDark ? "bg-zinc-800 text-zinc-600 cursor-not-allowed" : "bg-slate-100 text-slate-400 cursor-not-allowed"
                                     : verdict === "approve"
                                     ? "bg-emerald-500 text-white hover:brightness-110"
                                     : verdict === "reject"
@@ -374,7 +370,7 @@ export default function ManualAuditModal({
                         </button>
                         <button
                             onClick={onClose}
-                            className="py-3 px-6 bg-zinc-800 border border-white/5 text-zinc-400 text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-zinc-700 transition-all flex items-center justify-center gap-2"
+                            className={`py-3 px-6 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${isDark ? "bg-zinc-800 border-white/5 text-zinc-400 hover:bg-zinc-700" : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200"}`}
                         >
                             Cancel
                         </button>
