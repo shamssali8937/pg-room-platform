@@ -34,6 +34,7 @@ import {
     type ReportPriority,
     type ReportTab,
 } from "@/components/admin/mockData";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
 // ── Priority config ──
 const priorityConfig: Record<ReportPriority, { dot: string; label: string }> = {
@@ -56,7 +57,8 @@ const tabs: { id: ReportTab; label: string }[] = [
     { id: "appeals", label: "Appeals" },
 ];
 
-export default function ReportsPage() {
+function ReportsContent() {
+    const { isDark } = useAdminTheme();
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [reports, setReports] = useState<AdminReport[]>(mockAdminReports);
@@ -119,7 +121,7 @@ export default function ReportsPage() {
     }, [reports]);
 
     return (
-        <div className="bg-[#0e0e0e] text-white min-h-screen">
+        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
             <Sidebar activeId="reports" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Topbar
                 searchQuery={searchQuery}
@@ -128,33 +130,62 @@ export default function ReportsPage() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="ml-0 lg:ml-[280px] pt-24 lg:pt-32 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
-                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter text-white mb-2" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                             Reports &amp; Appeals
                         </h2>
-                        <p className="text-zinc-500 max-w-lg text-sm">
+                        <p className={`max-w-lg text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                             Management console for resolving platform integrity issues, user disputes, and listing violations.
                         </p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                         <div className="relative">
-                            <button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${filterPriority !== "all" ? "bg-purple-500/20 border-purple-500/30 text-purple-400" : "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"}`}>
+                            <button
+                                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${
+                                    filterPriority !== "all"
+                                        ? "bg-purple-500/20 border-purple-500/30 text-purple-500"
+                                        : isDark
+                                            ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"
+                                            : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                                }`}
+                            >
                                 <SlidersHorizontal size={14} /> {filterPriority === "all" ? "Filter" : filterPriority.charAt(0).toUpperCase() + filterPriority.slice(1)}
                             </button>
-                            {showFilterMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-40 bg-zinc-900/98 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 z-50 shadow-2xl">
-                                    {(["all", "high", "medium", "low"] as const).map((p) => (
-                                        <button key={p} onClick={() => { setFilterPriority(p); setShowFilterMenu(false); setCurrentPage(1); }} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${filterPriority === p ? "bg-purple-500/20 text-purple-400" : "text-zinc-400 hover:text-white hover:bg-white/5"}`}>
-                                            {p === "all" ? "All Priorities" : p.charAt(0).toUpperCase() + p.slice(1) + " Priority"}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                            <AnimatePresence>
+                                {showFilterMenu && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -6, scale: 0.96 }}
+                                        transition={{ duration: 0.15 }}
+                                        className={`absolute right-0 top-full mt-2 w-44 backdrop-blur-xl border rounded-xl p-1.5 z-50 shadow-2xl ${
+                                            isDark ? "bg-zinc-900/98 border-white/10" : "bg-white border-slate-200"
+                                        }`}
+                                    >
+                                        {(["all", "high", "medium", "low"] as const).map((p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => { setFilterPriority(p); setShowFilterMenu(false); setCurrentPage(1); }}
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
+                                                    filterPriority === p
+                                                        ? "bg-purple-500/20 text-purple-500"
+                                                        : isDark ? "text-zinc-400 hover:text-white hover:bg-white/5" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                {p === "all" ? "All Priorities" : p.charAt(0).toUpperCase() + p.slice(1) + " Priority"}
+                                            </button>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
-                        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800/60 rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-700/60 transition-colors border border-white/5 text-white">
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${
+                            isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                        }`}>
                             <Download size={14} /> <span className="hidden sm:inline">Export</span> Logs
                         </button>
                     </div>
@@ -171,9 +202,9 @@ export default function ReportsPage() {
                 {/* Main Content Grid */}
                 <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 lg:gap-8">
                     {/* Reports Table */}
-                    <div className="xl:col-span-2 bg-zinc-900/60 rounded-2xl border border-white/[0.04] overflow-hidden">
+                    <div className={`xl:col-span-2 rounded-2xl border overflow-hidden ${isDark ? "bg-zinc-900/60 border-white/[0.04]" : "bg-white border-slate-200 shadow-sm"}`}>
                         {/* Table Tabs */}
-                        <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-white/[0.04]">
+                        <div className={`p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b ${isDark ? "border-white/[0.04]" : "border-slate-100"}`}>
                             <div className="flex gap-1">
                                 {tabs.map((tab) => (
                                     <button
@@ -181,15 +212,15 @@ export default function ReportsPage() {
                                         onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
                                         className={`text-xs sm:text-sm font-semibold pb-2 px-3 border-b-2 transition-colors ${
                                             activeTab === tab.id
-                                                ? "text-purple-400 border-purple-400"
-                                                : "text-zinc-500 border-transparent hover:text-white"
+                                                ? "text-purple-500 border-purple-500"
+                                                : isDark ? "text-zinc-500 border-transparent hover:text-white" : "text-slate-500 border-transparent hover:text-slate-900"
                                         }`}
                                     >
                                         {tab.label}
                                     </button>
                                 ))}
                             </div>
-                            <p className="text-[11px] text-zinc-500 font-medium">
+                            <p className={`text-[11px] font-medium ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                 {filtered.length} {activeTab === "active" ? "open" : activeTab} reports
                             </p>
                         </div>
@@ -198,7 +229,7 @@ export default function ReportsPage() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left min-w-[700px]">
                                 <thead>
-                                    <tr className="text-[10px] uppercase tracking-widest text-zinc-500 bg-zinc-900/80">
+                                    <tr className={`text-[10px] uppercase tracking-widest ${isDark ? "text-zinc-500 bg-zinc-900/80" : "text-slate-500 bg-slate-50"}`}>
                                         <th className="px-4 sm:px-6 py-4 font-bold">Report ID</th>
                                         <th className="px-4 sm:px-6 py-4 font-bold">Target</th>
                                         <th className="px-4 sm:px-6 py-4 font-bold">Reason</th>
@@ -207,7 +238,7 @@ export default function ReportsPage() {
                                         <th className="px-4 sm:px-6 py-4 font-bold text-right">Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/[0.04]">
+                                <tbody className={`divide-y ${isDark ? "divide-white/[0.04]" : "divide-slate-100"}`}>
                                     <AnimatePresence mode="popLayout">
                                         {paginated.length > 0 ? paginated.map((report) => {
                                             const rc = reasonColors[report.reason];
@@ -219,7 +250,7 @@ export default function ReportsPage() {
                                                     initial={{ opacity: 0, x: -10 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, x: 20 }}
-                                                    className="hover:bg-white/[0.02] transition-colors group"
+                                                    className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}
                                                 >
                                                     <td className="px-4 sm:px-6 py-4">
                                                         <span className="text-sm font-mono text-purple-400">#{report.id}</span>
@@ -229,13 +260,13 @@ export default function ReportsPage() {
                                                             {report.target.avatar ? (
                                                                 <img src={report.target.avatar} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-white/[0.06]" />
                                                             ) : (
-                                                                <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0">
-                                                                    <MessageCircle size={16} className="text-zinc-500" />
+                                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? "bg-zinc-800" : "bg-slate-100"}`}>
+                                                                    <MessageCircle size={16} className={isDark ? "text-zinc-500" : "text-slate-400"} />
                                                                 </div>
                                                             )}
                                                             <div className="min-w-0">
-                                                                <p className="text-sm font-semibold text-white truncate">{report.target.name}</p>
-                                                                <p className="text-[11px] text-zinc-500">{report.target.subLabel}</p>
+                                                                <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{report.target.name}</p>
+                                                                <p className={`text-[11px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.target.subLabel}</p>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -247,13 +278,13 @@ export default function ReportsPage() {
                                                     <td className="px-4 sm:px-6 py-4">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-2 h-2 rounded-full ${pc.dot}`} />
-                                                            <span className="text-xs font-bold text-white">{pc.label}</span>
+                                                            <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{pc.label}</span>
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 sm:px-6 py-4 text-xs text-zinc-500">{report.time}</td>
+                                                    <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.time}</td>
                                                     <td className="px-4 sm:px-6 py-4 text-right">
                                                         <div className="flex justify-end gap-1.5">
-                                                            <button onClick={() => setSelectedReport(report)} className="p-2 rounded-lg bg-zinc-800/80 hover:bg-purple-500/20 hover:text-purple-400 transition-all" title="View">
+                                                            <button onClick={() => setSelectedReport(report)} className={`p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-400 transition-all ${isDark ? "bg-zinc-800/80 text-zinc-400" : "bg-slate-100 text-slate-500"}`} title="View">
                                                                 <Eye size={15} />
                                                             </button>
                                                             <button onClick={() => resolveReport(report.id)} className="p-2 rounded-lg bg-purple-500 text-white hover:brightness-110 transition-all" title="Resolve">
@@ -265,7 +296,7 @@ export default function ReportsPage() {
                                             );
                                         }) : (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-16 text-center text-zinc-500 text-sm">
+                                                <td colSpan={6} className={`px-6 py-16 text-center text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                                     No reports in this category
                                                 </td>
                                             </tr>
@@ -276,16 +307,16 @@ export default function ReportsPage() {
                         </div>
 
                         {/* Pagination */}
-                        <div className="p-4 sm:p-6 border-t border-white/[0.04] flex flex-col sm:flex-row justify-between items-center gap-3">
-                            <p className="text-xs text-zinc-500">Showing {paginated.length} of {filtered.length}</p>
+                        <div className={`p-4 sm:p-6 border-t flex flex-col sm:flex-row justify-between items-center gap-3 ${isDark ? "border-white/[0.04]" : "border-slate-100"}`}>
+                            <p className={`text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Showing {paginated.length} of {filtered.length}</p>
                             <div className="flex gap-1.5">
-                                <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-9 h-9 rounded-lg bg-zinc-800/80 flex items-center justify-center text-white hover:bg-zinc-700 disabled:opacity-30 transition-all">
+                                <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className={`w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all ${isDark ? "bg-zinc-800/80 text-white hover:bg-zinc-700" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
                                     <ChevronLeft size={16} />
                                 </button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                    <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${p === currentPage ? "bg-purple-500 text-white" : "bg-zinc-800/80 text-white hover:bg-zinc-700"}`}>{p}</button>
+                                    <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${p === currentPage ? "bg-purple-500 text-white" : isDark ? "bg-zinc-800/80 text-white hover:bg-zinc-700" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{p}</button>
                                 ))}
-                                <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-9 h-9 rounded-lg bg-zinc-800/80 flex items-center justify-center text-white hover:bg-zinc-700 disabled:opacity-30 transition-all">
+                                <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className={`w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all ${isDark ? "bg-zinc-800/80 text-white hover:bg-zinc-700" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>
                                     <ChevronRight size={16} />
                                 </button>
                             </div>
@@ -293,30 +324,30 @@ export default function ReportsPage() {
                     </div>
 
                     {/* Inspector Panel */}
-                    <div className="bg-zinc-900/60 rounded-2xl border border-white/[0.04] p-5 sm:p-6 flex flex-col">
-                        <h4 className="text-lg font-bold text-white mb-5" style={{ fontFamily: "Manrope, sans-serif" }}>
+                    <div className={`rounded-2xl border p-5 sm:p-6 flex flex-col ${isDark ? "bg-zinc-900/60 border-white/[0.04]" : "bg-white border-slate-200 shadow-sm"}`}>
+                        <h4 className={`text-lg font-bold mb-5 ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                             {selectedReport ? `Inspect: ${selectedReport.id}` : "Moderation Tools"}
                         </h4>
 
                         {selectedReport ? (
                             <div className="space-y-5 flex-1">
                                 {/* Target Info */}
-                                <div className="flex items-center gap-3 bg-zinc-800/40 rounded-xl p-4 border border-white/[0.04]">
+                                <div className={`flex items-center gap-3 rounded-xl p-4 border ${isDark ? "bg-zinc-800/40 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
                                     {selectedReport.target.avatar ? (
                                         <img src={selectedReport.target.avatar} alt="" className="w-11 h-11 rounded-xl object-cover border border-white/[0.06]" />
                                     ) : (
                                         <div className="w-11 h-11 rounded-xl bg-zinc-700 flex items-center justify-center"><MessageCircle size={18} className="text-zinc-400" /></div>
                                     )}
                                     <div className="min-w-0">
-                                        <p className="text-sm font-bold text-white truncate">{selectedReport.target.name}</p>
-                                        <p className="text-[11px] text-zinc-500">{selectedReport.target.subLabel} • Reported by {selectedReport.reportedBy}</p>
+                                        <p className={`text-sm font-bold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{selectedReport.target.name}</p>
+                                        <p className={`text-[11px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{selectedReport.target.subLabel} • Reported by {selectedReport.reportedBy}</p>
                                     </div>
                                 </div>
 
                                 {selectedReport.description && (
-                                    <div className="bg-zinc-800/40 rounded-xl p-4 border border-white/[0.04]">
-                                        <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-1.5">Description</p>
-                                        <p className="text-sm text-zinc-300 leading-relaxed">{selectedReport.description}</p>
+                                    <div className={`rounded-xl p-4 border ${isDark ? "bg-zinc-800/40 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                                        <p className={`text-[10px] uppercase tracking-widest font-semibold mb-1.5 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Description</p>
+                                        <p className={`text-sm leading-relaxed ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{selectedReport.description}</p>
                                     </div>
                                 )}
 
@@ -364,14 +395,14 @@ export default function ReportsPage() {
                         )}
 
                         {/* Moderator Note */}
-                        <div className="mt-auto pt-5 border-t border-white/[0.04]">
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2">Moderator Note</p>
+                        <div className={`mt-auto pt-5 border-t ${isDark ? "border-white/[0.04]" : "border-slate-100"}`}>
+                            <p className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Moderator Note</p>
                             <textarea
                                 value={moderatorNote}
                                 onChange={(e) => setModeratorNote(e.target.value)}
                                 placeholder="Type resolution details..."
                                 rows={3}
-                                className="w-full bg-zinc-800/60 border border-white/[0.04] rounded-xl text-sm py-3 px-4 text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all mb-3"
+                                className={`w-full rounded-xl text-sm py-3 px-4 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all mb-3 border ${isDark ? "bg-zinc-800/60 border-white/[0.04] text-white placeholder:text-zinc-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
                             />
                             <button
                                 onClick={() => { if (selectedReport) { resolveReport(selectedReport.id); setModeratorNote(""); } }}
@@ -400,5 +431,13 @@ export default function ReportsPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function ReportsPage() {
+    return (
+        <AdminThemeProvider>
+            <ReportsContent />
+        </AdminThemeProvider>
     );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Star, ShoppingBag, Shield, AlertTriangle, ChevronRight } from "lucide-react";
 import { mockModerationReports, mockPointsActivity } from "./mockData";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 
 const severityConfig = {
     high: { bg: "bg-red-500/10", text: "text-red-400", label: "HIGH" },
@@ -20,17 +21,29 @@ const pointsIcons: Record<string, React.ReactNode> = {
 export default function ActivityPanel() {
     const [reports, setReports] = useState(mockModerationReports);
     const [expandedReport, setExpandedReport] = useState<string | null>(null);
+    const { isDark } = useAdminTheme();
 
     const dismissReport = (id: string) => {
         setReports((prev) => prev.filter((r) => r.id !== id));
     };
 
+    const cardBg = isDark ? "bg-zinc-900/60 border-white/[0.04] divide-white/[0.04]" : "bg-white border-slate-200 divide-slate-100";
+    const pointsBg = isDark ? "bg-black/40 border-white/[0.04]" : "bg-slate-50 border-slate-200";
+    const headingColor = isDark ? "text-white" : "text-slate-900";
+    const titleColor = isDark ? "text-white" : "text-slate-900";
+    const subColor = isDark ? "text-zinc-500" : "text-slate-500";
+    const emptyColor = isDark ? "text-zinc-500" : "text-slate-400";
+    const chevronColor = isDark ? "text-zinc-600 group-hover:text-zinc-400" : "text-slate-300 group-hover:text-slate-500";
+    const ledgerBtn = isDark
+        ? "bg-zinc-800/60 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+        : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900";
+
     return (
         <div className="space-y-8">
             {/* Moderation Reports */}
             <div className="space-y-3">
-                <h4 className="text-lg font-bold tracking-tight text-white">Recent Moderation</h4>
-                <div className="bg-zinc-900/60 rounded-xl p-4 border border-white/[0.04] divide-y divide-white/[0.04]">
+                <h4 className={`text-lg font-bold tracking-tight ${headingColor}`}>Recent Moderation</h4>
+                <div className={`rounded-xl p-4 border divide-y ${cardBg}`}>
                     <AnimatePresence mode="popLayout">
                         {reports.map((report) => {
                             const sev = severityConfig[report.severity];
@@ -48,13 +61,13 @@ export default function ActivityPanel() {
                                     <div className="flex justify-between items-start mb-1">
                                         <div className="flex items-center gap-2">
                                             <AlertTriangle size={13} className={sev.text} />
-                                            <p className="text-sm font-semibold text-white">{report.title}</p>
+                                            <p className={`text-sm font-semibold ${titleColor}`}>{report.title}</p>
                                         </div>
                                         <span className={`${sev.bg} ${sev.text} text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-widest`}>
                                             {sev.label}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-zinc-500 ml-5">{report.description}</p>
+                                    <p className={`text-xs ml-5 ${subColor}`}>{report.description}</p>
 
                                     <AnimatePresence>
                                         {isExpanded && (
@@ -78,15 +91,15 @@ export default function ActivityPanel() {
                         })}
                     </AnimatePresence>
                     {reports.length === 0 && (
-                        <p className="py-4 text-center text-zinc-500 text-sm">No pending reports ✓</p>
+                        <p className={`py-4 text-center text-sm ${emptyColor}`}>No pending reports ✓</p>
                     )}
                 </div>
             </div>
 
             {/* Points Activity */}
             <div className="space-y-3">
-                <h4 className="text-lg font-bold tracking-tight text-white">Points Activity</h4>
-                <div className="bg-black/40 rounded-xl p-5 border border-white/[0.04] space-y-5">
+                <h4 className={`text-lg font-bold tracking-tight ${headingColor}`}>Points Activity</h4>
+                <div className={`rounded-xl p-5 border space-y-5 ${pointsBg}`}>
                     {mockPointsActivity.map((activity) => {
                         const isPositive = activity.amount > 0;
                         return (
@@ -95,17 +108,17 @@ export default function ActivityPanel() {
                                     {pointsIcons[activity.icon] || <Star size={18} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-white">
+                                    <p className={`text-sm font-medium ${titleColor}`}>
                                         {isPositive ? "+" : ""}{activity.amount} Points {activity.type === "earned" ? "Earned" : activity.type === "spent" ? "Spent" : "Reward"}
                                     </p>
-                                    <p className="text-xs text-zinc-500 truncate">{activity.user} • {activity.reason}</p>
+                                    <p className={`text-xs truncate ${subColor}`}>{activity.user} • {activity.reason}</p>
                                 </div>
-                                <ChevronRight size={14} className="text-zinc-600 group-hover:text-zinc-400 transition-colors flex-shrink-0" />
+                                <ChevronRight size={14} className={`transition-colors flex-shrink-0 ${chevronColor}`} />
                             </div>
                         );
                     })}
 
-                    <button className="w-full py-3 bg-zinc-800/60 rounded-lg text-[11px] font-bold uppercase tracking-[0.15em] text-zinc-400 hover:bg-zinc-800 hover:text-white transition-all duration-300">
+                    <button className={`w-full py-3 rounded-lg text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 ${ledgerBtn}`}>
                         Manage Ledger
                     </button>
                 </div>

@@ -19,6 +19,7 @@ import {
     type ModerationListing,
     type ModerationStatus,
 } from "@/components/admin/mockData";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
 type FilterTab = "all" | ModerationStatus;
 
@@ -30,7 +31,8 @@ const filterTabs: { id: FilterTab; label: string }[] = [
     { id: "audit", label: "Audit" },
 ];
 
-export default function ListingsPage() {
+function ListingsContent() {
+    const { isDark } = useAdminTheme();
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<FilterTab>("all");
@@ -143,7 +145,7 @@ export default function ListingsPage() {
     const pendingCountForTab = listings.filter((l) => l.status === "pending").length;
 
     return (
-        <div className="bg-[#0e0e0e] text-white min-h-screen">
+        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
             <Sidebar activeId="listings" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Topbar
                 searchQuery={searchQuery}
@@ -155,24 +157,24 @@ export default function ListingsPage() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="ml-0 lg:ml-[280px] pt-24 lg:pt-32 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* ── Page Header ── */}
                 <section className="mb-8 lg:mb-12 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-6">
                     <div className="space-y-2">
                         <h2
-                            className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter text-white"
+                            className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter ${isDark ? "text-white" : "text-slate-900"}`}
                             style={{ fontFamily: "Manrope, sans-serif" }}
                         >
                             Listing Moderation
                         </h2>
-                        <p className="text-zinc-500 max-w-lg text-sm">
+                        <p className={`max-w-lg text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                             Review and manage property submissions. Ensure quality standards and host
                             verification across the PG Nexus network.
                         </p>
                     </div>
 
                     {/* Filter Tabs */}
-                    <div className="flex bg-zinc-900/60 p-1.5 rounded-xl border border-white/5 overflow-x-auto flex-shrink-0 gap-0.5">
+                    <div className={`flex p-1.5 rounded-xl border overflow-x-auto flex-shrink-0 gap-0.5 ${isDark ? "bg-zinc-900/60 border-white/5" : "bg-white border-slate-200 shadow-sm"}`}>
                         {filterTabs.map((tab) => (
                             <button
                                 key={tab.id}
@@ -180,10 +182,11 @@ export default function ListingsPage() {
                                     setActiveTab(tab.id);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${activeTab === tab.id
-                                        ? "bg-zinc-800 text-white shadow-xl"
-                                        : "text-zinc-500 hover:text-white"
-                                    }`}
+                                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${
+                                    activeTab === tab.id
+                                        ? isDark ? "bg-zinc-800 text-white shadow-xl" : "bg-slate-100 text-slate-900 shadow"
+                                        : isDark ? "text-zinc-500 hover:text-white" : "text-slate-500 hover:text-slate-900"
+                                }`}
                             >
                                 {tab.label}
                                 {tab.id === "pending" && pendingCountForTab > 0 && (
@@ -230,20 +233,20 @@ export default function ListingsPage() {
 
                 {/* ── Toolbar ── */}
                 <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-                    <p className="text-sm text-zinc-500">
+                    <p className={`text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                         Showing{" "}
-                        <span className="text-white font-bold">{paginatedListings.length}</span> of{" "}
-                        <span className="text-white font-bold">{filtered.length}</span> listings
+                        <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{paginatedListings.length}</span> of{" "}
+                        <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{filtered.length}</span> listings
                         {activeTab !== "all" && (
-                            <span className="text-zinc-600"> • filtered by {activeTab}</span>
+                            <span className={isDark ? "text-zinc-600" : "text-slate-400"}> • filtered by {activeTab}</span>
                         )}
                     </p>
                     <div className="flex gap-2">
-                        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800/60 rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-700/60 transition-colors border border-white/5 text-white">
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}>
                             <SlidersHorizontal size={14} />
                             <span className="hidden sm:inline">Advanced</span> Filters
                         </button>
-                        <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-zinc-800/60 rounded-xl text-xs sm:text-sm font-semibold hover:bg-zinc-700/60 transition-colors border border-white/5 text-white">
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}>
                             <Download size={14} />
                             <span className="hidden sm:inline">Export</span> CSV
                         </button>
@@ -276,10 +279,10 @@ export default function ListingsPage() {
                                 animate={{ opacity: 1 }}
                                 className="col-span-full flex flex-col items-center justify-center py-20 text-center"
                             >
-                                <div className="w-16 h-16 rounded-full bg-zinc-800/60 flex items-center justify-center mb-4">
-                                    <SlidersHorizontal size={24} className="text-zinc-600" />
+                                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isDark ? "bg-zinc-800/60" : "bg-slate-100"}`}>
+                                    <SlidersHorizontal size={24} className={isDark ? "text-zinc-600" : "text-slate-400"} />
                                 </div>
-                                <p className="text-zinc-500 text-sm">
+                                <p className={`text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
                                     {searchQuery
                                         ? `No listings matching "${searchQuery}"`
                                         : "No listings in this category"}
@@ -291,16 +294,16 @@ export default function ListingsPage() {
 
                 {/* ── Pagination ── */}
                 {filtered.length > ITEMS_PER_PAGE && (
-                    <footer className="mt-12 lg:mt-16 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-white/5 pt-8 lg:pt-10">
-                        <div className="text-sm text-zinc-500">
-                            Page <span className="text-white font-bold">{currentPage}</span> of{" "}
-                            <span className="text-white font-bold">{totalPages}</span>
+                    <footer className={`mt-12 lg:mt-16 flex flex-col sm:flex-row justify-between items-center gap-4 border-t pt-8 lg:pt-10 ${isDark ? "border-white/5" : "border-slate-200"}`}>
+                        <div className={`text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
+                            Page <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{currentPage}</span> of{" "}
+                            <span className={`font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{totalPages}</span>
                         </div>
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/60 border border-white/5 text-white hover:bg-purple-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${isDark ? "bg-zinc-900/60 border-white/5 text-white hover:bg-purple-500/20" : "bg-white border-slate-200 text-slate-700 hover:bg-purple-50 shadow-sm"}`}
                             >
                                 <ChevronLeft size={18} />
                             </button>
@@ -308,10 +311,11 @@ export default function ListingsPage() {
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${page === currentPage
+                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
+                                        page === currentPage
                                             ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
-                                            : "bg-zinc-900/60 border border-white/5 text-white hover:bg-white/10"
-                                        }`}
+                                            : isDark ? "bg-zinc-900/60 border border-white/5 text-white hover:bg-white/10" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                                    }`}
                                 >
                                     {page}
                                 </button>
@@ -319,7 +323,7 @@ export default function ListingsPage() {
                             <button
                                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                className="w-10 h-10 flex items-center justify-center rounded-xl bg-zinc-900/60 border border-white/5 text-white hover:bg-purple-500/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                className={`w-10 h-10 flex items-center justify-center rounded-xl border transition-all disabled:opacity-30 disabled:cursor-not-allowed ${isDark ? "bg-zinc-900/60 border-white/5 text-white hover:bg-purple-500/20" : "bg-white border-slate-200 text-slate-700 hover:bg-purple-50 shadow-sm"}`}
                             >
                                 <ChevronRight size={18} />
                             </button>
@@ -374,5 +378,13 @@ export default function ListingsPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function ListingsPage() {
+    return (
+        <AdminThemeProvider>
+            <ListingsContent />
+        </AdminThemeProvider>
     );
 }

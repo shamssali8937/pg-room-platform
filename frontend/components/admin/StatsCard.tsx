@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrendingUp } from "lucide-react";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 
 interface StatsCardProps {
     title: string;
@@ -22,6 +23,15 @@ const accentColors: Record<string, string> = {
 };
 
 const tagTextColors: Record<string, string> = {
+    trend: "text-blue-500",
+    info: "text-purple-500",
+    danger: "text-red-500",
+    secondary: "text-blue-500",
+    tertiary: "text-pink-500",
+    error: "text-red-500",
+};
+
+const tagTextColorsDark: Record<string, string> = {
     trend: "text-blue-400",
     info: "text-purple-400",
     danger: "text-red-400",
@@ -38,8 +48,17 @@ export default function StatsCard({
     accentColor,
     index = 0,
 }: StatsCardProps) {
+    const { isDark } = useAdminTheme();
     const borderClass = accentColor || accentColors[tagType] || "border-l-purple-400";
-    const tagColor = tagTextColors[tagType] || "text-purple-400";
+    const tagColor = isDark
+        ? tagTextColorsDark[tagType] || "text-purple-400"
+        : tagTextColors[tagType] || "text-purple-500";
+
+    const cardBg = isDark
+        ? "bg-zinc-900/60 hover:bg-zinc-900/80"
+        : "bg-white hover:bg-slate-50 shadow-sm shadow-slate-200/80";
+    const titleColor = isDark ? "text-zinc-500" : "text-slate-500";
+    const valueColor = isDark ? "text-white" : "text-slate-900";
 
     return (
         <motion.div
@@ -47,13 +66,13 @@ export default function StatsCard({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: index * 0.08 }}
             whileHover={{ y: -2 }}
-            className={`bg-zinc-900/60 p-4 sm:p-6 rounded-2xl border-l-4 ${borderClass} hover:bg-zinc-900/80 transition-colors duration-300`}
+            className={`p-4 sm:p-6 rounded-2xl border-l-4 ${borderClass} ${cardBg} transition-colors duration-300`}
         >
-            <p className="text-zinc-500 text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] mb-1">
+            <p className={`${titleColor} text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] mb-1`}>
                 {title}
             </p>
             <h3
-                className="text-2xl sm:text-3xl font-black tracking-tight text-white"
+                className={`text-2xl sm:text-3xl font-black tracking-tight ${valueColor}`}
                 style={{ fontFamily: "Manrope, sans-serif" }}
             >
                 {value}

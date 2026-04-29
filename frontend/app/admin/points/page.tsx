@@ -7,6 +7,7 @@ import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import { mockPointTransactions, mockPointsStats, type PointTransaction, type PointAction } from "@/components/admin/mockData";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
 const typeColors: Record<PointAction, { dot: string; delta: string }> = {
     earned: { dot: "bg-purple-400", delta: "text-purple-400" },
@@ -16,15 +17,39 @@ const typeColors: Record<PointAction, { dot: string; delta: string }> = {
     penalty: { dot: "bg-red-400", delta: "text-red-400" },
 };
 
-const statusBadge: Record<string, { bg: string; text: string }> = {
-    verified: { bg: "bg-white/5", text: "text-white" },
-    "auto-debit": { bg: "bg-white/5", text: "text-white" },
-    manual: { bg: "bg-pink-500/20", text: "text-pink-400" },
-    pending: { bg: "bg-amber-500/20", text: "text-amber-400" },
-    reversed: { bg: "bg-red-500/20", text: "text-red-400" },
-};
+// const statusBadge: Record<string, { bg: string; text: string }> = {
+//     verified: { bg: "bg-white/5", text: "text-white" },
+//     "auto-debit": { bg: "bg-white/5", text: "text-white" },
+//     manual: { bg: "bg-pink-500/20", text: "text-pink-400" },
+//     pending: { bg: "bg-amber-500/20", text: "text-amber-400" },
+//     reversed: { bg: "bg-red-500/20", text: "text-red-400" },
+// };
 
-export default function PointsPage() {
+const statusBadge = (isDark: boolean): Record<string, { bg: string; text: string }> => ({
+    verified: {
+        bg: isDark ? "bg-white/5" : "bg-slate-100",
+        text: isDark ? "text-white" : "text-slate-700",
+    },
+    "auto-debit": {
+        bg: isDark ? "bg-white/5" : "bg-slate-100",
+        text: isDark ? "text-white" : "text-slate-700",
+    },
+    manual: {
+        bg: isDark ? "bg-pink-500/20" : "bg-pink-100",
+        text: isDark ? "text-pink-400" : "text-pink-600",
+    },
+    pending: {
+        bg: isDark ? "bg-amber-500/20" : "bg-amber-100",
+        text: isDark ? "text-amber-400" : "text-amber-600",
+    },
+    reversed: {
+        bg: isDark ? "bg-red-500/20" : "bg-red-100",
+        text: isDark ? "text-red-400" : "text-red-600",
+    },
+});
+
+function PointsContent() {
+    const { isDark } = useAdminTheme();
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [transactions, setTransactions] = useState<PointTransaction[]>(mockPointTransactions);
@@ -75,26 +100,42 @@ export default function PointsPage() {
     const s = mockPointsStats;
 
     return (
-        <div className="bg-[#0e0e0e] text-white min-h-screen">
+        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
             <Sidebar activeId="points" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Topbar searchQuery={searchQuery} onSearchChange={(q) => { setSearchQuery(q); setCurrentPage(1); }} searchPlaceholder="Search transactions, users or IDs..." onMenuToggle={() => setSidebarOpen(true)} />
 
-            <main className="ml-0 lg:ml-[280px] pt-24 lg:pt-32 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
-                        <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter text-white mb-2" style={{ fontFamily: "Manrope, sans-serif" }}>Points Ledger</h2>
-                        <p className="text-zinc-500 max-w-xl text-sm">Comprehensive audit trail of all virtual currency movements across the PG Nexus ecosystem.</p>
+                        <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>Points Ledger</h2>
+                        <p className={`max-w-xl text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Comprehensive audit trail of all virtual currency movements across the PG Nexus ecosystem.</p>
                     </div>
                     <div className="flex gap-2 flex-shrink-0">
                         <div className="relative">
-                            <button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${filterType !== "all" ? "bg-purple-500/20 border-purple-500/30 text-purple-400" : "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"}`}>
+                            <button
+                                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${filterType !== "all"
+                                    ? "bg-purple-500/20 border-purple-500/30 text-purple-500"
+                                    : isDark
+                                        ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"
+                                        : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                                    }`}
+                            >
                                 <SlidersHorizontal size={14} /> {filterType === "all" ? "Filter" : filterType.charAt(0).toUpperCase() + filterType.slice(1)}
                             </button>
                             {showFilterMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-44 bg-zinc-900/98 backdrop-blur-xl border border-white/10 rounded-xl p-1.5 z-50 shadow-2xl">
+                                <div className={`absolute right-0 top-full mt-2 w-44 backdrop-blur-xl border rounded-xl p-1.5 z-50 shadow-2xl ${isDark ? "bg-zinc-900/98 border-white/10" : "bg-white border-slate-200"
+                                    }`}>
                                     {(["all", "earned", "spent", "manual", "reward", "penalty"] as const).map((t) => (
-                                        <button key={t} onClick={() => { setFilterType(t); setShowFilterMenu(false); setCurrentPage(1); }} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${filterType === t ? "bg-purple-500/20 text-purple-400" : "text-zinc-400 hover:text-white hover:bg-white/5"}`}>
+                                        <button
+                                            key={t}
+                                            onClick={() => { setFilterType(t); setShowFilterMenu(false); setCurrentPage(1); }}
+                                            className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${filterType === t
+                                                ? "bg-purple-500/20 text-purple-500"
+                                                : isDark ? "text-zinc-400 hover:text-white hover:bg-white/5" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                                                }`}
+                                        >
                                             {t === "all" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}
                                         </button>
                                     ))}
@@ -110,44 +151,44 @@ export default function PointsPage() {
                 {/* Bento Stats */}
                 <section className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 mb-8 lg:mb-12">
                     {/* Velocity Card */}
-                    <div className="lg:col-span-8 bg-zinc-900/60 rounded-2xl p-5 sm:p-8 border border-white/[0.04]">
+                    <div className={`lg:col-span-8 rounded-2xl p-5 sm:p-8 border ${isDark ? "bg-zinc-900/60 border-white/[0.04]" : "bg-white border-slate-200 shadow-sm"}`}>
                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-6 sm:mb-8">
                             <div>
-                                <h3 className="text-base sm:text-lg font-bold text-white" style={{ fontFamily: "Manrope, sans-serif" }}>Ecosystem Velocity</h3>
-                                <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest mt-0.5">Last 24 Hours Overview</p>
+                                <h3 className={`text-base sm:text-lg font-bold ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>Ecosystem Velocity</h3>
+                                <p className={`text-[10px] font-medium uppercase tracking-widest mt-0.5 ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Last 24 Hours Overview</p>
                             </div>
                             <span className="px-3 py-1 bg-purple-500/10 text-purple-400 text-[10px] font-bold rounded-full uppercase tracking-tight self-start">Live Audit</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
                             <div className="space-y-2">
-                                <p className="text-xs sm:text-sm text-zinc-500">Total Earned</p>
+                                <p className={`text-xs sm:text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Total Earned</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-white" style={{ fontFamily: "Manrope, sans-serif" }}>{s.totalEarned.value.toLocaleString()} <span className="text-purple-400 text-sm">{s.totalEarned.label}</span></p>
                                 <div className="h-1.5 bg-zinc-800 rounded-full"><div className="h-full bg-purple-500 rounded-full" style={{ width: "65%" }} /></div>
                             </div>
                             <div className="space-y-2">
-                                <p className="text-xs sm:text-sm text-zinc-500">Total Spent</p>
+                                <p className={`text-xs sm:text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Total Spent</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-white" style={{ fontFamily: "Manrope, sans-serif" }}>{s.totalSpent.value.toLocaleString()} <span className="text-blue-400 text-sm">{s.totalSpent.label}</span></p>
                                 <div className="h-1.5 bg-zinc-800 rounded-full"><div className="h-full bg-blue-500 rounded-full" style={{ width: "40%" }} /></div>
                             </div>
                             <div className="space-y-2">
-                                <p className="text-xs sm:text-sm text-zinc-500">Net Delta</p>
+                                <p className={`text-xs sm:text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Net Delta</p>
                                 <p className="text-2xl sm:text-3xl font-bold text-pink-400" style={{ fontFamily: "Manrope, sans-serif" }}>+{s.netDelta.value.toLocaleString()}</p>
                                 <div className="h-1.5 bg-zinc-800 rounded-full"><div className="h-full bg-pink-500 rounded-full" style={{ width: "55%" }} /></div>
                             </div>
                         </div>
                     </div>
                     {/* System Health */}
-                    <div className="lg:col-span-4 bg-zinc-900/60 rounded-2xl p-5 sm:p-8 border border-white/[0.04] relative overflow-hidden">
+                    <div className={`lg:col-span-4 rounded-2xl p-5 sm:p-8 border relative overflow-hidden ${isDark ? "bg-zinc-900/60 border-white/[0.04]" : "bg-white border-slate-200 shadow-sm"}`}>
                         <div className="absolute -right-10 -top-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
-                        <h3 className="text-base sm:text-lg font-bold text-white mb-5 relative z-10" style={{ fontFamily: "Manrope, sans-serif" }}>System Health</h3>
+                        <h3 className={`text-base sm:text-lg font-bold mb-5 relative z-10 ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>System Health</h3>
                         <div className="space-y-5 relative z-10">
                             {[{ icon: ShieldCheck, label: "Auto-Approvals", val: s.systemHealth.autoApprovals }, { icon: Zap, label: "Admin Manual", val: s.systemHealth.adminManual }, { icon: TrendingUp, label: "Boost Utilization", val: s.systemHealth.boostUtilization }].map((item) => (
                                 <div key={item.label} className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center"><item.icon size={14} className="text-zinc-400" /></div>
-                                        <span className="text-sm text-zinc-300">{item.label}</span>
+                                        <span className={`text-sm ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{item.label}</span>
                                     </div>
-                                    <span className="text-sm font-bold text-white">{item.val}%</span>
+                                    <span className={`text-sm font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{item.val}%</span>
                                 </div>
                             ))}
                         </div>
@@ -155,19 +196,19 @@ export default function PointsPage() {
                 </section>
 
                 {/* Transaction Table */}
-                <div className="bg-zinc-900/60 rounded-2xl border border-white/[0.04] overflow-hidden mb-8 lg:mb-12">
-                    <div className="px-4 sm:px-6 py-4 border-b border-white/[0.04] flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 bg-zinc-900/80">
-                        <h3 className="text-sm sm:text-base font-bold text-white" style={{ fontFamily: "Manrope, sans-serif" }}>Audit Transaction Log</h3>
+                <div className={`rounded-2xl border overflow-hidden mb-8 lg:mb-12 ${isDark ? "bg-zinc-900/60 border-white/[0.04]" : "bg-white border-slate-200 shadow-sm"}`}>
+                    <div className={`px-4 sm:px-6 py-4 border-b flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 ${isDark ? "bg-zinc-900/80 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                        <h3 className={`text-sm sm:text-base font-bold ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>Audit Transaction Log</h3>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] text-zinc-500 font-medium">Export:</span>
-                            <button className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors border border-white/[0.04]">CSV</button>
-                            <button className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors border border-white/[0.04]">PDF</button>
+                            <span className={`text-[10px] font-medium ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Export:</span>
+                            <button className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border ${isDark ? "bg-zinc-800 border-white/[0.04] text-zinc-400 hover:text-white" : "bg-white border-slate-200 text-slate-500 hover:text-slate-900"}`}>CSV</button>
+                            <button className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-colors border ${isDark ? "bg-zinc-800 border-white/[0.04] text-zinc-400 hover:text-white" : "bg-white border-slate-200 text-slate-500 hover:text-slate-900"}`}>PDF</button>
                         </div>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left min-w-[800px]">
                             <thead>
-                                <tr className="text-[10px] uppercase tracking-widest text-zinc-500 border-b border-white/[0.04]">
+                                <tr className={`text-[10px] uppercase tracking-widest border-b ${isDark ? "text-zinc-500 border-white/[0.04]" : "text-slate-500 border-slate-200"}`}>
                                     <th className="px-4 sm:px-6 py-4 font-bold">Owner / User ID</th>
                                     <th className="px-4 sm:px-6 py-4 font-bold">Action Performed</th>
                                     <th className="px-4 sm:px-6 py-4 font-bold text-right">Point Delta</th>
@@ -176,35 +217,37 @@ export default function PointsPage() {
                                     <th className="px-4 sm:px-6 py-4 font-bold text-center">Status</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-white/[0.04]">
+                            <tbody className={`divide-y ${isDark ? "divide-white/[0.04]" : "divide-slate-100"}`}>
                                 <AnimatePresence mode="popLayout">
                                     {paginated.map((txn) => {
                                         const tc = typeColors[txn.type];
-                                        const sb = statusBadge[txn.status] || statusBadge.verified;
+                                        // const sb = statusBadge[txn.status] || statusBadge.verified;
+                                        const sbMap = statusBadge(isDark);
+                                        const sb = sbMap[txn.status] || sbMap.verified;
                                         return (
-                                            <motion.tr key={txn.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="hover:bg-white/[0.02] transition-colors group">
+                                            <motion.tr key={txn.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}>
                                                 <td className="px-4 sm:px-6 py-4">
                                                     <div className="flex items-center gap-3">
                                                         <img src={txn.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/[0.06] flex-shrink-0" />
                                                         <div className="min-w-0">
-                                                            <p className="text-sm font-semibold text-white truncate">{txn.user.name}</p>
-                                                            <p className="text-[10px] text-zinc-500">ID: {txn.user.uid}</p>
+                                                            <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{txn.user.name}</p>
+                                                            <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>ID: {txn.user.uid}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-4 sm:px-6 py-4">
                                                     <div className="flex items-center gap-2">
                                                         <div className={`w-2 h-2 rounded-full ${tc.dot}`} />
-                                                        <span className="text-sm text-zinc-300">{txn.action}</span>
+                                                        <span className={`text-sm ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{txn.action}</span>
                                                     </div>
                                                 </td>
                                                 <td className={`px-4 sm:px-6 py-4 text-right font-bold ${tc.delta}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                                                     {txn.delta > 0 ? "+" : ""}{txn.delta.toLocaleString()}
                                                 </td>
-                                                <td className="px-4 sm:px-6 py-4 text-right font-semibold text-white" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                                <td className={`px-4 sm:px-6 py-4 text-right font-semibold ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                                                     {txn.balance.toLocaleString()}
                                                 </td>
-                                                <td className="px-4 sm:px-6 py-4 text-xs text-zinc-500">{txn.timestamp}</td>
+                                                <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{txn.timestamp}</td>
                                                 <td className="px-4 sm:px-6 py-4 text-center">
                                                     <span className={`px-2.5 py-1 rounded-full ${sb.bg} ${sb.text} text-[10px] font-bold uppercase tracking-tight`}>
                                                         {txn.status.replace("-", " ")}
@@ -217,14 +260,14 @@ export default function PointsPage() {
                             </tbody>
                         </table>
                     </div>
-                    <div className="px-4 sm:px-6 py-4 border-t border-white/[0.04] flex flex-col sm:flex-row justify-between items-center gap-3 bg-zinc-900/80">
-                        <p className="text-xs text-zinc-500">Showing {paginated.length} of {filtered.length} transactions</p>
+                    <div className={`px-4 sm:px-6 py-4 border-t flex flex-col sm:flex-row justify-between items-center gap-3 ${isDark ? "bg-zinc-900/80 border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                        <p className={`text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Showing {paginated.length} of {filtered.length} transactions</p>
                         <div className="flex gap-1.5">
-                            <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-9 h-9 rounded-lg bg-zinc-800/80 flex items-center justify-center text-white disabled:opacity-30 transition-all"><ChevronLeft size={16} /></button>
+                            <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className={`w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all ${isDark ? "bg-zinc-800/80 text-white" : "bg-white border border-slate-200 text-slate-700"}`}><ChevronLeft size={16} /></button>
                             {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                                <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${p === currentPage ? "bg-purple-500 text-white" : "bg-zinc-800/80 text-white hover:bg-zinc-700"}`}>{p}</button>
+                                <button key={p} onClick={() => setCurrentPage(p)} className={`w-9 h-9 rounded-lg text-xs font-bold transition-all ${p === currentPage ? "bg-purple-500 text-white" : isDark ? "bg-zinc-800/80 text-white hover:bg-zinc-700" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50"}`}>{p}</button>
                             ))}
-                            <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-9 h-9 rounded-lg bg-zinc-800/80 flex items-center justify-center text-white disabled:opacity-30 transition-all"><ChevronRight size={16} /></button>
+                            <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className={`w-9 h-9 rounded-lg flex items-center justify-center disabled:opacity-30 transition-all ${isDark ? "bg-zinc-800/80 text-white" : "bg-white border border-slate-200 text-slate-700"}`}><ChevronRight size={16} /></button>
                         </div>
                     </div>
                 </div>
@@ -276,5 +319,13 @@ export default function PointsPage() {
                 )}
             </AnimatePresence>
         </div>
+    );
+}
+
+export default function PointsPage() {
+    return (
+        <AdminThemeProvider>
+            <PointsContent />
+        </AdminThemeProvider>
     );
 }

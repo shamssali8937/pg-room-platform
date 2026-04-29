@@ -7,13 +7,16 @@ import StatsCard from "@/components/admin/StatsCard";
 import ListingsTable from "@/components/admin/ListingsTable";
 import ActivityPanel from "@/components/admin/ActivityPanel";
 import FloatingAction from "@/components/admin/FloatingAction";
+import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 
-export default function DashboardPage() {
+function DashboardContent() {
+    const { isDark } = useAdminTheme();
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="bg-[#0e0e0e] text-white min-h-screen">
+        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
             <Sidebar activeId="dashboard" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Topbar
                 searchQuery={searchQuery}
@@ -22,13 +25,13 @@ export default function DashboardPage() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="ml-0 lg:ml-[280px] pt-24 lg:pt-32 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12">
-                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter text-white mb-2" style={{ fontFamily: "Manrope, sans-serif" }}>
+                    <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
                         Curator Dashboard
                     </h2>
-                    <p className="text-zinc-500 text-sm">Welcome back, Elite Administrator.</p>
+                    <p className={`text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Welcome back, Elite Administrator.</p>
                 </section>
 
                 {/* Stats Grid */}
@@ -48,5 +51,13 @@ export default function DashboardPage() {
 
             <FloatingAction />
         </div>
+    );
+}
+
+export default function DashboardPage() {
+    return (
+        <AdminThemeProvider>
+            <DashboardContent />
+        </AdminThemeProvider>
     );
 }
