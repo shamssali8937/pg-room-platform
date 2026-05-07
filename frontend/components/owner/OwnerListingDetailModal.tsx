@@ -31,9 +31,11 @@ const docStatusConfig = {
 interface OwnerListingDetailModalProps {
     listing: OwnerListing | null;
     onClose: () => void;
+    onEdit?: (listing: OwnerListing) => void;
+    onDelete?: (listing: OwnerListing) => void;
 }
 
-export default function OwnerListingDetailModal({ listing, onClose }: OwnerListingDetailModalProps) {
+export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDelete }: OwnerListingDetailModalProps) {
     const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
     const { isDark } = useOwnerTheme();
 
@@ -179,10 +181,16 @@ export default function OwnerListingDetailModal({ listing, onClose }: OwnerListi
 
                         {/* Actions */}
                         <div className={`flex flex-col sm:flex-row gap-2 pt-2 border-t ${actionsBorder}`}>
-                            <button className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2">
+                            <button
+                                onClick={() => { onEdit?.(listing); onClose(); }}
+                                className="flex-1 py-3 bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                            >
                                 <Edit size={15} /> Edit Listing
                             </button>
-                            <button className={`flex-1 py-3 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${secActionBg}`}>
+                            <button
+                                onClick={() => { onDelete?.(listing); onClose(); }}
+                                className={`flex-1 py-3 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${secActionBg}`}
+                            >
                                 <Trash2 size={15} /> Delete Listing
                             </button>
                             <button onClick={onClose} className={`py-3 px-6 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${closeActionBg}`}>

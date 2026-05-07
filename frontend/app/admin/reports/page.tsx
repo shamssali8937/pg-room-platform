@@ -145,13 +145,12 @@ function ReportsContent() {
                         <div className="relative">
                             <button
                                 onClick={() => setShowFilterMenu(!showFilterMenu)}
-                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${
-                                    filterPriority !== "all"
+                                className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${filterPriority !== "all"
                                         ? "bg-purple-500/20 border-purple-500/30 text-purple-500"
                                         : isDark
                                             ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"
                                             : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
-                                }`}
+                                    }`}
                             >
                                 <SlidersHorizontal size={14} /> {filterPriority === "all" ? "Filter" : filterPriority.charAt(0).toUpperCase() + filterPriority.slice(1)}
                             </button>
@@ -162,19 +161,17 @@ function ReportsContent() {
                                         animate={{ opacity: 1, y: 0, scale: 1 }}
                                         exit={{ opacity: 0, y: -6, scale: 0.96 }}
                                         transition={{ duration: 0.15 }}
-                                        className={`absolute right-0 top-full mt-2 w-44 backdrop-blur-xl border rounded-xl p-1.5 z-50 shadow-2xl ${
-                                            isDark ? "bg-zinc-900/98 border-white/10" : "bg-white border-slate-200"
-                                        }`}
+                                        className={`absolute right-0 top-full mt-2 w-44 backdrop-blur-xl border rounded-xl p-1.5 z-50 shadow-2xl ${isDark ? "bg-zinc-900/98 border-white/10" : "bg-white border-slate-200"
+                                            }`}
                                     >
                                         {(["all", "high", "medium", "low"] as const).map((p) => (
                                             <button
                                                 key={p}
                                                 onClick={() => { setFilterPriority(p); setShowFilterMenu(false); setCurrentPage(1); }}
-                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${
-                                                    filterPriority === p
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-colors ${filterPriority === p
                                                         ? "bg-purple-500/20 text-purple-500"
                                                         : isDark ? "text-zinc-400 hover:text-white hover:bg-white/5" : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-                                                }`}
+                                                    }`}
                                             >
                                                 {p === "all" ? "All Priorities" : p.charAt(0).toUpperCase() + p.slice(1) + " Priority"}
                                             </button>
@@ -183,9 +180,8 @@ function ReportsContent() {
                                 )}
                             </AnimatePresence>
                         </div>
-                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${
-                            isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
-                        }`}>
+                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                            }`}>
                             <Download size={14} /> <span className="hidden sm:inline">Export</span> Logs
                         </button>
                     </div>
@@ -210,11 +206,10 @@ function ReportsContent() {
                                     <button
                                         key={tab.id}
                                         onClick={() => { setActiveTab(tab.id); setCurrentPage(1); }}
-                                        className={`text-xs sm:text-sm font-semibold pb-2 px-3 border-b-2 transition-colors ${
-                                            activeTab === tab.id
+                                        className={`text-xs sm:text-sm font-semibold pb-2 px-3 border-b-2 transition-colors ${activeTab === tab.id
                                                 ? "text-purple-500 border-purple-500"
                                                 : isDark ? "text-zinc-500 border-transparent hover:text-white" : "text-slate-500 border-transparent hover:text-slate-900"
-                                        }`}
+                                            }`}
                                     >
                                         {tab.label}
                                     </button>
@@ -422,9 +417,8 @@ function ReportsContent() {
                         initial={{ opacity: 0, y: 40, x: "-50%" }}
                         animate={{ opacity: 1, y: 0, x: "-50%" }}
                         exit={{ opacity: 0, y: 40, x: "-50%" }}
-                        className={`fixed bottom-8 left-1/2 z-[200] px-6 py-3 rounded-xl text-sm font-semibold shadow-2xl backdrop-blur-xl border border-white/10 whitespace-nowrap ${
-                            toast.type === "success" ? "bg-green-500/20 text-green-400" : toast.type === "error" ? "bg-red-500/20 text-red-400" : "bg-blue-500/20 text-blue-400"
-                        }`}
+                        className={`fixed bottom-8 left-1/2 z-[200] px-6 py-3 rounded-xl text-sm font-semibold shadow-2xl backdrop-blur-xl border border-white/10 whitespace-nowrap ${toast.type === "success" ? "bg-green-500/20 text-green-400" : toast.type === "error" ? "bg-red-500/20 text-red-400" : "bg-blue-500/20 text-blue-400"
+                            }`}
                     >
                         {toast.message}
                     </motion.div>

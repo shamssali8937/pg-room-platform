@@ -182,11 +182,10 @@ function ListingsContent() {
                                     setActiveTab(tab.id);
                                     setCurrentPage(1);
                                 }}
-                                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${
-                                    activeTab === tab.id
+                                className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${activeTab === tab.id
                                         ? isDark ? "bg-zinc-800 text-white shadow-xl" : "bg-slate-100 text-slate-900 shadow"
                                         : isDark ? "text-zinc-500 hover:text-white" : "text-slate-500 hover:text-slate-900"
-                                }`}
+                                    }`}
                             >
                                 {tab.label}
                                 {tab.id === "pending" && pendingCountForTab > 0 && (
@@ -311,11 +310,10 @@ function ListingsContent() {
                                 <button
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
-                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${
-                                        page === currentPage
+                                    className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${page === currentPage
                                             ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
                                             : isDark ? "bg-zinc-900/60 border border-white/5 text-white hover:bg-white/10" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
-                                    }`}
+                                        }`}
                                 >
                                     {page}
                                 </button>
@@ -367,10 +365,10 @@ function ListingsContent() {
                         animate={{ opacity: 1, y: 0, x: "-50%" }}
                         exit={{ opacity: 0, y: 40, x: "-50%" }}
                         className={`fixed bottom-8 left-1/2 z-[200] px-6 py-3 rounded-xl text-sm font-semibold shadow-2xl shadow-black/40 backdrop-blur-xl border border-white/10 whitespace-nowrap ${toast.type === "success"
-                                ? "bg-green-500/20 text-green-400"
-                                : toast.type === "error"
-                                    ? "bg-red-500/20 text-red-400"
-                                    : "bg-blue-500/20 text-blue-400"
+                            ? "bg-green-500/20 text-green-400"
+                            : toast.type === "error"
+                                ? "bg-red-500/20 text-red-400"
+                                : "bg-blue-500/20 text-blue-400"
                             }`}
                     >
                         {toast.message}

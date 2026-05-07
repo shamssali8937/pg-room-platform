@@ -22,8 +22,8 @@ import { useOwnerTheme } from "@/context/OwnerThemeContext";
 const navItems = [
     { icon: Home, label: "Dashboard", id: "dashboard", href: "/owner/dashboard" },
     { icon: Building2, label: "My Listings", id: "listings", href: "/owner/listings" },
-    { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "#" },
-    { icon: Wallet, label: "Points Wallet", id: "wallet", href: "#" },
+    { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "/owner/inquiries" },
+    { icon: Wallet, label: "Points Wallet", id: "wallet", href: "/owner/wallet" },
     { icon: Settings, label: "Settings", id: "settings", href: "/owner/settings" },
 ];
 
