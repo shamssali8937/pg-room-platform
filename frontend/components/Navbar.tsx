@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Menu, X } from "lucide-react"; // Install lucide-react or use SVG
+import Link from "next/link";
 
 export default function Navbar() {
     const [isOpen, setIsOpen] = useState(false);
@@ -18,8 +19,8 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
                 {/* LOGO */}
-                <div className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 text-transparent bg-clip-text">
-                    PG Nexus
+                <div className="text-2xl cursor-pointer font-bold bg-gradient-to-r from-purple-400 to-blue-400 text-transparent bg-clip-text">
+                    <Link href="/">PG Nexus</Link>
                 </div>
 
                 {/* DESKTOP NAV */}

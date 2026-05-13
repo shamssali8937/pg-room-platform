@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Loader2, Phone } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ParticleBg from "@/components/ParticleBg";
 import PasswordChecklist from "@/components/PasswordChecklist";
@@ -14,8 +14,10 @@ export default function SignupPage() {
     const [form, setForm] = useState({
         name: "",
         email: "",
+        phone: "",
         password: "",
         confirmPassword: "",
+        role: "tenant",
     });
 
     const [loading, setLoading] = useState(false);
@@ -35,7 +37,7 @@ export default function SignupPage() {
         setError("");
 
         // 1. Check for empty fields
-        if (!form.name || !form.email || !form.password) {
+        if (!form.name || !form.email || !form.phone || !form.password) {
             setError("All fields are required");
             return;
         }
@@ -57,7 +59,13 @@ export default function SignupPage() {
         try {
             // Replace with your actual API call
             console.log("Signing up with:", form);
-            // const res = await axios.post("/api/auth/signup", form);
+            // const res = await axios.post("/api/auth/signup", {
+            //     full_name: form.name,
+            //     email: form.email,
+            //     mobile_number: form.phone,
+            //     password: form.password,
+            //     role: form.role
+            // });
 
             // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -103,6 +111,18 @@ export default function SignupPage() {
                     </AnimatePresence>
 
                     <form onSubmit={handleSignup} className="space-y-5">
+                        {/* Role Selection */}
+                        <div className="flex gap-4">
+                            <label className={`flex-1 flex items-center justify-center p-3 rounded-xl border cursor-pointer transition-all ${form.role === 'tenant' ? 'bg-blue-600/20 border-blue-500 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-200'}`}>
+                                <input type="radio" name="role" value="tenant" checked={form.role === 'tenant'} onChange={(e) => setForm({ ...form, role: e.target.value })} className="hidden" />
+                                <span className="font-medium">Tenant</span>
+                            </label>
+                            <label className={`flex-1 flex items-center justify-center p-3 rounded-xl border cursor-pointer transition-all ${form.role === 'owner' ? 'bg-purple-600/20 border-purple-500 text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)]' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10 hover:text-gray-200'}`}>
+                                <input type="radio" name="role" value="owner" checked={form.role === 'owner'} onChange={(e) => setForm({ ...form, role: e.target.value })} className="hidden" />
+                                <span className="font-medium">Property Owner</span>
+                            </label>
+                        </div>
+
                         <FloatingInput
                             icon={User}
                             type="text"
@@ -117,6 +137,14 @@ export default function SignupPage() {
                             value={form.email}
                             onChange={(e: any) => setForm({ ...form, email: e.target.value })}
                             label="Email"
+                        />
+
+                        <FloatingInput
+                            icon={Phone}
+                            type="tel"
+                            value={form.phone}
+                            onChange={(e: any) => setForm({ ...form, phone: e.target.value })}
+                            label="Mobile Number"
                         />
 
                         <div className="relative">
