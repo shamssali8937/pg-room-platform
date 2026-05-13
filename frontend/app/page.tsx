@@ -1,8 +1,10 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import LandpageFooter from "@/components/LandpageFooter";
 import ParticleBg from "@/components/ParticleBg";
+import Link from "next/link";
 
 // React Icons
 import { HiOutlineLocationMarker, HiOutlineSearch } from "react-icons/hi";
@@ -56,11 +58,31 @@ const defaultListings = [
 ];
 
 export default function Home() {
-  const [listings] = useState(defaultListings);
+  const [listings, setListings] = useState(defaultListings);
+  const router = useRouter();
+  const [searchQuery, setSearchQuery] = useState({ city: "", budget: "", type: "" });
 
-  const featuredListing = listings.find((l) => l.type === "featured");
-  const verticalListing = listings.find((l) => l.type === "vertical");
-  const gridListings = listings.filter((l) => l.type === "grid");
+  const handleSearch = () => {
+    let filtered = defaultListings;
+
+    if (searchQuery.city) {
+      filtered = filtered.filter(l => l.location.toLowerCase().includes(searchQuery.city.toLowerCase()));
+    }
+
+    if (searchQuery.budget) {
+      filtered = filtered.filter(l => l.price <= Number(searchQuery.budget));
+    }
+
+    if (searchQuery.type && searchQuery.type !== "Room Type") {
+      filtered = filtered.filter(l => l.title.toLowerCase().includes(searchQuery.type.toLowerCase()));
+    }
+
+    setListings(filtered);
+  };
+
+  const featuredListing = listings.find((l) => l.type === "featured") || (listings.length > 0 ? listings[0] : null);
+  const verticalListing = listings.find((l) => l.type === "vertical") || (listings.length > 1 && listings[1] !== featuredListing ? listings[1] : null);
+  const gridListings = listings.filter((l) => l !== featuredListing && l !== verticalListing);
 
   return (
     <main className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
@@ -92,26 +114,45 @@ export default function Home() {
             <div className="mt-10 backdrop-blur-2xl bg-white/[0.03] p-2 rounded-3xl md:rounded-full border border-white/10 shadow-2xl max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-1">
               <div className="w-full md:w-1/3 flex items-center px-5 py-3 gap-3">
                 <HiOutlineLocationMarker className="text-[#ba9eff] text-xl shrink-0" />
-                <input className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium" placeholder="City" type="text" />
+                <input
+                  className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium"
+                  placeholder="City"
+                  type="text"
+                  value={searchQuery.city}
+                  onChange={(e) => setSearchQuery({ ...searchQuery, city: e.target.value })}
+                />
               </div>
               <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
 
               <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
                 <RiMoneyDollarCircleLine className="text-[#ba9eff] text-xl shrink-0" />
-                <input className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium" placeholder="Budget" type="number" />
+                <input
+                  className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium"
+                  placeholder="Budget"
+                  type="number"
+                  value={searchQuery.budget}
+                  onChange={(e) => setSearchQuery({ ...searchQuery, budget: e.target.value })}
+                />
               </div>
               <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
 
               <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
                 <RiHotelBedLine className="text-[#ba9eff] text-xl shrink-0" />
-                <select className="bg-transparent border-none focus:ring-0 text-gray-400 text-sm font-medium w-full appearance-none cursor-pointer">
-                  <option className="bg-[#1a1a1a]">Room Type</option>
-                  <option className="bg-[#1a1a1a]">Luxury Room</option>
-                  <option className="bg-[#1a1a1a]">Sharing</option>
+                <select
+                  className="bg-transparent border-none focus:ring-0 text-gray-400 text-sm font-medium w-full appearance-none cursor-pointer"
+                  value={searchQuery.type}
+                  onChange={(e) => setSearchQuery({ ...searchQuery, type: e.target.value })}
+                >
+                  <option value="" className="bg-[#1a1a1a]">Room Type</option>
+                  <option value="Luxury Room" className="bg-[#1a1a1a]">Luxury Room</option>
+                  <option value="Sharing" className="bg-[#1a1a1a]">Sharing</option>
                 </select>
               </div>
 
-              <button className="w-full md:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] rounded-2xl md:rounded-full p-4 flex items-center justify-center hover:brightness-110 active:scale-95 transition-all cursor-pointer">
+              <button
+                onClick={handleSearch}
+                className="w-full md:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] rounded-2xl md:rounded-full p-4 flex items-center justify-center hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              >
                 <HiOutlineSearch className="text-white text-xl" />
               </button>
             </div>
@@ -125,7 +166,10 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2 sm:mb-3">Elite Collections</h2>
               <p className="text-gray-400 text-sm sm:text-base">Handpicked premium stays across Pakistan</p>
             </div>
-            <button className="text-[#699cff] hover:text-[#ba9eff] font-semibold flex items-center gap-2 group transition-all text-sm uppercase tracking-wider cursor-pointer">
+            <button
+              onClick={() => router.push('/auth/signin')}
+              className="text-[#699cff] hover:text-[#ba9eff] font-semibold flex items-center gap-2 group transition-all text-sm uppercase tracking-wider cursor-pointer"
+            >
               Explore All <FiArrowRight className="group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
@@ -218,9 +262,9 @@ export default function Home() {
               <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">Have a Room to List?</h2>
               <p className="text-gray-400 text-sm sm:text-base md:text-lg">Join Pakistan&apos;s most elite network of verified hosts and reach thousands of tenants.</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-5 pt-4">
-                <button className="w-full sm:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] px-8 sm:px-12 py-3 sm:py-4 rounded-2xl text-white font-bold text-sm sm:text-lg hover:shadow-[0_0_30px_rgba(132,85,239,0.3)] transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95">
+                <Link href={`/auth/signin`} className="w-full sm:w-auto bg-gradient-to-r from-[#8455ef] to-[#699cff] px-8 sm:px-12 py-3 sm:py-4 rounded-2xl text-white font-bold text-sm sm:text-lg hover:shadow-[0_0_30px_rgba(132,85,239,0.3)] transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95">
                   Post Your Room <FiPlusCircle className="text-xl" />
-                </button>
+                </Link>
                 <button className="w-full sm:w-auto px-8 sm:px-12 py-3 sm:py-4 rounded-2xl text-white font-bold text-sm sm:text-lg border border-white/10 hover:bg-white/5 transition-all cursor-pointer active:scale-95">
                   Learn More
                 </button>
