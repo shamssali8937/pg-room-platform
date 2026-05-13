@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Lock, User, Eye, EyeOff, Loader2, Phone } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import ParticleBg from "@/components/ParticleBg";
 import PasswordChecklist from "@/components/PasswordChecklist";
@@ -14,7 +14,6 @@ export default function SignupPage() {
     const [form, setForm] = useState({
         name: "",
         email: "",
-        phone: "",
         password: "",
         confirmPassword: "",
         role: "tenant",
@@ -37,7 +36,7 @@ export default function SignupPage() {
         setError("");
 
         // 1. Check for empty fields
-        if (!form.name || !form.email || !form.phone || !form.password) {
+        if (!form.name || !form.email || !form.password) {
             setError("All fields are required");
             return;
         }
@@ -59,13 +58,7 @@ export default function SignupPage() {
         try {
             // Replace with your actual API call
             console.log("Signing up with:", form);
-            // const res = await axios.post("/api/auth/signup", {
-            //     full_name: form.name,
-            //     email: form.email,
-            //     mobile_number: form.phone,
-            //     password: form.password,
-            //     role: form.role
-            // });
+            // const res = await axios.post("/api/auth/signup", form);
 
             // Simulate API delay
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -137,14 +130,6 @@ export default function SignupPage() {
                             value={form.email}
                             onChange={(e: any) => setForm({ ...form, email: e.target.value })}
                             label="Email"
-                        />
-
-                        <FloatingInput
-                            icon={Phone}
-                            type="tel"
-                            value={form.phone}
-                            onChange={(e: any) => setForm({ ...form, phone: e.target.value })}
-                            label="Mobile Number"
                         />
 
                         <div className="relative">
