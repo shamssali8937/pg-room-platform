@@ -1,32 +1,38 @@
 import { Request, Response, NextFunction } from "express";
-import { getMeService, updateMeService } from "../services/user.service.js";
-import { logger } from "../config/logger.js";
+import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService } from "../services/user.service.js";
 
-export const getMe = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Promise<void> => {
+export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const user = await getMeService(req.user!.id);
-        res.json({ success: true, data: user });
+        const data = await getMeService(req.user!.id);
+        res.json({ success: true, data });
     } catch (error) {
         next(error);
     }
 };
 
-export const updateMe = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-): Promise<void> => {
+export const updateMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const user = await updateMeService(req.user!.id, req.body, req.file);
-        logger.info("User profile updated", {
-            userId: req.user!.id,
-            requestId: req.requestId,
-        });
-        res.json({ success: true, data: user });
+        const data = await updateMeService(req.user!.id, req.body);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMyNotifications = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await getMyNotificationsService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const markNotificationRead = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const data = await markNotificationReadService(req.user!.id, id);
+        res.json({ success: true, data });
     } catch (error) {
         next(error);
     }

@@ -24,6 +24,13 @@ import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import roomRoutes from "./routes/room.routes.js";
 import healthRoutes from "./routes/health.routes.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import bookingRoutes from "./routes/booking.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import ownerRoutes from "./routes/owner.routes.js";
+import chatRoutes from "./routes/chat.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
+import reportRoutes from "./routes/report.routes.js";
 
 // ─── App ─────────────────────────────────────────────────
 const app: Application = express();
@@ -85,6 +92,13 @@ app.use("/api", globalRateLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/rooms", roomRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/owner", ownerRoutes);
+app.use("/api/chat", chatRoutes);
+app.use("/api", reviewRoutes);
+app.use("/api", reportRoutes);
 
 // ─── Root ─────────────────────────────────────────────────
 app.get("/", (_req, res) => {

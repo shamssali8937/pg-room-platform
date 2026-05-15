@@ -5,6 +5,8 @@ import {
     sendPhoneOTPService,
     verifyPhoneOTPService,
     verifyEmailService,
+    forgotPasswordService,
+    resetPasswordService,
 } from "../services/auth.services.js";
 import { addToBlacklist } from "../utils/tokenBlacklist.js";
 import { logger } from "../config/logger.js";
@@ -105,6 +107,33 @@ export const logout = async (
             });
         }
         res.json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const forgotPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const result = await forgotPasswordService(req.body.email);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resetPassword = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { token, newPassword } = req.body;
+        const result = await resetPasswordService(token, newPassword);
+        res.json({ success: true, ...result });
     } catch (error) {
         next(error);
     }
