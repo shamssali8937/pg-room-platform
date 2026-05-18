@@ -53,13 +53,15 @@ export const verifyEmail = async (
     res: Response,
     next: NextFunction
 ): Promise<void> => {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     try {
         const { token } = req.query;
-        const result = await verifyEmailService(String(token));
+        await verifyEmailService(String(token));
         logger.info("Email verified", { requestId: req.requestId });
-        res.json({ success: true, ...result });
-    } catch (error) {
-        next(error);
+        res.redirect(`${frontendUrl}/auth/signin?verified=true`);
+    } catch (error: any) {
+        logger.error("Email verification failed", { error: error.message, requestId: req.requestId });
+        res.redirect(`${frontendUrl}/auth/signin?error=verification_failed`);
     }
 };
 

@@ -32,7 +32,8 @@ export const signupService = async (data: any) => {
         },
     });
 
-    const verifyLink = `http://localhost:5000/api/auth/verify-email?token=${emailToken}`;
+    const apiUrl = process.env.API_URL || "http://localhost:5000/api";
+    const verifyLink = `${apiUrl}/auth/verify-email?token=${emailToken}`;
 
     await sendEmail(
         email,
