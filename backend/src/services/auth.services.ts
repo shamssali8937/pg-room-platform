@@ -44,6 +44,7 @@ export const signupService = async (data: any) => {
     return { message: "Signup successful. Verify your email." };
 };
 export const loginService = async (email: string, password: string) => {
+    // login user
     const user = await prisma.user.findUnique({
         where: { email },
     });
