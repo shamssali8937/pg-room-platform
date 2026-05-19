@@ -63,7 +63,7 @@ function LoginContent() {
 
         try {
             const data = await loginApi({ email, password });
-            saveSession(data.token, data.user);
+            saveSession(data.user);
             redirectByRole(data.user.role);
         } catch (err: any) {
             setError(err.message ?? "Invalid credentials. Please try again.");

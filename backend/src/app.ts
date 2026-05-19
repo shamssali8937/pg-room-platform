@@ -2,6 +2,7 @@ import express, { Application } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
 // ─── Config ──────────────────────────────────────────────
 dotenv.config();
@@ -18,6 +19,7 @@ import {
     globalErrorHandler,
     notFoundHandler,
 } from "./middleware/errorHandler.middleware.js";
+import { csrfSynchronisedProtection } from "./config/csrf.js";
 
 // ─── Routes ──────────────────────────────────────────────
 import authRoutes from "./routes/auth.routes.js";
@@ -64,6 +66,7 @@ app.use(
             "Content-Type",
             "Authorization",
             "X-Request-ID",
+            "x-csrf-token",
         ],
         exposedHeaders: ["X-Request-ID"],
     })
@@ -78,15 +81,19 @@ app.use(httpLogger);
 // ─── Performance Monitor ──────────────────────────────────
 app.use(performanceMonitor);
 
-// ─── Body Parsers ─────────────────────────────────────────
+// ─── Body Parsers & Cookies ───────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+app.use(cookieParser(process.env.JWT_SECRET));
 
 // ─── Health Routes (exempt from rate limiting) ────────────
 app.use("/health", healthRoutes);
 
 // ─── Global Rate Limiter for all API routes ───────────────
 app.use("/api", globalRateLimiter);
+
+// ─── Global CSRF Protection ────────────────────────────────
+app.use("/api", csrfSynchronisedProtection);
 
 // ─── API Routes ───────────────────────────────────────────
 app.use("/api/auth", authRoutes);

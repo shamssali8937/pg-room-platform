@@ -35,7 +35,6 @@ export interface AuthUser {
 
 export interface LoginResponse {
     success: boolean;
-    token: string;
     user: AuthUser;
 }
 
@@ -61,5 +60,10 @@ export const logoutApi = async (): Promise<void> => {
 
 export const forgotPasswordApi = async (email: string): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post("/auth/forgot-password", { email });
+    return data;
+};
+
+export const getMeApi = async (): Promise<{ success: boolean; data: AuthUser }> => {
+    const { data } = await api.get("/users/me");
     return data;
 };

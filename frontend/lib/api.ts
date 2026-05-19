@@ -5,19 +5,40 @@ const API_BASE_URL =
 
 const api = axios.create({
     baseURL: API_BASE_URL,
-    withCredentials: false,
+    withCredentials: true,
     headers: {
         "Content-Type": "application/json",
     },
 });
 
-// ─── Request Interceptor — attach JWT token ───────────────────────
+let csrfToken: string | null = null;
+let csrfTokenPromise: Promise<void> | null = null;
+
+export const fetchCsrfToken = async () => {
+    if (csrfTokenPromise) return csrfTokenPromise;
+    csrfTokenPromise = (async () => {
+        try {
+            const { data } = await axios.get(`${API_BASE_URL}/auth/csrf-token?t=${Date.now()}`, { withCredentials: true });
+            csrfToken = data.csrfToken;
+        } catch (error) {
+            console.error("Failed to fetch CSRF token", error);
+        }
+    })();
+    return csrfTokenPromise;
+};
+
+// ─── Request Interceptor — attach CSRF token ───────────────────────
 api.interceptors.request.use(
-    (config) => {
-        if (typeof window !== "undefined") {
-            const token = localStorage.getItem("pg_token");
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
+    async (config) => {
+        const isSafeMethod = ["get", "head", "options"].includes(config.method?.toLowerCase() || "");
+        if (!isSafeMethod && !csrfToken && typeof window !== "undefined") {
+            await fetchCsrfToken();
+        }
+        if (!isSafeMethod && csrfToken) {
+            if (typeof config.headers.set === 'function') {
+                config.headers.set("x-csrf-token", csrfToken);
+            } else {
+                config.headers["x-csrf-token"] = csrfToken;
             }
         }
         return config;
@@ -25,10 +46,25 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// ─── Response Interceptor — normalize errors ─────────────────────
+// ─── Response Interceptor — normalize errors & handle refresh ─────────────────────
 api.interceptors.response.use(
     (response) => response,
-    (error) => {
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+            try {
+                await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+                return api(originalRequest);
+            } catch (refreshError) {
+                if (typeof window !== "undefined") {
+                    window.dispatchEvent(new Event("auth-expired"));
+                }
+                return Promise.reject(refreshError);
+            }
+        }
+
         const message =
             error?.response?.data?.message ??
             error?.message ??

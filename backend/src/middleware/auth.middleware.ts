@@ -20,24 +20,10 @@ export const authenticate = (
     next: NextFunction
 ): void => {
     try {
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader?.startsWith("Bearer ")) {
-            throw UnauthorizedError("No token provided");
-        }
-
-        const token = authHeader.split(" ")[1];
+        const token = req.cookies?.accessToken;
 
         if (!token) {
-            throw UnauthorizedError("Malformed authorization header");
-        }
-
-        if (isBlacklisted(token)) {
-            logger.warn("Blacklisted token used", {
-                requestId: req.requestId,
-                path: req.path,
-            });
-            throw UnauthorizedError("Token has been revoked (logged out)");
+            throw UnauthorizedError("No token provided");
         }
 
         const decoded = jwt.verify(token, SECRET) as any;

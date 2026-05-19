@@ -6,12 +6,17 @@ import {
     verifyEmail,
     sendPhoneOTP,
     verifyPhoneOTP,
+    refreshSession,
+    getCsrfToken,
 } from "../controllers/auth.controller.js";
 import * as authController from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { authRateLimiter, otpRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router: Router = Router();
+
+router.get("/csrf-token", getCsrfToken);
+router.post("/refresh", refreshSession);
 
 router.post("/signup", authRateLimiter, signup);
 router.post("/login", authRateLimiter, login);

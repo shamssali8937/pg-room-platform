@@ -1,6 +1,6 @@
 import { prisma } from "../config/prisma.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
-import { generateToken } from "../utils/jwt.js";
+import { generateAccessToken, generateRefreshToken, verifyToken } from "../utils/jwt.js";
 import { sendEmail } from "../utils/mail.js";
 import crypto from "crypto";
 import { generateOTP, getOTPExpiry } from "../utils/otp.js";
@@ -58,14 +58,81 @@ export const loginService = async (email: string, password: string) => {
 
     if (!isValid) throw new Error("Invalid password");
 
-    const token = generateToken({
+    const accessToken = generateAccessToken({
         id: user.id,
         role: user.role,
     });
 
+    const refreshToken = generateRefreshToken({
+        id: user.id,
+        role: user.role,
+    });
+
+    // Store refresh token
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7); // 7 days
+
+    await prisma.refreshToken.create({
+        data: {
+            token: refreshToken,
+            user_id: user.id,
+            expires_at: expiryDate,
+        }
+    });
+
     const { password_hash, ...safeUser } = user;
 
-    return { token, user: safeUser };
+    return { accessToken, refreshToken, user: safeUser };
+};
+
+export const logoutService = async (refreshToken: string) => {
+    if (!refreshToken) return;
+    await prisma.refreshToken.deleteMany({
+        where: { token: refreshToken }
+    });
+};
+
+export const refreshTokenService = async (token: string) => {
+    if (!token) throw new Error("No refresh token provided");
+
+    // Verify token exists in DB
+    const storedToken = await prisma.refreshToken.findUnique({
+        where: { token }
+    });
+
+    if (!storedToken) throw new Error("Invalid refresh token");
+
+    if (new Date() > storedToken.expires_at) {
+        await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+        throw new Error("Refresh token expired");
+    }
+
+    try {
+        const decoded: any = verifyToken(token);
+        
+        const user = await prisma.user.findUnique({ where: { id: decoded.id } });
+        if (!user) throw new Error("User not found");
+
+        const newAccessToken = generateAccessToken({ id: user.id, role: user.role });
+        const newRefreshToken = generateRefreshToken({ id: user.id, role: user.role });
+
+        // Rotate refresh token
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 7);
+
+        await prisma.refreshToken.update({
+            where: { id: storedToken.id },
+            data: {
+                token: newRefreshToken,
+                expires_at: expiryDate,
+            }
+        });
+
+        return { accessToken: newAccessToken, refreshToken: newRefreshToken };
+    } catch (err) {
+        await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+        throw new Error("Invalid refresh token");
+    }
 };
 
 export const sendPhoneOTPService = async (mobile_number: string) => {
