@@ -1,39 +1,34 @@
 import { prisma } from "../config/prisma.js";
-import { uploadToCloudinary } from "../utils/upload.js";
 
 export const getMeService = async (userId: string) => {
-    const user = await prisma.user.findUnique({
+    return prisma.user.findUnique({
         where: { id: userId },
     });
-
-    if (!user) throw new Error("User not found");
-
-    const { password_hash, ...safeUser } = user;
-
-    return safeUser;
 };
 
-export const updateMeService = async (
-    userId: string,
-    data: any,
-    file?: Express.Multer.File
-) => {
-    let imageUrl;
+export const updateMeService = async (userId: string, data: any) => {
+    return prisma.user.update({
+        where: { id: userId },
+        data,
+    });
+};
 
-    if (file) {
-        const uploadResult: any = await uploadToCloudinary(file);
-        imageUrl = uploadResult.secure_url;
+export const getMyNotificationsService = async (userId: string) => {
+    return prisma.notification.findMany({
+        where: { user_id: userId },
+        orderBy: { created_at: "desc" },
+    });
+};
+
+export const markNotificationReadService = async (userId: string, notificationId: string) => {
+    const notification = await prisma.notification.findUnique({ where: { id: notificationId } });
+    
+    if (!notification || notification.user_id !== userId) {
+        throw new Error("Notification not found");
     }
 
-    const user = await prisma.user.update({
-        where: { id: userId },
-        data: {
-            ...data,
-            ...(imageUrl && { profile_photo_url: imageUrl }),
-        },
+    return prisma.notification.update({
+        where: { id: notificationId },
+        data: { is_read: true },
     });
-
-    const { password_hash, ...safeUser } = user;
-
-    return safeUser;
 };

@@ -1,11 +1,15 @@
 import express from "express";
-import { getMe, updateMe } from "../controllers/user.controller.js";
+import * as ctrl from "../controllers/user.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
 
 const router = express.Router();
 
-router.get("/me", authenticate, getMe);
-router.patch("/me", authenticate, upload.single("image"), updateMe);
+router.use(authenticate);
+
+router.get("/me", ctrl.getMe);
+router.patch("/me", upload.single("image"), ctrl.updateMe);
+router.get("/me/notifications", ctrl.getMyNotifications);
+router.patch("/me/notifications/:id/read", ctrl.markNotificationRead);
 
 export default router;

@@ -12,9 +12,9 @@ model User {
   id                  String    @id @default(uuid())
   role                String    @default("user") // admin, owner, tenant
   full_name           String
-  mobile_number       String    @unique
+  mobile_number       String?   @unique
   email               String    @unique
-  password_hash       String
+  password_hash       String?
   profile_photo_url   String?
   city                String?
   account_status      String    @default("active")
@@ -26,6 +26,8 @@ model User {
   verification_status String    @default("pending")
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
+  reset_token         String?
+  reset_token_expiry  DateTime?
 
   // Relationships
   rooms               Room[]
@@ -42,6 +44,7 @@ model User {
   points_transactions PointsTransaction[]
   notifications       Notification[]
   admin_actions       AdminAction[]
+  refresh_tokens      RefreshToken[]
 
   @@index([email])
   @@index([mobile_number])
@@ -256,4 +259,16 @@ model AdminAction {
   target_id   String
   notes       String?
   created_at  DateTime @default(now())
+}
+
+// --- 13.15 RefreshTokens ---
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  @@index([user_id])
 }
