@@ -9,6 +9,7 @@ import {
     resetPasswordService,
     logoutService,
     refreshTokenService,
+    googleAuthService,
 } from "../services/auth.services.js";
 import { generateToken as generateCsrf } from "../config/csrf.js";
 import { logger } from "../config/logger.js";
@@ -200,5 +201,81 @@ export const resetPassword = async (
         res.json({ success: true, ...result });
     } catch (error) {
         next(error);
+    }
+};
+
+export const googleLoginInitiate = (req: Request, res: Response): void => {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback";
+    
+    if (!clientId) {
+        res.status(500).json({ success: false, message: "Google OAuth is not configured on this server." });
+        return;
+    }
+
+    // Role passed from frontend (e.g. tenant, owner). Defaults to 'tenant'
+    const role = req.query.role ? String(req.query.role) : "tenant";
+
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${encodeURIComponent(clientId)}` +
+        `&redirect_uri=${encodeURIComponent(callbackUrl)}` +
+        `&response_type=code` +
+        `&scope=${encodeURIComponent("openid email profile")}` +
+        `&state=${encodeURIComponent(role)}` +
+        `&access_type=offline` +
+        `&prompt=consent`;
+
+    res.redirect(googleAuthUrl);
+};
+
+export const googleLoginCallback = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    try {
+        const { code, state, error } = req.query;
+
+        if (error) {
+            logger.error("Google OAuth error from query param", { error, requestId: req.requestId });
+            res.redirect(`${frontendUrl}/auth/signin?error=oauth_failed`);
+            return;
+        }
+
+        if (!code) {
+            logger.error("No code returned from Google OAuth", { requestId: req.requestId });
+            res.redirect(`${frontendUrl}/auth/signin?error=oauth_failed`);
+            return;
+        }
+
+        const data = await googleAuthService(String(code), String(state || "tenant"));
+
+        logger.info("Google OAuth login success", {
+            userId: data.user.id,
+            role: data.user.role,
+            requestId: req.requestId,
+        });
+
+        const isProd = process.env.NODE_ENV === "production";
+        
+        res.cookie("accessToken", data.accessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "strict" : "lax",
+            maxAge: 15 * 60 * 1000, // 15 mins
+        });
+
+        res.cookie("refreshToken", data.refreshToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "strict" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        res.redirect(`${frontendUrl}/auth/callback?status=success`);
+    } catch (err: any) {
+        logger.error("Google OAuth login failed", { error: err.message, requestId: req.requestId });
+        res.redirect(`${frontendUrl}/auth/signin?error=oauth_failed`);
     }
 };

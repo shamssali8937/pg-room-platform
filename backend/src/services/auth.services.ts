@@ -54,6 +54,10 @@ export const loginService = async (email: string, password: string) => {
         throw new Error("Email not verified");
     }
 
+    if (!user.password_hash) {
+        throw new Error("This account is configured with Google Sign-In. Please sign in with Google.");
+    }
+
     const isValid = await comparePassword(password, user.password_hash);
 
     if (!isValid) throw new Error("Invalid password");
@@ -238,4 +242,125 @@ export const resetPasswordService = async (token: string, newPassword: string) =
     const hashedPassword = await hashPassword(newPassword);
     
     return { message: "Password reset successfully" };
+};
+
+export const googleAuthService = async (code: string, state: string) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+        throw new Error("Google OAuth environment variables are not configured.");
+    }
+
+    const callbackUrl = process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/auth/google/callback";
+
+    // 1. Exchange authorization code for access token
+    const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+            code,
+            client_id: process.env.GOOGLE_CLIENT_ID,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: callbackUrl,
+            grant_type: "authorization_code",
+        }).toString(),
+    });
+
+    if (!tokenResponse.ok) {
+        const errText = await tokenResponse.text();
+        throw new Error(`Failed to exchange Google OAuth code: ${errText}`);
+    }
+
+    const tokenData = (await tokenResponse.json()) as { access_token: string };
+
+    // 2. Fetch user profile from Google
+    const profileResponse = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+        headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+        },
+    });
+
+    if (!profileResponse.ok) {
+        throw new Error("Failed to retrieve user profile from Google");
+    }
+
+    const profile = (await profileResponse.json()) as {
+        sub: string;
+        email: string;
+        email_verified: boolean;
+        name: string;
+        picture?: string;
+    };
+
+    if (!profile.email_verified) {
+        throw new Error("Google email is not verified");
+    }
+
+    // 3. Find or create user
+    let user = await prisma.user.findUnique({
+        where: { email: profile.email },
+    });
+
+    if (user) {
+        // Support existing users: check if we need to update profile photo or verify email
+        let needsUpdate = false;
+        const updateData: any = {};
+
+        if (!user.profile_photo_url && profile.picture) {
+            updateData.profile_photo_url = profile.picture;
+            needsUpdate = true;
+        }
+
+        if (!user.email_verified_at) {
+            updateData.email_verified_at = new Date();
+            needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+            user = await prisma.user.update({
+                where: { id: user.id },
+                data: updateData,
+            });
+        }
+    } else {
+        // Automatically create user on first login (signup)
+        const role = (state === "owner" || state === "admin" || state === "tenant") ? state : "tenant";
+        user = await prisma.user.create({
+            data: {
+                email: profile.email,
+                full_name: profile.name,
+                profile_photo_url: profile.picture || null,
+                role,
+                email_verified_at: new Date(),
+                password_hash: null as any,
+                mobile_number: null as any,
+            },
+        });
+    }
+
+    // 4. Generate tokens
+    const accessToken = generateAccessToken({
+        id: user.id,
+        role: user.role,
+    });
+
+    const refreshToken = generateRefreshToken({
+        id: user.id,
+        role: user.role,
+    });
+
+    // Store refresh token
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7); // 7 days
+
+    await prisma.refreshToken.create({
+        data: {
+            token: refreshToken,
+            user_id: user.id,
+            expires_at: expiryDate,
+        },
+    });
+
+    const { password_hash, ...safeUser } = user;
+    return { accessToken, refreshToken, user: safeUser };
 };
