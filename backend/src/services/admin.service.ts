@@ -16,7 +16,10 @@ export const getAllListingsService = async (status?: string) => {
     const where = status ? { status } : {};
     return prisma.room.findMany({
         where,
-        include: { owner: { select: { full_name: true, email: true } } },
+        include: {
+            owner: { select: { full_name: true, email: true } },
+            images: true,
+        },
         orderBy: { created_at: "desc" }
     });
 };

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService } from "../services/user.service.js";
+import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService, uploadDocumentService, getMyDocumentsService } from "../services/user.service.js";
 
 export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -37,3 +37,26 @@ export const markNotificationRead = async (req: Request, res: Response, next: Ne
         next(error);
     }
 };
+
+export const uploadDocument = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const docType = req.body.doc_type ?? req.params.docType;
+        if (!req.file) {
+            res.status(400).json({ success: false, message: "No file uploaded" });
+            return;
+        }
+        const data = await uploadDocumentService(req.user!.id, docType, req.file);
+        res.status(201).json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMyDocuments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await getMyDocumentsService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};

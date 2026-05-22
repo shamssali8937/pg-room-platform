@@ -30,7 +30,9 @@ export interface AuthUser {
     mobile_number: string | null;
     email_verified_at: string | null;
     mobile_verified_at: string | null;
+    image?: string | null;
     created_at: string;
+    updated_at?: string;
 }
 
 export interface LoginResponse {

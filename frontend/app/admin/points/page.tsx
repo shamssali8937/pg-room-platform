@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Download, SlidersHorizontal, Plus, RotateCcw, ShieldCheck, Zap, TrendingUp, MoreVertical } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, SlidersHorizontal, Plus, RotateCcw, ShieldCheck, Zap, TrendingUp, MoreVertical, Loader2 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
-import { mockPointTransactions, mockPointsStats, type PointTransaction, type PointAction } from "@/components/admin/mockData";
+import { type PointTransaction, type PointAction } from "@/components/admin/mockData";
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAdminPointsTransactions, adjustOwnerPoints } from "@/store/slices/adminSlice";
 
 const typeColors: Record<PointAction, { dot: string; delta: string }> = {
     earned: { dot: "bg-purple-400", delta: "text-purple-400" },
@@ -16,14 +18,6 @@ const typeColors: Record<PointAction, { dot: string; delta: string }> = {
     reward: { dot: "bg-emerald-400", delta: "text-emerald-400" },
     penalty: { dot: "bg-red-400", delta: "text-red-400" },
 };
-
-// const statusBadge: Record<string, { bg: string; text: string }> = {
-//     verified: { bg: "bg-white/5", text: "text-white" },
-//     "auto-debit": { bg: "bg-white/5", text: "text-white" },
-//     manual: { bg: "bg-pink-500/20", text: "text-pink-400" },
-//     pending: { bg: "bg-amber-500/20", text: "text-amber-400" },
-//     reversed: { bg: "bg-red-500/20", text: "text-red-400" },
-// };
 
 const statusBadge = (isDark: boolean): Record<string, { bg: string; text: string }> => ({
     verified: {
@@ -50,9 +44,11 @@ const statusBadge = (isDark: boolean): Record<string, { bg: string; text: string
 
 function PointsContent() {
     const { isDark } = useAdminTheme();
+    const dispatch = useAppDispatch();
+    const { pointsTransactions: reduxTransactions, isLoading } = useAppSelector((state) => state.admin);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [transactions, setTransactions] = useState<PointTransaction[]>(mockPointTransactions);
     const [currentPage, setCurrentPage] = useState(1);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
     const [showAdjustForm, setShowAdjustForm] = useState(false);
@@ -62,18 +58,48 @@ function PointsContent() {
 
     const ITEMS_PER_PAGE = 6;
 
+    useEffect(() => {
+        dispatch(fetchAdminPointsTransactions());
+    }, [dispatch]);
+
+    const mappedTransactions = useMemo((): PointTransaction[] => {
+        return reduxTransactions.map((tx) => {
+            let typeFormatted: PointAction = "manual";
+            if (tx.points > 0) {
+                typeFormatted = "earned";
+            } else if (tx.points < 0) {
+                typeFormatted = "spent";
+            }
+
+            return {
+                id: tx.id,
+                user: {
+                    name: tx.owner?.full_name ?? "System / Owner",
+                    uid: tx.owner_id,
+                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.owner?.full_name ?? "O")}&background=3b82f6&color=fff`,
+                },
+                action: tx.reason_code,
+                type: typeFormatted,
+                delta: tx.points,
+                balance: tx.balance_after,
+                timestamp: new Date(tx.created_at).toLocaleString(),
+                status: "verified",
+            };
+        });
+    }, [reduxTransactions]);
+
     const showToast = (msg: string, type: "success" | "error" | "info" = "success") => {
         setToast({ message: msg, type });
         setTimeout(() => setToast(null), 3000);
     };
 
     const filtered = useMemo(() => {
-        let result = transactions;
+        let result = mappedTransactions;
         if (filterType !== "all") result = result.filter((t) => t.type === filterType);
         if (!searchQuery) return result;
         const q = searchQuery.toLowerCase();
         return result.filter((t) => t.user.name.toLowerCase().includes(q) || t.user.uid.toLowerCase().includes(q) || t.action.toLowerCase().includes(q));
-    }, [transactions, searchQuery, filterType]);
+    }, [mappedTransactions, searchQuery, filterType]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -82,22 +108,46 @@ function PointsContent() {
         if (!adjustForm.userId || !adjustForm.amount || !adjustForm.reason) return;
         const delta = parseInt(adjustForm.amount);
         if (isNaN(delta)) return;
-        const newTxn: PointTransaction = {
-            id: `TXN-${Date.now()}`,
-            user: { name: adjustForm.userId, uid: adjustForm.userId, avatar: "https://i.pravatar.cc/100?u=" + adjustForm.userId },
-            action: adjustForm.reason,
-            type: delta >= 0 ? "manual" : "penalty",
-            delta, balance: Math.max(0, 5000 + delta),
-            timestamp: new Date().toLocaleString(),
-            status: "manual",
-        };
-        setTransactions((prev) => [newTxn, ...prev]);
+
+        dispatch(adjustOwnerPoints({
+            ownerId: adjustForm.userId,
+            points: delta,
+            reasonCode: adjustForm.reason,
+        })).then((res) => {
+            if (res.meta.requestStatus === "fulfilled") {
+                showToast(`Balance adjusted by ${delta > 0 ? "+" : ""}${delta} successfully`, "success");
+                dispatch(fetchAdminPointsTransactions());
+            } else {
+                showToast(`Failed to adjust points: ${res.payload ?? "Error"}`, "error");
+            }
+        });
+
         setAdjustForm({ userId: "", amount: "", reason: "" });
         setShowAdjustForm(false);
-        showToast(`Balance adjusted by ${delta > 0 ? "+" : ""}${delta} for ${adjustForm.userId}`, delta >= 0 ? "success" : "error");
     };
 
-    const s = mockPointsStats;
+    const s = useMemo(() => {
+        let totalEarned = 0;
+        let totalSpent = 0;
+        reduxTransactions.forEach((tx) => {
+            if (tx.points > 0) {
+                totalEarned += tx.points;
+            } else {
+                totalSpent += Math.abs(tx.points);
+            }
+        });
+        const netDelta = totalEarned - totalSpent;
+        return {
+            totalEarned: { value: totalEarned, label: "pts" },
+            totalSpent: { value: totalSpent, label: "pts" },
+            netDelta: { value: netDelta },
+            systemHealth: {
+                autoApprovals: 92,
+                adminManual: 4,
+                boostUtilization: 28,
+            },
+        };
+    }, [reduxTransactions]);
 
     return (
         <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
@@ -218,45 +268,53 @@ function PointsContent() {
                                 </tr>
                             </thead>
                             <tbody className={`divide-y ${isDark ? "divide-white/[0.04]" : "divide-slate-100"}`}>
-                                <AnimatePresence mode="popLayout">
-                                    {paginated.map((txn) => {
-                                        const tc = typeColors[txn.type];
-                                        // const sb = statusBadge[txn.status] || statusBadge.verified;
-                                        const sbMap = statusBadge(isDark);
-                                        const sb = sbMap[txn.status] || sbMap.verified;
-                                        return (
-                                            <motion.tr key={txn.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}>
-                                                <td className="px-4 sm:px-6 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <img src={txn.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/[0.06] flex-shrink-0" />
-                                                        <div className="min-w-0">
-                                                            <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{txn.user.name}</p>
-                                                            <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>ID: {txn.user.uid}</p>
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-sm">
+                                            <Loader2 className="animate-spin text-purple-500 mx-auto" size={24} />
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    <AnimatePresence mode="popLayout">
+                                        {paginated.map((txn) => {
+                                            const tc = typeColors[txn.type];
+                                            // const sb = statusBadge[txn.status] || statusBadge.verified;
+                                            const sbMap = statusBadge(isDark);
+                                            const sb = sbMap[txn.status] || sbMap.verified;
+                                            return (
+                                                <motion.tr key={txn.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <img src={txn.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover border border-white/[0.06] flex-shrink-0" />
+                                                            <div className="min-w-0">
+                                                                <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{txn.user.name}</p>
+                                                                <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>ID: {txn.user.uid}</p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 sm:px-6 py-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-2 h-2 rounded-full ${tc.dot}`} />
-                                                        <span className={`text-sm ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{txn.action}</span>
-                                                    </div>
-                                                </td>
-                                                <td className={`px-4 sm:px-6 py-4 text-right font-bold ${tc.delta}`} style={{ fontFamily: "Manrope, sans-serif" }}>
-                                                    {txn.delta > 0 ? "+" : ""}{txn.delta.toLocaleString()}
-                                                </td>
-                                                <td className={`px-4 sm:px-6 py-4 text-right font-semibold ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
-                                                    {txn.balance.toLocaleString()}
-                                                </td>
-                                                <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{txn.timestamp}</td>
-                                                <td className="px-4 sm:px-6 py-4 text-center">
-                                                    <span className={`px-2.5 py-1 rounded-full ${sb.bg} ${sb.text} text-[10px] font-bold uppercase tracking-tight`}>
-                                                        {txn.status.replace("-", " ")}
-                                                    </span>
-                                                </td>
-                                            </motion.tr>
-                                        );
-                                    })}
-                                </AnimatePresence>
+                                                    </td>
+                                                    <td className="px-4 sm:px-6 py-4">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-2 h-2 rounded-full ${tc.dot}`} />
+                                                            <span className={`text-sm ${isDark ? "text-zinc-300" : "text-slate-700"}`}>{txn.action}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className={`px-4 sm:px-6 py-4 text-right font-bold ${tc.delta}`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                                        {txn.delta > 0 ? "+" : ""}{txn.delta.toLocaleString()}
+                                                    </td>
+                                                    <td className={`px-4 sm:px-6 py-4 text-right font-semibold ${isDark ? "text-white" : "text-slate-900"}`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                                        {txn.balance.toLocaleString()}
+                                                    </td>
+                                                    <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{txn.timestamp}</td>
+                                                    <td className="px-4 sm:px-6 py-4 text-center">
+                                                        <span className={`px-2.5 py-1 rounded-full ${sb.bg} ${sb.text} text-[10px] font-bold uppercase tracking-tight`}>
+                                                            {txn.status.replace("-", " ")}
+                                                        </span>
+                                                    </td>
+                                                </motion.tr>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                )}
                             </tbody>
                         </table>
                     </div>

@@ -166,9 +166,9 @@ export default function TenantListingDetailModal({ listing, onClose, favorites, 
                         </div>
 
                         {/* Tags */}
-                        {listing.tags.length > 0 && (
+                        {(listing.tags || []).length > 0 && (
                             <div className="flex flex-wrap gap-2">
-                                {listing.tags.map(tag => (
+                                {(listing.tags || []).map(tag => (
                                     <span key={tag} className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${isDark ? "bg-[#a27cff]/10 text-[#a27cff] border-[#a27cff]/20" : "bg-violet-50 text-violet-700 border-violet-200"}`}>
                                         {tag}
                                     </span>
@@ -183,11 +183,11 @@ export default function TenantListingDetailModal({ listing, onClose, favorites, 
                         </div>
 
                         {/* Amenities */}
-                        {listing.amenities.length > 0 && (
+                        {(listing.amenities || []).length > 0 && (
                             <div>
                                 <h4 className={`text-xs uppercase tracking-widest font-semibold mb-3 ${metaLabel}`}>Amenities</h4>
                                 <div className="flex flex-wrap gap-2">
-                                    {listing.amenities.map((a) => {
+                                    {(listing.amenities || []).map((a) => {
                                         const Icon = amenityIcons[a] || Shield;
                                         return (
                                             <span key={a} className={`flex items-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-medium ${amenityChip}`}>

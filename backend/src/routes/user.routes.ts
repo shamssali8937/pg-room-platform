@@ -12,4 +12,9 @@ router.patch("/me", upload.single("image"), ctrl.updateMe);
 router.get("/me/notifications", ctrl.getMyNotifications);
 router.patch("/me/notifications/:id/read", ctrl.markNotificationRead);
 
+// Identity documents
+router.get("/me/documents", ctrl.getMyDocuments);
+router.post("/me/documents", upload.single("file"), ctrl.uploadDocument);
+router.post("/me/documents/:docType", upload.single("file"), ctrl.uploadDocument);
+
 export default router;

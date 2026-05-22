@@ -14,7 +14,8 @@ const api = axios.create({
 let csrfToken: string | null = null;
 let csrfTokenPromise: Promise<void> | null = null;
 
-export const fetchCsrfToken = async () => {
+export const fetchCsrfToken = async (forceRefetch = false) => {
+    if (csrfToken && !forceRefetch) return;
     if (csrfTokenPromise) return csrfTokenPromise;
     csrfTokenPromise = (async () => {
         try {
@@ -22,6 +23,9 @@ export const fetchCsrfToken = async () => {
             csrfToken = data.csrfToken;
         } catch (error) {
             console.error("Failed to fetch CSRF token", error);
+            csrfToken = null;
+        } finally {
+            csrfTokenPromise = null;
         }
     })();
     return csrfTokenPromise;
@@ -51,6 +55,23 @@ api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+
+        if (error.response?.status === 403 && !originalRequest._retryCsrf) {
+            originalRequest._retryCsrf = true;
+            try {
+                await fetchCsrfToken(true);
+                if (csrfToken) {
+                    if (originalRequest.headers && typeof originalRequest.headers.set === 'function') {
+                        originalRequest.headers.set("x-csrf-token", csrfToken);
+                    } else if (originalRequest.headers) {
+                        originalRequest.headers["x-csrf-token"] = csrfToken;
+                    }
+                    return api(originalRequest);
+                }
+            } catch (csrfErr) {
+                console.error("Failed to recover from CSRF error", csrfErr);
+            }
+        }
 
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;

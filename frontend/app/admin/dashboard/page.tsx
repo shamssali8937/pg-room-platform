@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
@@ -8,12 +8,20 @@ import ListingsTable from "@/components/admin/ListingsTable";
 import ActivityPanel from "@/components/admin/ActivityPanel";
 import FloatingAction from "@/components/admin/FloatingAction";
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAdminDashboard } from "@/store/slices/adminSlice";
 
 function DashboardContent() {
     const { isDark } = useAdminTheme();
+    const dispatch = useAppDispatch();
+    const { dashboardStats } = useAppSelector((state) => state.admin);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        dispatch(fetchAdminDashboard());
+    }, [dispatch]);
 
     return (
         <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
@@ -36,10 +44,10 @@ function DashboardContent() {
 
                 {/* Stats Grid */}
                 <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-12">
-                    <StatsCard title="Active Listings" value="1,284" tag="+12% from last month" tagType="trend" index={0} />
-                    <StatsCard title="Pending Approvals" value="42" tag="New entries" tagType="info" index={1} />
-                    <StatsCard title="Reported Items" value="08" tag="Action required" tagType="danger" index={2} />
-                    <StatsCard title="Active Users" value="8,920" tag="Live now" tagType="secondary" index={3} />
+                    <StatsCard title="Active Listings" value={dashboardStats ? String(dashboardStats.activeListings) : "1,284"} tag="+12% from last month" tagType="trend" index={0} />
+                    <StatsCard title="Pending Approvals" value={dashboardStats ? String(dashboardStats.pendingListings) : "42"} tag="New entries" tagType="info" index={1} />
+                    <StatsCard title="Reported Items" value={dashboardStats ? String(dashboardStats.pendingReports) : "08"} tag="Action required" tagType="danger" index={2} />
+                    <StatsCard title="Active Users" value={dashboardStats ? String(dashboardStats.totalUsers) : "8,920"} tag="Live now" tagType="secondary" index={3} />
                 </section>
 
                 {/* Main Grid */}

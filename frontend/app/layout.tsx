@@ -4,6 +4,7 @@ import "./globals.css";
 
 import { Nunito } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
+import ReduxProvider from "@/store/ReduxProvider";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -21,8 +22,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PG Room Platform",
-  description: "Find and list PG rooms with ease",
+  title: "PG Nexus — Find Your Perfect PG Room",
+  description: "PG Nexus — Discover, list, and book verified PG rooms across Pakistan.",
 };
 
 export default function RootLayout({
@@ -36,7 +37,9 @@ export default function RootLayout({
       className={`${nunito.className} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning={true}>
-        <AuthProvider>{children}</AuthProvider>
+        <ReduxProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </ReduxProvider>
       </body>
     </html>
   );

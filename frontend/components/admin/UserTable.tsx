@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, AlertTriangle, Gavel, ShieldCheck, Clock, X, ChevronLeft, ChevronRight } from "lucide-react";
-import { mockUsers, type AdminUser, type UserRole, type AccountStatus } from "./mockData";
+import { Eye, AlertTriangle, Gavel, ShieldCheck, Clock, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { type AdminUser, type UserRole, type AccountStatus } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAdminUsers, updateUserStatus } from "@/store/slices/adminSlice";
 
 interface UserTableProps {
     searchQuery: string;
@@ -13,7 +15,8 @@ interface UserTableProps {
 const ITEMS_PER_PAGE = 5;
 
 export default function UserTable({ searchQuery }: UserTableProps) {
-    const [users, setUsers] = useState<AdminUser[]>(mockUsers);
+    const dispatch = useAppDispatch();
+    const { users: reduxUsers, isLoading } = useAppSelector((state) => state.admin);
     const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
     const [statusFilter, setStatusFilter] = useState<AccountStatus | "Any">("Any");
     const [currentPage, setCurrentPage] = useState(1);
@@ -21,8 +24,32 @@ export default function UserTable({ searchQuery }: UserTableProps) {
     const [actionModal, setActionModal] = useState<{ user: AdminUser; action: "warn" | "ban" } | null>(null);
     const { isDark } = useAdminTheme();
 
+    useEffect(() => {
+        dispatch(fetchAdminUsers());
+    }, [dispatch]);
+
+    const mappedUsers = useMemo((): AdminUser[] => {
+        return reduxUsers.map((u) => {
+            const roleFormatted = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as UserRole;
+            let statusFormatted: AccountStatus = "Active";
+            if (u.account_status.toLowerCase() === "suspended") statusFormatted = "Suspended";
+            if (u.account_status.toLowerCase() === "warned") statusFormatted = "Warned";
+
+            return {
+                id: u.id,
+                name: u.full_name,
+                email: u.email,
+                role: roleFormatted,
+                verification: "Verified",
+                accountStatus: statusFormatted,
+                joinDate: new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=8b5cf6&color=fff`,
+            };
+        });
+    }, [reduxUsers]);
+
     const filtered = useMemo(() => {
-        return users.filter((u) => {
+        return mappedUsers.filter((u) => {
             if (roleFilter !== "All" && u.role !== roleFilter) return false;
             if (statusFilter !== "Any" && u.accountStatus !== statusFilter) return false;
             if (searchQuery) {
@@ -35,7 +62,7 @@ export default function UserTable({ searchQuery }: UserTableProps) {
             }
             return true;
         });
-    }, [users, roleFilter, statusFilter, searchQuery]);
+    }, [mappedUsers, roleFilter, statusFilter, searchQuery]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const paged = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
@@ -44,17 +71,17 @@ export default function UserTable({ searchQuery }: UserTableProps) {
     const handleStatusChange = (val: string) => { setStatusFilter(val as AccountStatus | "Any"); setCurrentPage(1); };
 
     const handleWarn = (id: string) => {
-        setUsers((prev) => prev.map((u) => u.id === id ? { ...u, accountStatus: "Warned" as const } : u));
+        dispatch(updateUserStatus({ id, status: "warned", reason: "Policy violation warning" }));
         setActionModal(null);
     };
 
     const handleBan = (id: string) => {
-        setUsers((prev) => prev.map((u) => u.id === id ? { ...u, accountStatus: "Suspended" as const } : u));
+        dispatch(updateUserStatus({ id, status: "suspended", reason: "Severe policy violation suspension" }));
         setActionModal(null);
     };
 
     const handleRestore = (id: string) => {
-        setUsers((prev) => prev.map((u) => u.id === id ? { ...u, accountStatus: "Active" as const } : u));
+        dispatch(updateUserStatus({ id, status: "active", reason: "Account status reinstated" }));
     };
 
     // Theme tokens
@@ -128,8 +155,15 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                             </tr>
                         </thead>
                         <tbody className={`divide-y ${divider}`}>
-                            <AnimatePresence mode="popLayout">
-                                {paged.length > 0 ? paged.map((user) => (
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={6} className="px-8 py-16 text-center text-sm">
+                                        <Loader2 className="animate-spin text-purple-500 mx-auto" size={24} />
+                                    </td>
+                                </tr>
+                            ) : (
+                                <AnimatePresence mode="popLayout">
+                                    {paged.length > 0 ? paged.map((user) => (
                                     <motion.tr
                                         key={user.id}
                                         layout
@@ -168,6 +202,7 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                                     </motion.tr>
                                 )}
                             </AnimatePresence>
+                            )}
                         </tbody>
                     </table>
                 </div>

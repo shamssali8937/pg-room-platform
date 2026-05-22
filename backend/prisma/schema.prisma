@@ -10,7 +10,7 @@ datasource db {
 // --- 13.1 Users ---
 model User {
   id                  String    @id @default(uuid())
-  role                String    @default("user") // admin, owner, tenant
+  role                String    @default("tenant") // admin, owner, tenant
   full_name           String
   mobile_number       String?   @unique
   email               String    @unique
@@ -45,9 +45,24 @@ model User {
   notifications       Notification[]
   admin_actions       AdminAction[]
   refresh_tokens      RefreshToken[]
+  documents           UserDocument[]
 
   @@index([email])
   @@index([mobile_number])
+}
+
+// --- User Documents (for identity verification) ---
+model UserDocument {
+  id          String   @id @default(uuid())
+  user_id     String
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  doc_type    String   // cnic, photo, employment, bank
+  file_url    String
+  status      String   @default("pending") // pending, verified, rejected
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([user_id])
 }
 
 // --- 13.2 Rooms ---
@@ -58,22 +73,35 @@ model Room {
   title                   String
   description             String?
   city                    String
-  locality                String
+  address                 String    @default("")
+  locality                String    @default("")
   landmark                String?
   approximate_latitude    Float?
   approximate_longitude   Float?
   room_type               String
-  furnished_status        String
-  size_value              Float
+  furnished_status        String    @default("unfurnished")
+  beds                    Int       @default(1)
+  baths                   Int       @default(1)
+  size_value              Float     @default(0)
   size_unit               String    @default("sqft")
-  rent_amount             Int
-  security_deposit_amount Int
-  available_for           String
-  availability_date       DateTime
+  price                   Int       @default(0)       // main price field (frontend uses this)
+  rent_amount             Int       @default(0)       // alias kept for compatibility
+  price_unit              String    @default("month")
+  security_deposit_amount Int       @default(0)
+  available_for           String    @default("any")
+  availability_date       DateTime  @default(now())
+  gender_preference       String    @default("any")
   rules_json              Json?
+  amenities_list          String[]  @default([])      // flat list for easy querying
   status                  String    @default("pending")
   approved_at             DateTime?
   rejected_reason         String?
+  is_boosted              Boolean   @default(false)
+  is_featured             Boolean   @default(false)
+  views                   Int       @default(0)
+  is_verified             Boolean   @default(false)
+  rating                  Float?
+  review_count            Int       @default(0)
   created_at              DateTime  @default(now())
   updated_at              DateTime  @updatedAt
 
@@ -95,11 +123,11 @@ model Room {
 model RoomImage {
   id                String   @id @default(uuid())
   room_id           String
-  room              Room     @relation(fields: [room_id], references: [id])
+  room              Room     @relation(fields: [room_id], references: [id], onDelete: Cascade)
   file_url          String
   file_hash         String?
   sort_order        Int      @default(0)
-  moderation_status String   @default("pending")
+  moderation_status String   @default("approved")
   created_at        DateTime @default(now())
 }
 
@@ -114,7 +142,7 @@ model Amenity {
 // --- 13.5 RoomAmenities ---
 model RoomAmenity {
   room_id    String
-  room       Room    @relation(fields: [room_id], references: [id])
+  room       Room    @relation(fields: [room_id], references: [id], onDelete: Cascade)
   amenity_id String
   amenity    Amenity @relation(fields: [amenity_id], references: [id])
 
@@ -130,7 +158,7 @@ model SavedRoom {
   room       Room     @relation(fields: [room_id], references: [id])
   created_at DateTime @default(now())
 
-  @@unique([user_id, room_id]) // Prevents a user from saving the same room twice
+  @@unique([user_id, room_id])
 }
 
 // --- 13.7 Bookings ---
@@ -142,7 +170,7 @@ model Booking {
   tenant       User      @relation("TenantBookings", fields: [tenant_id], references: [id])
   owner_id     String
   owner        User      @relation("OwnerBookings", fields: [owner_id], references: [id])
-  request_type String
+  request_type String    @default("inquiry")
   status       String    @default("pending")
   message      String?
   owner_note   String?
