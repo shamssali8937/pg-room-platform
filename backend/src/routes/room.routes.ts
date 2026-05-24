@@ -1,9 +1,9 @@
-import express from "express";
+import express, { Router } from "express";
 import * as ctrl from "../controllers/room.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
 
-const router = express.Router();
+const router: Router = express.Router();
 
 // PUBLIC
 router.get("/", ctrl.getRooms);
