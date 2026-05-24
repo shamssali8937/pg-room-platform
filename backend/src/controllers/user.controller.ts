@@ -12,7 +12,7 @@ export const getMe = async (req: Request, res: Response, next: NextFunction): Pr
 
 export const updateMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await updateMeService(req.user!.id, req.body);
+        const data = await updateMeService(req.user!.id, req.body, req.file);
         res.json({ success: true, data });
     } catch (error) {
         next(error);

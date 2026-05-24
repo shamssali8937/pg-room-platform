@@ -98,7 +98,22 @@ async function main() {
 
 
     // ─── 3. Amenities ─────────────────────────────────────────────────────────
-    const amenityNames = ["WiFi", "AC", "Parking", "Kitchen", "Pool", "Gym", "CCTV", "Power Backup"];
+    const amenityNames = [
+        "WiFi",
+        "AC",
+        "Parking",
+        "Kitchen",
+        "Pool",
+        "Gym",
+        "CCTV",
+        "Power Backup",
+        "Study Room",
+        "Breakfast",
+        "Housekeeping",
+        "Laundry",
+        "Terrace",
+        "Concierge"
+    ];
     const amenities = await Promise.all(
         amenityNames.map((name) =>
             prisma.amenity.create({ data: { name, category: "standard" } })
@@ -273,6 +288,61 @@ async function main() {
     });
 
     console.log("✅ Rooms created");
+
+    // ─── 4b. RoomAmenities (link rooms to amenity records) ─────────────────────
+    const amenityMap = new Map(amenities.map((a) => [a.name, a]));
+
+    // room1: WiFi, AC, CCTV
+    for (const name of ["WiFi", "AC", "CCTV"]) {
+        const amenity = amenityMap.get(name);
+        if (amenity) {
+            await prisma.roomAmenity.create({
+                data: { room_id: room1.id, amenity_id: amenity.id },
+            });
+        }
+    }
+
+    // room2: WiFi, AC, Kitchen, Parking
+    for (const name of ["WiFi", "AC", "Kitchen", "Parking"]) {
+        const amenity = amenityMap.get(name);
+        if (amenity) {
+            await prisma.roomAmenity.create({
+                data: { room_id: room2.id, amenity_id: amenity.id },
+            });
+        }
+    }
+
+    // room3: WiFi, AC, CCTV
+    for (const name of ["WiFi", "AC", "CCTV"]) {
+        const amenity = amenityMap.get(name);
+        if (amenity) {
+            await prisma.roomAmenity.create({
+                data: { room_id: room3.id, amenity_id: amenity.id },
+            });
+        }
+    }
+
+    // room4: WiFi, AC, Parking, Gym
+    for (const name of ["WiFi", "AC", "Parking", "Gym"]) {
+        const amenity = amenityMap.get(name);
+        if (amenity) {
+            await prisma.roomAmenity.create({
+                data: { room_id: room4.id, amenity_id: amenity.id },
+            });
+        }
+    }
+
+    // room5: WiFi, Power Backup
+    for (const name of ["WiFi", "Power Backup"]) {
+        const amenity = amenityMap.get(name);
+        if (amenity) {
+            await prisma.roomAmenity.create({
+                data: { room_id: room5.id, amenity_id: amenity.id },
+            });
+        }
+    }
+
+    console.log("✅ RoomAmenities created");
 
     // ─── 5. Bookings ──────────────────────────────────────────────────────────
     const booking1 = await prisma.booking.create({

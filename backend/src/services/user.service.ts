@@ -22,8 +22,13 @@ export const getMeService = async (userId: string) => {
     });
 };
 
-export const updateMeService = async (userId: string, data: any) => {
-    const { full_name, mobile_number, city, profile_photo_url } = data;
+export const updateMeService = async (userId: string, data: any, file?: Express.Multer.File) => {
+    let profile_photo_url = data.profile_photo_url;
+    if (file) {
+        const result: any = await uploadToCloudinary(file.buffer);
+        profile_photo_url = result.secure_url;
+    }
+    const { full_name, mobile_number, city } = data;
     return prisma.user.update({
         where: { id: userId },
         data: {

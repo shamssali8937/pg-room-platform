@@ -1,11 +1,19 @@
+import { createServer } from "http";
 import app from "./app.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
+import { initSocket } from "./config/socket.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 
+// ─── Create HTTP Server (needed for Socket.IO) ──────────────────
+const server = createServer(app);
+
+// ─── Initialize Socket.IO ────────────────────────────────────────
+initSocket(server);
+
 // ─── Start Server ─────────────────────────────────────────────────
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
     logger.info(`🚀 Server started`, {
         port: PORT,
         env: process.env.NODE_ENV ?? "development",
@@ -49,7 +57,6 @@ process.on("unhandledRejection", (reason: unknown) => {
         reason: reason instanceof Error ? reason.message : String(reason),
         stack: reason instanceof Error ? reason.stack : undefined,
     });
-    // Let the process crash — let process manager (PM2 / k8s) restart it
     process.exit(1);
 });
 

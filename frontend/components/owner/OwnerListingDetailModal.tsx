@@ -133,6 +133,60 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                             ))}
                         </div>
 
+                        {/* Detailed Specifications */}
+                        <div className={`rounded-2xl p-5 border ${metaCardBg} space-y-4`}>
+                            <h4 className={`text-xs uppercase tracking-widest font-bold ${descLabel}`}>Property Specifications</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                                <div>
+                                    <p className={metaLabel}>Security Deposit</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>PKR {new Intl.NumberFormat("en-PK").format(listing.securityDeposit ?? 0)}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Furnished Status</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.furnishedStatus}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Area / Size</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{listing.sqft || "—"} sq ft</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Available For</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.availableFor || "any"}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Gender Preference</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.genderPreference || "any"}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Baths</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{listing.baths || 1} baths</p>
+                                </div>
+                            </div>
+
+                            <div className={`pt-3 border-t ${isDark ? "border-white/5" : "border-slate-200"} space-y-2`}>
+                                <div>
+                                    <p className={metaLabel}>Full Address</p>
+                                    <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.address || "—"}</p>
+                                </div>
+                                {(listing.locality || listing.landmark) && (
+                                    <div className="grid grid-cols-2 gap-4 text-xs pt-1">
+                                        {listing.locality && (
+                                            <div>
+                                                <p className={metaLabel}>Locality / Sector</p>
+                                                <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.locality}</p>
+                                            </div>
+                                        )}
+                                        {listing.landmark && (
+                                            <div>
+                                                <p className={metaLabel}>Landmark</p>
+                                                <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.landmark}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Description */}
                         {listing.description && (
                             <div>

@@ -114,9 +114,9 @@ export const fetchAdminDashboard = createAsyncThunk(
     }
 );
 
-export const fetchAdminListings = createAsyncThunk(
+export const fetchAdminListings = createAsyncThunk<AdminRoom[], string | undefined>(
     "admin/fetchListings",
-    async (status?: string, { rejectWithValue }: any = {}) => {
+    async (status, { rejectWithValue }) => {
         try {
             const params = status ? `?status=${status}` : "";
             const { data } = await api.get(`/admin/listings${params}`);

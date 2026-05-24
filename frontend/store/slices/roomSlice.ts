@@ -31,6 +31,14 @@ export interface Room {
     rejection_reason?: string | null;
     created_at: string;
     inquiries?: number;
+    locality?: string;
+    landmark?: string | null;
+    room_type?: string;
+    furnished_status?: string;
+    security_deposit_amount?: number;
+    available_for?: string;
+    gender_preference?: string;
+    size_value?: number | null;
 }
 
 export interface RoomFilters {

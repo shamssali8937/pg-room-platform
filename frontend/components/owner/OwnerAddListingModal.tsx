@@ -28,6 +28,11 @@ const INITIAL_FORM = {
     description: "",
     amenities: [] as string[],
     gender_preference: "any",
+    locality: "",
+    landmark: "",
+    furnished_status: "unfurnished",
+    security_deposit_amount: "0",
+    available_for: "any",
 };
 
 export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListingModalProps) {
@@ -121,6 +126,11 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             formData.append("description", form.description);
             formData.append("gender_preference", form.gender_preference);
             if (form.sqft) formData.append("sqft", form.sqft);
+            formData.append("locality", form.locality);
+            formData.append("landmark", form.landmark);
+            formData.append("furnished_status", form.furnished_status);
+            formData.append("security_deposit_amount", form.security_deposit_amount);
+            formData.append("available_for", form.available_for);
             form.amenities.forEach((a) => formData.append("amenities[]", a));
             images.forEach((img) => formData.append("images", img));
 
@@ -226,7 +236,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>City *</label>
                                             <select
@@ -251,6 +261,18 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 <option>Entire Villa</option>
                                             </select>
                                         </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Furnished Status *</label>
+                                            <select
+                                                value={form.furnished_status}
+                                                onChange={(e) => setField("furnished_status", e.target.value)}
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            >
+                                                <option value="unfurnished">Unfurnished</option>
+                                                <option value="semi-furnished">Semi-Furnished</option>
+                                                <option value="furnished">Fully Furnished</option>
+                                            </select>
+                                        </div>
                                     </div>
 
                                     <div>
@@ -267,7 +289,30 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Locality (Neighborhood)</label>
+                                            <input
+                                                type="text"
+                                                value={form.locality}
+                                                onChange={(e) => setField("locality", e.target.value)}
+                                                placeholder="e.g. DHA Phase 6"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Landmark (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={form.landmark}
+                                                onChange={(e) => setField("landmark", e.target.value)}
+                                                placeholder="e.g. Near Raya Club"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent *</label>
                                             <div className="relative">
@@ -281,6 +326,22 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 />
                                             </div>
                                         </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
+                                            <div className="relative">
+                                                <DollarSign size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <input
+                                                    type="number"
+                                                    value={form.security_deposit_amount}
+                                                    onChange={(e) => setField("security_deposit_amount", e.target.value)}
+                                                    placeholder="45000"
+                                                    className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Beds *</label>
                                             <div className="relative">
@@ -309,7 +370,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Area (sq ft)</label>
                                             <input
@@ -330,6 +391,19 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 <option value="any">Any</option>
                                                 <option value="male">Male Only</option>
                                                 <option value="female">Female Only</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Available For</label>
+                                            <select
+                                                value={form.available_for}
+                                                onChange={(e) => setField("available_for", e.target.value)}
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            >
+                                                <option value="any">Any</option>
+                                                <option value="students">Students Only</option>
+                                                <option value="professionals">Professionals Only</option>
+                                                <option value="families">Families Only</option>
                                             </select>
                                         </div>
                                     </div>

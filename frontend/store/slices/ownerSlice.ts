@@ -104,7 +104,7 @@ const ownerSlice = createSlice({
         });
         builder.addCase(fetchOwnerPoints.fulfilled, (state, action) => {
             state.isLoading = false;
-            state.points = action.payload?.balance ?? action.payload ?? 0;
+            state.points = action.payload?.points ?? action.payload?.balance ?? (typeof action.payload === "number" ? action.payload : 0);
         });
         builder.addCase(fetchOwnerPoints.rejected, (state, action) => {
             state.isLoading = false;

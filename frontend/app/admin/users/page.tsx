@@ -7,12 +7,20 @@ import StatsCard from "@/components/admin/StatsCard";
 import UserTable from "@/components/admin/UserTable";
 import { Filter, Download } from "lucide-react";
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppSelector } from "@/store/hooks";
 
 function UsersContent() {
     const { isDark } = useAdminTheme();
+    const { users, isLoading } = useAppSelector((state) => state.admin);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Compute real stats from Redux data
+    const total = users.length;
+    const active = users.filter((u) => u.account_status === "active").length;
+    const suspended = users.filter((u) => u.account_status === "suspended").length;
+    const owners = users.filter((u) => u.role === "owner").length;
 
     const pageBg = isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900";
     const headingColor = isDark ? "text-white" : "text-slate-900";
@@ -54,12 +62,12 @@ function UsersContent() {
                     </div>
                 </section>
 
-                {/* Stats Bento Grid */}
+                {/* Stats Bento Grid — real data from Redux */}
                 <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-                    <StatsCard title="Total Users" value="12,842" tag="+14% from last month" tagType="info" index={0} />
-                    <StatsCard title="Active Now" value="3,104" tag="Real-time engagement" tagType="secondary" index={1} />
-                    <StatsCard title="Pending Verification" value="128" tag="Action required" tagType="tertiary" index={2} />
-                    <StatsCard title="Suspended" value="42" tag="Policy violations" tagType="error" index={3} />
+                    <StatsCard title="Total Users" value={isLoading ? "..." : String(total)} tag="All registered accounts" tagType="info" index={0} />
+                    <StatsCard title="Active Users" value={isLoading ? "..." : String(active)} tag="Currently active" tagType="secondary" index={1} />
+                    <StatsCard title="Property Owners" value={isLoading ? "..." : String(owners)} tag="Listing owners" tagType="tertiary" index={2} />
+                    <StatsCard title="Suspended" value={isLoading ? "..." : String(suspended)} tag="Policy violations" tagType="error" index={3} />
                 </section>
 
                 {/* User Table */}

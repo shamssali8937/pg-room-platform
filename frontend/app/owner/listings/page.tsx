@@ -45,7 +45,6 @@ const STATUS_CONFIG: Record<string, {
     },
 };
 
-// Adapter: convert backend Room to the shape modals expect
 function roomToOwnerListing(room: Room): any {
     return {
         id: room.id,
@@ -65,6 +64,19 @@ function roomToOwnerListing(room: Room): any {
         description: room.description ?? "",
         amenities: room.amenities ?? [],
         rejectionReason: room.rejection_reason ?? undefined,
+
+        // Schema mappings:
+        roomType: room.room_type ?? "Private Room",
+        capacity: room.beds,
+        occupancy: 80,
+        locality: room.locality ?? "",
+        landmark: room.landmark ?? "",
+        address: room.address ?? "",
+        furnishedStatus: room.furnished_status ?? "unfurnished",
+        securityDeposit: room.security_deposit_amount ?? 0,
+        availableFor: room.available_for ?? "any",
+        genderPreference: room.gender_preference ?? "any",
+        sqft: room.sqft ?? room.size_value ?? 0,
     };
 }
 
@@ -436,7 +448,27 @@ export default function OwnerListingsPage() {
                     onClose={() => setEditRoom(null)}
                     onSave={async (updated) => {
                         const { updateRoom } = await import("@/store/slices/roomSlice");
-                        await dispatch(updateRoom({ id: editRoom.id, body: { title: updated.title, price: updated.price, description: updated.description } }));
+                        await dispatch(updateRoom({
+                            id: editRoom.id,
+                            body: {
+                                title: updated.title,
+                                price: Number(updated.price),
+                                description: updated.description,
+                                city: updated.location,
+                                address: updated.address,
+                                locality: updated.locality,
+                                landmark: updated.landmark,
+                                room_type: updated.roomType,
+                                beds: Number(updated.beds),
+                                baths: Number(updated.baths),
+                                sqft: Number(updated.sqft),
+                                furnished_status: updated.furnishedStatus,
+                                security_deposit_amount: Number(updated.securityDeposit),
+                                available_for: updated.availableFor,
+                                gender_preference: updated.genderPreference,
+                                amenities: updated.amenities,
+                            }
+                        }));
                         setEditRoom(null);
                     }}
                 />

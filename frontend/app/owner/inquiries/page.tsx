@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
@@ -10,8 +10,7 @@ import {
     setActiveConversation, blockConversation,
 } from "@/store/slices/chatSlice";
 import type { Conversation } from "@/store/slices/chatSlice";
-import { useAppSelector as useSelector } from "@/store/hooks";
-import { updateBookingStatus } from "@/store/slices/bookingSlice";
+import { useSocket } from "@/hooks/useSocket";
 import {
     Send, Paperclip, Smile, Phone, MoreVertical, CheckCircle,
     Filter, Search, Loader2, MessageSquare, ShieldX
@@ -30,6 +29,9 @@ export default function OwnerInquiriesPage() {
     useEffect(() => {
         dispatch(fetchConversations());
     }, [dispatch]);
+
+    const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+    useSocket(conversationIds);
 
     const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? conversations[0] ?? null;
 
@@ -193,7 +195,7 @@ export default function OwnerInquiriesPage() {
                                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? "bg-[#ba9eff]/20" : "bg-violet-100"}`}>
                                     <span className="text-[#ba9eff] text-lg font-bold">{getOther(activeConversation)?.full_name?.[0] ?? "?"}</span>
                                 </div>
-                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#ba9eff] rounded-full border-2 border-[#131313]" />
+                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#131313]" />
                             </div>
                             <div>
                                 <h4 className={`font-headline font-bold text-base ${textPrimary}`}>{getOther(activeConversation)?.full_name ?? "Tenant"}</h4>
@@ -235,6 +237,8 @@ export default function OwnerInquiriesPage() {
                                 </div>
                                 {activeMessages.map((msg) => {
                                     const isMine = msg.sender_id === user?.id;
+                                    // Support both content field and message_body (fallback)
+                                    const text = (msg as any).content ?? (msg as any).message_body ?? "";
                                     return (
                                         <motion.div
                                             key={msg.id}
@@ -243,7 +247,7 @@ export default function OwnerInquiriesPage() {
                                             className={`flex items-end gap-3 ${isMine ? "flex-row-reverse" : ""}`}
                                         >
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isDark ? "bg-[#ba9eff]/20" : "bg-violet-100"}`}>
-                                                <span className="text-[#ba9eff] text-[10px] font-bold">{msg.sender?.full_name?.[0] ?? "?"}</span>
+                                                <span className="text-[#ba9eff] text-[10px] font-bold">{msg.sender?.full_name?.[0] ?? (isMine ? user?.full_name?.[0] : "T")}</span>
                                             </div>
                                             <div className={`max-w-[70%] ${isMine ? "items-end" : "items-start"} flex flex-col`}>
                                                 <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
@@ -255,7 +259,7 @@ export default function OwnerInquiriesPage() {
                                                         ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
                                                         : "bg-slate-100 text-slate-700 rounded-tl-none"
                                                 }`}>
-                                                    {msg.content}
+                                                    {text}
                                                 </div>
                                                 <div className={`flex items-center gap-1 mt-1 ${isMine ? "flex-row-reverse" : ""}`}>
                                                     <span className={`text-[10px] ${textVariant}`}>

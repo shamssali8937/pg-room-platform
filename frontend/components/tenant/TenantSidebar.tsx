@@ -3,6 +3,9 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store/hooks";
+import { logoutUser } from "@/store/slices/authSlice";
 import {
     LayoutDashboard,
     Search,
@@ -20,11 +23,11 @@ import {
 import { useTenantTheme } from "@/context/TenantThemeContext";
 
 const navItems = [
-    { icon: LayoutDashboard, label: "Dashboard",   id: "dashboard",   href: "/tenant/dashboard" },
-    { icon: Search,          label: "Find Rooms",  id: "browse",      href: "/tenant/browse" },
-    { icon: CalendarCheck,   label: "My Bookings", id: "bookings",    href: "/tenant/bookings" },
-    { icon: MessageSquare,   label: "Inbox",       id: "inbox",       href: "/tenant/inbox" },
-    { icon: ShieldCheck,     label: "Identity",    id: "identity",    href: "/tenant/identity" },
+    { icon: LayoutDashboard, label: "Dashboard", id: "dashboard", href: "/tenant/dashboard" },
+    { icon: Search, label: "Find Rooms", id: "browse", href: "/tenant/browse" },
+    { icon: CalendarCheck, label: "My Bookings", id: "bookings", href: "/tenant/bookings" },
+    { icon: MessageSquare, label: "Inbox", id: "inbox", href: "/tenant/inbox" },
+    { icon: ShieldCheck, label: "Identity", id: "identity", href: "/tenant/identity" },
     { icon: SlidersHorizontal, label: "Preferences", id: "preferences", href: "/tenant/preferences" },
 ];
 
@@ -37,6 +40,13 @@ interface SidebarProps {
 export default function TenantSidebar({ activeId = "dashboard", isOpen = false, onClose }: SidebarProps) {
     const touchStartX = useRef(0);
     const { isDark, toggleTheme } = useTenantTheme();
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
+    const handleSignOut = async () => {
+        await dispatch(logoutUser());
+        router.push("/auth/signin");
+    };
 
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
@@ -159,7 +169,7 @@ export default function TenantSidebar({ activeId = "dashboard", isOpen = false, 
                         <HelpCircle size={18} strokeWidth={1.8} />
                         <span>Support</span>
                     </button>
-                    <button className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} hover:!text-red-500`}>
+                    <button onClick={handleSignOut} className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} hover:!text-red-500`}>
                         <LogOut size={18} strokeWidth={1.8} />
                         <span>Sign Out</span>
                     </button>
