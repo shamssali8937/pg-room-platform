@@ -51,14 +51,14 @@ export const login = async (
         res.cookie("accessToken", data.accessToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 15 * 60 * 1000, // 15 mins
         });
 
         res.cookie("refreshToken", data.refreshToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
@@ -84,14 +84,14 @@ export const refreshSession = async (
         res.cookie("accessToken", data.accessToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 15 * 60 * 1000,
         });
 
         res.cookie("refreshToken", data.refreshToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
@@ -262,14 +262,14 @@ export const googleLoginCallback = async (
         res.cookie("accessToken", data.accessToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 15 * 60 * 1000, // 15 mins
         });
 
         res.cookie("refreshToken", data.refreshToken, {
             httpOnly: true,
             secure: isProd,
-            sameSite: isProd ? "strict" : "lax",
+            sameSite: isProd ? "none" : "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 

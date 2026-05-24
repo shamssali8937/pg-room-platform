@@ -37,6 +37,9 @@ import reportRoutes from "./routes/report.routes.js";
 // ─── App ─────────────────────────────────────────────────
 const app: Application = express();
 
+// Trust reverse proxy (Render, Heroku, Cloudflare etc.)
+app.set("trust proxy", 1);
+
 // ─── Security Headers ─────────────────────────────────────
 app.use(
     helmet({
