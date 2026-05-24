@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, Settings, X, Menu } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
+import { useAuth } from "@/context/AuthContext";
 
 // Reuse admin mock notifications structure
 interface Notification {
@@ -34,6 +35,7 @@ export default function OwnerTopbar({
     const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
+    const { user } = useAuth();
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -171,14 +173,20 @@ export default function OwnerTopbar({
                 {/* Profile */}
                 <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
                     <div className="text-right hidden sm:block">
-                        <p className={`text-xs font-bold tracking-tight ${profileName}`}>Zubair Khan</p>
-                        <p className={`text-[10px] ${profileSub}`}>Owner</p>
+                        <p className={`text-xs font-bold tracking-tight ${profileName}`}>{user?.full_name ?? "Owner User"}</p>
+                        <p className={`text-[10px] ${profileSub}`}>{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Owner"}</p>
                     </div>
-                    <img
-                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuC83hUmp8-Zou7yX7CUPDz4mXecdWYUvEQS-3-GaBh6XMFC3C6y7hFNpBBZ2LPf7ynDqsG97gE4_JHP23jepV64eh-QTkc8m2wTyGmB3dmx8hAFaQ_AUOtbNGv8zfdie3V1FA8sMmSjCli3HzFDBEB6Xz5lwhBZicwsg5HfSfFj2EpP1AmNFETmQIvfIwZxmxcBt92tTI1dKUlht8tuua1LlA6D6FJKN9ZBGrftUNY6DtRVcl6ik-kDeDZ66Ghj7oLPTcQFghbYTg"
-                        alt="Owner avatar"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
-                    />
+                    {user?.image ? (
+                        <img
+                            src={user.image}
+                            alt="Owner avatar"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
+                        />
+                    ) : (
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400`}>
+                            {user?.full_name?.[0] ?? "?"}
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

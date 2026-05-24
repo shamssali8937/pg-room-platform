@@ -32,16 +32,25 @@ interface Props {
     onClose: () => void;
     favorites: Set<string>;
     onToggleFavorite: (id: string) => void;
+    onSendInquiry?: (listing: TenantListing) => void;
+    isInquiring?: boolean;
 }
 
-export default function TenantListingDetailModal({ listing, onClose, favorites, onToggleFavorite }: Props) {
+export default function TenantListingDetailModal({
+    listing,
+    onClose,
+    favorites,
+    onToggleFavorite,
+    onSendInquiry,
+    isInquiring = false
+}: Props) {
     const { isDark } = useTenantTheme();
     const [galleryIdx, setGalleryIdx] = useState(0);
 
     if (!listing) return null;
 
     // Build a simple gallery from the single image (extend later with real gallery array)
-    const gallery = [listing.imageUrl];
+    const gallery = listing.gallery && listing.gallery.length > 0 ? listing.gallery : [listing.imageUrl];
     const prevImage = () => setGalleryIdx((i) => (i === 0 ? gallery.length - 1 : i - 1));
     const nextImage = () => setGalleryIdx((i) => (i === gallery.length - 1 ? 0 : i + 1));
     const isFav = favorites.has(listing.id);
@@ -104,7 +113,7 @@ export default function TenantListingDetailModal({ listing, onClose, favorites, 
                                     <ChevronRight size={18} />
                                 </button>
                                 <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                                    {gallery.map((_, i) => (
+                                    {gallery.map((_: any, i: number) => (
                                         <button key={i} onClick={() => setGalleryIdx(i)} className={`h-2 rounded-full transition-all ${i === galleryIdx ? "bg-white w-5" : "bg-white/40 w-2 hover:bg-white/60"}`} />
                                     ))}
                                 </div>
@@ -176,6 +185,60 @@ export default function TenantListingDetailModal({ listing, onClose, favorites, 
                             </div>
                         )}
 
+                        {/* Detailed Specifications */}
+                        <div className={`rounded-2xl p-5 border ${metaCardBg} space-y-4`}>
+                            <h4 className={`text-xs uppercase tracking-widest font-bold ${metaLabel}`}>Property Specifications</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
+                                <div>
+                                    <p className={metaLabel}>Security Deposit</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>PKR {new Intl.NumberFormat("en-PK").format(listing.securityDeposit ?? 0)}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Furnished Status</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.furnishedStatus || "unfurnished"}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Area / Size</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{listing.sqft || "—"} sq ft</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Available For</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.availableFor || "any"}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Gender Preference</p>
+                                    <p className={`font-bold mt-1 capitalize ${metaVal}`}>{listing.genderPreference || "any"}</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Baths</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{listing.baths || 1} baths</p>
+                                </div>
+                            </div>
+
+                            <div className={`pt-3 border-t ${isDark ? "border-white/5" : "border-slate-200"} space-y-2`}>
+                                <div>
+                                    <p className={metaLabel}>Full Address</p>
+                                    <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.address || "—"}</p>
+                                </div>
+                                {(listing.locality || listing.landmark) && (
+                                    <div className="grid grid-cols-2 gap-4 text-xs pt-1">
+                                        {listing.locality && (
+                                            <div>
+                                                <p className={metaLabel}>Locality / Sector</p>
+                                                <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.locality}</p>
+                                            </div>
+                                        )}
+                                        {listing.landmark && (
+                                            <div>
+                                                <p className={metaLabel}>Landmark</p>
+                                                <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.landmark}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Description */}
                         <div>
                             <h4 className={`text-xs uppercase tracking-widest font-semibold mb-2 ${metaLabel}`}>Description</h4>
@@ -210,8 +273,17 @@ export default function TenantListingDetailModal({ listing, onClose, favorites, 
 
                         {/* Actions */}
                         <div className={`flex flex-col sm:flex-row gap-2 pt-2 border-t ${actionsBorder}`}>
-                            <button className="flex-1 py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2">
-                                <MessageSquare size={15} /> Send Inquiry
+                            <button
+                                onClick={() => onSendInquiry?.(listing)}
+                                disabled={isInquiring}
+                                className="flex-1 py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                                {isInquiring ? (
+                                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <MessageSquare size={15} />
+                                )}
+                                Send Inquiry
                             </button>
                             <button
                                 onClick={() => onToggleFavorite(listing.id)}

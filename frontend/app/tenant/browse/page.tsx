@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchRooms, saveRoom, unsaveRoom, fetchSavedRooms } from "@/store/slices/roomSlice";
+import { createConversation, sendMessage } from "@/store/slices/chatSlice";
 import type { Room } from "@/store/slices/roomSlice";
 import { useAuth } from "@/context/AuthContext";
 import TenantListingDetailModal from "@/components/tenant/TenantListingDetailModal";
@@ -16,11 +18,78 @@ import {
 const CITIES = ["All", "Lahore", "Islamabad", "Rawalpindi", "Karachi"];
 const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Rating"];
 
+function roomToTenantListing(room: Room): any {
+    const daysAgo = Math.max(0, Math.floor((Date.now() - new Date(room.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+    return {
+        id: room.id,
+        title: room.title,
+        address: room.address || "",
+        locality: room.locality || "",
+        landmark: room.landmark || "",
+        city: room.city,
+        price: room.price,
+        imageUrl: room.images?.[0]?.url ?? "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80",
+        gallery: room.images?.map((img) => img.url) ?? [],
+        beds: room.beds,
+        baths: room.baths,
+        sqft: room.sqft ?? room.size_value ?? 0,
+        rating: room.rating ?? 4.8,
+        reviews: room.review_count ?? 0,
+        tags: [
+            room.is_verified ? "Verified" : "",
+            room.is_featured ? "Featured" : "",
+            room.furnished_status ? room.furnished_status.toUpperCase() : ""
+        ].filter(Boolean),
+        isFavorited: false,
+        isVerified: room.is_verified,
+        postedDaysAgo: daysAgo,
+        ownerName: room.owner?.full_name ?? "Unknown Owner",
+        ownerAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(room.owner?.full_name ?? "U")}&background=8b5cf6&color=fff`,
+        ownerId: room.owner?.id,
+        description: room.description ?? `${room.room_type || "PG"} Room with ${room.beds} Beds and ${room.baths} Baths.`,
+        amenities: room.amenities && room.amenities.length > 0 ? room.amenities : ["WiFi", "AC", "Laundry"],
+        furnishedStatus: room.furnished_status ?? "unfurnished",
+        securityDeposit: room.security_deposit_amount ?? 0,
+        availableFor: room.available_for ?? "any",
+        genderPreference: room.gender_preference ?? "any",
+        status: room.status
+    };
+}
+
 export default function TenantBrowse() {
     const { isDark, searchQuery } = useTenantTheme();
     const dispatch = useAppDispatch();
+    const router = useRouter();
     const { user } = useAuth();
     const { rooms, savedRooms, isLoading, error } = useAppSelector((s) => s.room);
+
+    const [isInquiring, setIsInquiring] = useState(false);
+
+    const handleSendInquiry = async (listing: any) => {
+        if (!listing.ownerId || isInquiring) return;
+        setIsInquiring(true);
+        try {
+            const res = await dispatch(createConversation({
+                roomId: listing.id,
+                recipientId: listing.ownerId
+            })).unwrap();
+            
+            if (res && res.id) {
+                const automatedMessage = `Hi, I am interested in your listing: "${listing.title}" located at ${listing.locality || listing.city}. Could you please share more details or schedule a visit?`;
+                await dispatch(sendMessage({
+                    conversationId: res.id,
+                    content: automatedMessage
+                })).unwrap();
+                
+                setSelectedRoom(null);
+                router.push("/tenant/inbox");
+            }
+        } catch (err) {
+            console.error("Failed to send inquiry", err);
+        } finally {
+            setIsInquiring(false);
+        }
+    };
 
     const [selectedCity, setSelectedCity] = useState("All");
     const [sortBy, setSortBy] = useState("Newest");
@@ -230,6 +299,13 @@ export default function TenantBrowse() {
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                                    {room.status === "booked" && (
+                                        <div className="absolute inset-0 bg-red-950/40 backdrop-blur-[1px] flex items-center justify-center z-20 pointer-events-none select-none">
+                                            <div className="border-4 border-red-500 text-red-500 font-black uppercase text-xl tracking-[0.25em] px-6 py-2 rounded-xl rotate-[-12deg] shadow-lg bg-black/60 scale-105 animate-pulse">
+                                                RENTED OUT
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Hover overlay */}
                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px]">
@@ -296,7 +372,7 @@ export default function TenantBrowse() {
                                         {[
                                             { icon: <Bed size={14} />, val: `${room.beds} Bed` },
                                             { icon: <Bath size={14} />, val: `${room.baths} Bath` },
-                                            { icon: <Home size={14} />, val: `${room.sqft ?? "—"} ft²` },
+                                            { icon: <Home size={14} />, val: `${room.sqft ?? room.size_value ?? "—"} ft²` },
                                         ].map((m, i) => (
                                             <div key={i} className={`flex items-center gap-1.5 p-2.5 rounded-xl ${surfaceLow}`}>
                                                 <span className={textVariant}>{m.icon}</span>
@@ -331,10 +407,12 @@ export default function TenantBrowse() {
             {/* Detail Modal */}
             {selectedRoom && (
                 <TenantListingDetailModal
-                    listing={selectedRoom as any}
+                    listing={roomToTenantListing(selectedRoom)}
                     onClose={() => setSelectedRoom(null)}
                     favorites={favorites}
                     onToggleFavorite={toggleFavorite}
+                    onSendInquiry={handleSendInquiry}
+                    isInquiring={isInquiring}
                 />
             )}
         </div>

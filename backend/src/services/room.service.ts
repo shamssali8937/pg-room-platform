@@ -137,9 +137,12 @@ export const createRoomService = async (userId: string, data: any, files: any) =
 export const getRoomsService = async (query: any) => {
     const { city, min_price, max_price, beds, sort, search, page = 1, limit = 12, status } = query;
 
-    const where: any = {
-        status: status ?? "active",
-    };
+    const where: any = {};
+    if (status) {
+        where.status = status;
+    } else {
+        where.status = { in: ["active", "booked"] };
+    }
 
     if (city) where.city = { contains: String(city), mode: "insensitive" };
     if (min_price || max_price) {

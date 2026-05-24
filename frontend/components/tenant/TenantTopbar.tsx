@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, X, Menu, CalendarCheck, MessageSquare, CreditCard } from "lucide-react";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { mockTenantNotifications } from "@/components/tenant/mockData";
+import { useAuth } from "@/context/AuthContext";
 
 interface TopbarProps {
     onMenuToggle?: () => void;
@@ -16,6 +17,7 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
     const [notifications, setNotifications] = useState(mockTenantNotifications);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
+    const { user } = useAuth();
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -147,14 +149,20 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                 {/* Profile */}
                 <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
                     <div className="text-right hidden sm:block">
-                        <p className={`text-xs font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>Ali Hassan</p>
-                        <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>Tenant</p>
+                        <p className={`text-xs font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{user?.full_name ?? "Tenant User"}</p>
+                        <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Tenant"}</p>
                     </div>
-                    <img
-                        src="https://i.pravatar.cc/150?img=25"
-                        alt="Tenant avatar"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
-                    />
+                    {user?.image ? (
+                        <img
+                            src={user.image}
+                            alt="Tenant avatar"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
+                        />
+                    ) : (
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-[#a27cff]/10 text-[#a27cff]`}>
+                            {user?.full_name?.[0] ?? "?"}
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

@@ -28,7 +28,8 @@ export const getMessages = async (req: Request, res: Response, next: NextFunctio
 
 export const createConversation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const { roomId, ownerId } = req.body;
+        const roomId = req.body.roomId ?? req.body.room_id;
+        const ownerId = req.body.ownerId ?? req.body.recipient_id ?? req.body.owner_id;
         const data = await service.createConversationService(req.user!.id, roomId, ownerId);
         res.status(201).json({ success: true, data });
     } catch (error) { next(error); }
@@ -57,5 +58,20 @@ export const blockConversation = async (req: Request, res: Response, next: NextF
     try {
         const data = await service.blockConversationService(req.user!.id, req.params.id as string);
         res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const deleteMessage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const messageId = req.params.messageId as string;
+        await service.deleteMessageService(req.user!.id, messageId);
+
+        // Emit socket event to delete message in real-time on all clients
+        try {
+            const { getIO } = await import("../config/socket.js");
+            getIO().emit("delete_message", { messageId });
+        } catch { /* ignore */ }
+
+        res.json({ success: true, messageId });
     } catch (error) { next(error); }
 };

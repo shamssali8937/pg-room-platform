@@ -52,7 +52,7 @@ export default function TenantDashboard() {
     const divider = isDark ? "border-white/[0.06]" : "border-slate-100";
 
     const activeBooking = tenantBookings.find((b) => b.status === "approved");
-    const unreadMessages = conversations.reduce((acc, c) => acc + c.unread_count, 0);
+    const unreadMessages = conversations.reduce((acc, c) => acc + (c.unread_count ?? 0), 0);
     const isLoading = dashLoading || bookingLoading;
 
     const stats = [

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import { useAppDispatch } from "@/store/hooks";
-import { addLocalMessage } from "@/store/slices/chatSlice";
+import { addLocalMessage, deleteLocalMessage } from "@/store/slices/chatSlice";
 import type { ChatMessage } from "@/store/slices/chatSlice";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ?? "http://localhost:5000";
@@ -45,7 +45,12 @@ export const useSocket = (conversationIds: string[] = []) => {
             dispatch(addLocalMessage({ conversationId: message.conversation_id, message }));
         };
 
+        const handleDeleteMessage = ({ messageId }: { messageId: string }) => {
+            dispatch(deleteLocalMessage({ messageId }));
+        };
+
         globalSocket.on("new_message", handleNewMessage);
+        globalSocket.on("delete_message", handleDeleteMessage);
 
         // Join all active conversation rooms
         conversationIds.forEach((id) => {
@@ -54,6 +59,7 @@ export const useSocket = (conversationIds: string[] = []) => {
 
         return () => {
             globalSocket?.off("new_message", handleNewMessage);
+            globalSocket?.off("delete_message", handleDeleteMessage);
             // Leave rooms on unmount
             conversationIds.forEach((id) => {
                 globalSocket?.emit("leave_conversation", id);

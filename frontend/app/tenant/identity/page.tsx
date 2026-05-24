@@ -6,9 +6,11 @@ import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import {
     ShieldCheck, Upload, CheckCircle2, AlertCircle, Clock,
-    User, Mail, Phone, Building2, FileText, Camera
+    User, Mail, Phone, Building2, FileText, Camera, Edit2, Check, X as CloseIcon
 } from "lucide-react";
 import api from "@/lib/api";
+import { useAppDispatch } from "@/store/hooks";
+import { hydrateAuth } from "@/store/slices/authSlice";
 
 type VerifyStatus = "verified" | "pending" | "not_uploaded";
 
@@ -36,11 +38,32 @@ const STATUS_UI: Record<VerifyStatus, { label: string; badge: string; icon: Reac
 export default function TenantIdentity() {
     const { isDark } = useTenantTheme();
     const { user } = useAuth();
+    const dispatch = useAppDispatch();
     const [docs, setDocs] = useState<DocItem[]>(INITIAL_DOCS);
     const [uploadingId, setUploadingId] = useState<string | null>(null);
     const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
     const [activeDocId, setActiveDocId] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+
+    // Profile edit states
+    const [isEditing, setIsEditing] = useState(false);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    const [formData, setFormData] = useState({
+        full_name: "",
+        mobile_number: "",
+        city: "Lahore",
+    });
+
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                full_name: user.full_name ?? "",
+                mobile_number: user.mobile_number ?? "",
+                city: user.city ?? "Lahore",
+            });
+        }
+    }, [user]);
 
     useEffect(() => {
         const fetchDocs = async () => {
@@ -115,6 +138,53 @@ export default function TenantIdentity() {
             setUploadingId(null);
             setActiveDocId(null);
             if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const handleAvatarClick = () => {
+        avatarInputRef.current?.click();
+    };
+
+    const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            const form = new FormData();
+            form.append("image", file);
+            form.append("full_name", formData.full_name || user?.full_name || "");
+            form.append("mobile_number", formData.mobile_number || user?.mobile_number || "");
+            form.append("city", formData.city || user?.city || "Lahore");
+
+            await api.patch("/users/me", form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            dispatch(hydrateAuth());
+            setUploadSuccess("profile_updated");
+            setTimeout(() => setUploadSuccess(null), 3000);
+        } catch (err) {
+            console.error("Avatar upload failed", err);
+        }
+    };
+
+    const handleSaveProfile = async () => {
+        setIsSavingProfile(true);
+        try {
+            const form = new FormData();
+            form.append("full_name", formData.full_name);
+            form.append("mobile_number", formData.mobile_number);
+            form.append("city", formData.city);
+
+            await api.patch("/users/me", form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            dispatch(hydrateAuth());
+            setIsEditing(false);
+            setUploadSuccess("profile_updated");
+            setTimeout(() => setUploadSuccess(null), 3000);
+        } catch (err) {
+            console.error("Save profile failed", err);
+        } finally {
+            setIsSavingProfile(false);
         }
     };
 
@@ -239,55 +309,141 @@ export default function TenantIdentity() {
 
                 {/* Personal Info */}
                 <section className={`rounded-2xl overflow-hidden ${surfaceLow}`}>
-                    <div className={`px-6 py-4 border-b flex items-center gap-3 ${divider}`}>
-                        <div className="w-7 h-7 rounded-lg bg-[#699cff]/10 flex items-center justify-center">
-                            <User size={14} className="text-[#699cff]" />
-                        </div>
-                        <h3 className={`font-headline font-bold ${textPrimary}`}>Personal Information</h3>
-                    </div>
-                    <div className="p-6">
-                        {/* Avatar */}
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="relative">
-                                {user?.image ? (
-                                    <img src={user.image} alt={user.full_name} className="w-16 h-16 rounded-2xl object-cover" />
-                                ) : (
-                                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black ${isDark ? "bg-[#a27cff]/20 text-[#a27cff]" : "bg-violet-100 text-violet-600"}`}>
-                                        {user?.full_name?.[0] ?? "?"}
-                                    </div>
-                                )}
-                                <button className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#a27cff] flex items-center justify-center shadow-lg hover:bg-[#9066ee] transition-colors">
-                                    <Camera size={13} className="text-white" />
-                                </button>
+                    <div className={`px-6 py-4 border-b flex items-center justify-between gap-3 ${divider}`}>
+                        <div className="flex items-center gap-3">
+                            <div className="w-7 h-7 rounded-lg bg-[#699cff]/10 flex items-center justify-center">
+                                <User size={14} className="text-[#699cff]" />
                             </div>
-                            <div>
-                                <p className={`font-bold ${textPrimary}`}>{user?.full_name ?? "Your Name"}</p>
-                                <p className={`text-xs ${textVariant}`}>Member since {joinDate}</p>
-                                <div className="flex items-center gap-2 mt-1">
-                                    {emailVerified && (
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">
-                                            Email Verified
-                                        </span>
+                            <h3 className={`font-headline font-bold ${textPrimary}`}>Personal Information</h3>
+                        </div>
+                        {!isEditing && (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#a27cff]/20 text-[#a27cff] text-xs font-bold hover:bg-[#a27cff]/5 transition-colors"
+                            >
+                                <Edit2 size={12} /> Edit Info
+                            </button>
+                        )}
+                    </div>
+                    {isEditing ? (
+                        <div className="p-6">
+                            {/* Avatar */}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="relative">
+                                    {user?.image ? (
+                                        <img src={user.image} alt={user.full_name} className="w-16 h-16 rounded-2xl object-cover" />
+                                    ) : (
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black ${isDark ? "bg-[#a27cff]/20 text-[#a27cff]" : "bg-violet-100 text-violet-600"}`}>
+                                            {user?.full_name?.[0] ?? "?"}
+                                        </div>
                                     )}
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#a27cff]/10 text-[#a27cff]">
-                                        {user?.role ?? "Tenant"}
-                                    </span>
+                                    <button
+                                        onClick={handleAvatarClick}
+                                        className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#a27cff] flex items-center justify-center shadow-lg hover:bg-[#9066ee] transition-colors"
+                                    >
+                                        <Camera size={13} className="text-white" />
+                                    </button>
+                                </div>
+                                <div>
+                                    <p className={`font-bold ${textPrimary}`}>{user?.full_name ?? "Your Name"}</p>
+                                    <p className={`text-xs ${textVariant}`}>Member since {joinDate}</p>
+                                </div>
+                            </div>
+
+                            {/* Edit Fields */}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className={`text-[10px] uppercase tracking-widest font-bold ${textVariant}`}>Full Name</label>
+                                    <input
+                                        type="text"
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                        className={`w-full mt-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all outline-none ${isDark ? "bg-[#1a1919] border-white/10 text-white focus:border-[#a27cff]" : "bg-slate-50 border-slate-200 text-slate-900 focus:border-[#a27cff]"}`}
+                                        placeholder="Enter your full name"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`text-[10px] uppercase tracking-widest font-bold ${textVariant}`}>Phone Number</label>
+                                    <input
+                                        type="text"
+                                        value={formData.mobile_number}
+                                        onChange={(e) => setFormData({ ...formData, mobile_number: e.target.value })}
+                                        className={`w-full mt-1 px-4 py-3 rounded-xl border text-sm font-medium transition-all outline-none ${isDark ? "bg-[#1a1919] border-white/10 text-white focus:border-[#a27cff]" : "bg-slate-50 border-slate-200 text-slate-900 focus:border-[#a27cff]"}`}
+                                        placeholder="Enter your phone number"
+                                    />
+                                </div>
+
+                                <div className="flex gap-2 pt-2">
+                                    <button
+                                        onClick={handleSaveProfile}
+                                        disabled={isSavingProfile}
+                                        className="flex-1 py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isSavingProfile ? (
+                                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        ) : (
+                                            <Check size={14} />
+                                        )}
+                                        Save Changes
+                                    </button>
+                                    <button
+                                        onClick={() => setIsEditing(false)}
+                                        className={`py-3 px-6 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${isDark ? "bg-[#201f1f] border-white/5 text-zinc-400 hover:bg-[#2c2c2c]" : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200"}`}
+                                    >
+                                        <CloseIcon size={14} /> Cancel
+                                    </button>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="space-y-3">
-                            {personalFields.map((field, i) => (
-                                <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl ${surfaceMid}`}>
-                                    <span className={textVariant}>{field.icon}</span>
-                                    <div className="flex-1 min-w-0">
-                                        <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>{field.label}</p>
-                                        <p className={`text-sm font-medium mt-0.5 truncate ${textPrimary}`}>{field.value}</p>
+                    ) : (
+                        <div className="p-6">
+                            {/* Avatar */}
+                            <div className="flex items-center gap-4 mb-6">
+                                <div className="relative">
+                                    {user?.image ? (
+                                        <img src={user.image} alt={user.full_name} className="w-16 h-16 rounded-2xl object-cover" />
+                                    ) : (
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-black ${isDark ? "bg-[#a27cff]/20 text-[#a27cff]" : "bg-violet-100 text-violet-600"}`}>
+                                            {user?.full_name?.[0] ?? "?"}
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={handleAvatarClick}
+                                        className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#a27cff] flex items-center justify-center shadow-lg hover:bg-[#9066ee] transition-colors"
+                                    >
+                                        <Camera size={13} className="text-white" />
+                                    </button>
+                                </div>
+                                <div>
+                                    <p className={`font-bold ${textPrimary}`}>{user?.full_name ?? "Your Name"}</p>
+                                    <p className={`text-xs ${textVariant}`}>Member since {joinDate}</p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        {emailVerified && (
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">
+                                                Email Verified
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#a27cff]/10 text-[#a27cff]">
+                                            {user?.role ?? "Tenant"}
+                                        </span>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+
+                            <div className="space-y-3">
+                                {personalFields.map((field, i) => (
+                                    <div key={i} className={`flex items-center gap-3 p-3.5 rounded-xl ${surfaceMid}`}>
+                                        <span className={textVariant}>{field.icon}</span>
+                                        <div className="flex-1 min-w-0">
+                                            <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>{field.label}</p>
+                                            <p className={`text-sm font-medium mt-0.5 truncate ${textPrimary}`}>{field.value}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </section>
             </div>
 
@@ -297,6 +453,14 @@ export default function TenantIdentity() {
                 ref={fileInputRef}
                 onChange={handleFileChange}
                 accept="image/*,.pdf"
+                className="hidden"
+            />
+
+            <input
+                type="file"
+                ref={avatarInputRef}
+                onChange={handleAvatarChange}
+                accept="image/*"
                 className="hidden"
             />
 
@@ -310,7 +474,7 @@ export default function TenantIdentity() {
                         className="fixed bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-emerald-400/90 backdrop-blur-sm text-black font-bold text-sm shadow-2xl z-50"
                     >
                         <CheckCircle2 size={18} />
-                        Document submitted for review!
+                        {uploadSuccess === "profile_updated" ? "Profile updated successfully!" : "Document submitted for review!"}
                     </motion.div>
                 )}
             </AnimatePresence>

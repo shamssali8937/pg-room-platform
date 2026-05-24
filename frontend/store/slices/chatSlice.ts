@@ -11,6 +11,9 @@ export interface ChatMessage {
         id: string;
         full_name: string;
         role: string;
+        profile_photo_url?: string | null;
+        image?: string | null;
+        mobile_number?: string | null;
     };
     content: string;
     is_read: boolean;
@@ -24,6 +27,9 @@ export interface Conversation {
         id: string;
         full_name: string;
         role: string;
+        profile_photo_url?: string | null;
+        image?: string | null;
+        mobile_number?: string | null;
     }>;
     last_message: string | null;
     last_message_at: string | null;
@@ -121,6 +127,18 @@ export const blockConversation = createAsyncThunk(
     }
 );
 
+export const deleteMessage = createAsyncThunk(
+    "chat/deleteMessage",
+    async (messageId: string, { rejectWithValue }) => {
+        try {
+            await api.delete(`/chat/messages/${messageId}`);
+            return messageId;
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to delete message");
+        }
+    }
+);
+
 // ─── Slice ───────────────────────────────────────────────────────────────────
 
 const chatSlice = createSlice({
@@ -147,6 +165,24 @@ const chatSlice = createSlice({
         clearChatError(state) {
             state.error = null;
         },
+        deleteLocalMessage(state, action: PayloadAction<{ messageId: string }>) {
+            const { messageId } = action.payload;
+            Object.keys(state.messages).forEach((convId) => {
+                state.messages[convId] = state.messages[convId].filter((msg) => msg.id !== messageId);
+            });
+            // Update last_message if the deleted message was the last one
+            state.conversations.forEach((conv) => {
+                const convMsgs = state.messages[conv.id] ?? [];
+                if (convMsgs.length > 0) {
+                    const lastMsg = convMsgs[convMsgs.length - 1];
+                    conv.last_message = lastMsg.content;
+                    conv.last_message_at = lastMsg.created_at;
+                } else {
+                    conv.last_message = null;
+                    conv.last_message_at = null;
+                }
+            });
+        },
     },
     extraReducers: (builder) => {
         // Conversations
@@ -167,6 +203,7 @@ const chatSlice = createSlice({
                     participants,
                     last_message: lastMsg,
                     last_message_at: lastMsgAt,
+                    unread_count: c.unread_count ?? 0,
                 };
             });
         });
@@ -213,8 +250,28 @@ const chatSlice = createSlice({
             if (!exists) state.conversations.unshift(mappedConv as any);
             state.activeConversationId = mappedConv.id;
         });
+
+        // Delete Message
+        builder.addCase(deleteMessage.fulfilled, (state, action) => {
+            const messageId = action.payload;
+            Object.keys(state.messages).forEach((convId) => {
+                state.messages[convId] = state.messages[convId].filter((msg) => msg.id !== messageId);
+            });
+            // Update last_message if the deleted message was the last one
+            state.conversations.forEach((conv) => {
+                const convMsgs = state.messages[conv.id] ?? [];
+                if (convMsgs.length > 0) {
+                    const lastMsg = convMsgs[convMsgs.length - 1];
+                    conv.last_message = lastMsg.content;
+                    conv.last_message_at = lastMsg.created_at;
+                } else {
+                    conv.last_message = null;
+                    conv.last_message_at = null;
+                }
+            });
+        });
     },
 });
 
-export const { setActiveConversation, addLocalMessage, clearChatError } = chatSlice.actions;
+export const { setActiveConversation, addLocalMessage, deleteLocalMessage, clearChatError } = chatSlice.actions;
 export default chatSlice.reducer;

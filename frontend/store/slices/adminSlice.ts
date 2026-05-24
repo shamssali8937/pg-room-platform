@@ -21,6 +21,17 @@ export interface AdminRoom {
     owner: { id: string; full_name: string; email: string };
     images: Array<{ url: string; public_id: string }>;
     created_at: string;
+    description?: string;
+    amenities?: string[];
+    amenities_list?: string[];
+    locality?: string;
+    landmark?: string;
+    furnished_status?: string;
+    security_deposit_amount?: number;
+    available_for?: string;
+    gender_preference?: string;
+    sqft?: number;
+    size_value?: number;
 }
 
 export interface AdminUser {

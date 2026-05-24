@@ -11,6 +11,7 @@ router.post("/conversations", ctrl.createConversation);
 router.get("/conversations/:id/messages", ctrl.getMessages);
 router.post("/messages", ctrl.sendMessage);
 router.post("/conversations/:id/block", ctrl.blockConversation);
+router.delete("/messages/:messageId", ctrl.deleteMessage);
 // NOTE: /conversations/:id/report is handled by global report route targeting 'conversation' or 'user' type
 
 export default router;

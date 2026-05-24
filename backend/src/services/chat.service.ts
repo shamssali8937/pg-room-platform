@@ -7,8 +7,8 @@ export const getConversationsService = async (userId: string, role: string) => {
     return prisma.conversation.findMany({
         where,
         include: {
-            tenant: { select: { id: true, full_name: true, profile_photo_url: true } },
-            owner: { select: { id: true, full_name: true, profile_photo_url: true } },
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
             room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
             messages: { orderBy: { created_at: "desc" }, take: 1 }
         },
@@ -24,16 +24,51 @@ export const getMessagesService = async (userId: string, conversationId: string)
 
     return prisma.message.findMany({
         where: { conversation_id: conversationId },
+        include: {
+            sender: { select: { id: true, full_name: true, profile_photo_url: true } }
+        },
         orderBy: { created_at: "asc" }
     });
 };
 
 export const createConversationService = async (tenantId: string, roomId: string, ownerId: string) => {
+    const existing = await prisma.conversation.findFirst({
+        where: {
+            tenant_id: tenantId,
+            owner_id: ownerId,
+        },
+        include: {
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
+        }
+    });
+    if (existing) {
+        if (existing.room_id !== roomId) {
+            const updated = await prisma.conversation.update({
+                where: { id: existing.id },
+                data: { room_id: roomId },
+                include: {
+                    tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+                    owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+                    room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
+                }
+            });
+            return updated;
+        }
+        return existing;
+    }
+
     return prisma.conversation.create({
         data: {
             room_id: roomId,
             tenant_id: tenantId,
             owner_id: ownerId,
+        },
+        include: {
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
         }
     });
 };
@@ -52,6 +87,9 @@ export const sendMessageService = async (senderId: string, conversationId: strin
             sender_id: senderId,
             receiver_id: receiverId,
             message_body: messageBody,
+        },
+        include: {
+            sender: { select: { id: true, full_name: true, profile_photo_url: true } }
         }
     });
 
@@ -72,5 +110,19 @@ export const blockConversationService = async (userId: string, conversationId: s
     return prisma.conversation.update({
         where: { id: conversationId },
         data: { conversation_status: "blocked" }
+    });
+};
+
+export const deleteMessageService = async (userId: string, messageId: string) => {
+    const message = await prisma.message.findUnique({ where: { id: messageId } });
+    if (!message) {
+        throw NotFoundError("Message");
+    }
+    if (message.sender_id !== userId) {
+        throw new Error("You are not authorized to delete this message");
+    }
+
+    return prisma.message.delete({
+        where: { id: messageId }
     });
 };

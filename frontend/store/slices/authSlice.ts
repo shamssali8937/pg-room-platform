@@ -67,6 +67,16 @@ export const logoutUser = createAsyncThunk(
     }
 );
 
+const mapUserPhotos = (user: AuthUser | null): AuthUser | null => {
+    if (!user) return null;
+    const photo = user.profile_photo_url ?? user.image;
+    return {
+        ...user,
+        profile_photo_url: photo,
+        image: photo,
+    };
+};
+
 // ─── Slice ─────────────────────────────────────────────────────────────────
 
 const authSlice = createSlice({
@@ -74,7 +84,7 @@ const authSlice = createSlice({
     initialState,
     reducers: {
         setUser(state, action: PayloadAction<AuthUser>) {
-            state.user = action.payload;
+            state.user = mapUserPhotos(action.payload);
             state.isAuthenticated = true;
             state.isLoading = false;
             state.error = null;
@@ -95,7 +105,7 @@ const authSlice = createSlice({
             state.isLoading = true;
         });
         builder.addCase(hydrateAuth.fulfilled, (state, action) => {
-            state.user = action.payload;
+            state.user = mapUserPhotos(action.payload);
             state.isAuthenticated = true;
             state.isLoading = false;
         });
@@ -111,7 +121,7 @@ const authSlice = createSlice({
             state.error = null;
         });
         builder.addCase(loginUser.fulfilled, (state, action) => {
-            state.user = action.payload;
+            state.user = mapUserPhotos(action.payload);
             state.isAuthenticated = true;
             state.isLoading = false;
             state.error = null;

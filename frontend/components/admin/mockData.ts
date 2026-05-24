@@ -340,6 +340,15 @@ export interface ModerationListing {
     documents?: { name: string; status: "verified" | "pending" | "failed" }[];
     submittedAt?: string;
     occupancy?: number;
+    address?: string;
+    locality?: string;
+    landmark?: string;
+    furnishedStatus?: string;
+    securityDeposit?: number;
+    availableFor?: string;
+    genderPreference?: string;
+    sqft?: number;
+    baths?: number;
 }
 
 export const rejectionReasons = [

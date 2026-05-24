@@ -52,6 +52,7 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     let activeId = "dashboard";
     if (pathname?.includes("settings")) activeId = "settings";
     else if (pathname?.includes("listings")) activeId = "listings";
+    else if (pathname?.includes("bookings")) activeId = "bookings";
     else if (pathname?.includes("inquiries")) activeId = "inquiries";
     else if (pathname?.includes("wallet")) activeId = "wallet";
     else if (pathname?.includes("dashboard")) activeId = "dashboard";
