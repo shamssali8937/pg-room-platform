@@ -7,13 +7,14 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchConversations, fetchMessages, sendMessage,
-    setActiveConversation, blockConversation, deleteMessage
+    setActiveConversation, blockConversation, deleteMessage,
+    createConversationByEmail
 } from "@/store/slices/chatSlice";
 import type { Conversation } from "@/store/slices/chatSlice";
 import {
     Send, Paperclip, Search, MessageSquare, Loader2,
     AlertCircle, Phone, MoreVertical, CheckCircle, Filter,
-    ShieldX, Image, MapPin, Video, FileText, Trash2
+    ShieldX, Image, MapPin, Video, FileText, Trash2, Plus, X
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -108,6 +109,31 @@ export default function TenantInbox() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const [showStartChatModal, setShowStartChatModal] = useState(false);
+    const [newChatEmail, setNewChatEmail] = useState("");
+    const [startChatError, setStartChatError] = useState("");
+    const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+    const handleStartChatByEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newChatEmail.trim()) return;
+        setIsCreatingChat(true);
+        setStartChatError("");
+        try {
+            const resultAction = await dispatch(createConversationByEmail({ email: newChatEmail.trim() }));
+            if (createConversationByEmail.fulfilled.match(resultAction)) {
+                setShowStartChatModal(false);
+                setNewChatEmail("");
+            } else {
+                setStartChatError(resultAction.payload as string || "Failed to start chat.");
+            }
+        } catch (err: any) {
+            setStartChatError("An unexpected error occurred.");
+        } finally {
+            setIsCreatingChat(false);
+        }
+    };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -217,9 +243,18 @@ export default function TenantInbox() {
                                 {conversations.reduce((a, c) => a + c.unread_count, 0)} unread
                             </p>
                         </div>
-                        <button className={`p-2 rounded-lg transition-colors ${isDark ? "text-zinc-400 hover:bg-white/5" : "text-slate-400 hover:bg-slate-100"}`}>
-                            <Filter size={16} />
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowStartChatModal(true)}
+                                className="p-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center"
+                                title="Start Chat by Email"
+                            >
+                                <Plus size={16} />
+                            </button>
+                            <button className={`p-2 rounded-lg transition-colors ${isDark ? "text-zinc-400 hover:bg-white/5" : "text-slate-400 hover:bg-slate-100"}`}>
+                                <Filter size={16} />
+                            </button>
+                        </div>
                     </div>
                     <div className="relative">
                         <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${textVariant}`} />
@@ -289,7 +324,7 @@ export default function TenantInbox() {
                                                     <p className={`text-sm font-bold ${textPrimary}`}>{other?.full_name ?? "Unknown"}</p>
                                                     {conv.room && (
                                                         <p className={`text-[10px] truncate max-w-[130px] ${conv.unread_count > 0 ? "text-[#a27cff]" : textVariant}`}>
-                                                            {conv.room.title}
+                                                            {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
                                                         </p>
                                                     )}
                                                 </div>
@@ -346,7 +381,7 @@ export default function TenantInbox() {
                                 </h4>
                                 {activeConversation.room && (
                                     <p className="text-[10px] font-bold text-[#a27cff] uppercase tracking-widest">
-                                        {activeConversation.room.title}
+                                        {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
                                     </p>
                                 )}
                             </div>
@@ -411,6 +446,10 @@ export default function TenantInbox() {
                                 </div>
                                 {activeMessages.map((msg) => {
                                     const isMine = msg.sender_id === user?.id;
+                                    const otherParticipant = getOtherParticipant(activeConversation);
+                                    const senderPhoto = isMine ? user?.profile_photo_url : (msg.sender?.profile_photo_url || msg.sender?.image || otherParticipant?.profile_photo_url);
+                                    const senderName = isMine ? user?.full_name : (msg.sender?.full_name || otherParticipant?.full_name);
+                                    
                                     return (
                                         <motion.div
                                             key={msg.id}
@@ -419,16 +458,16 @@ export default function TenantInbox() {
                                             className={`flex items-end gap-3 ${isMine ? "flex-row-reverse" : ""}`}
                                         >
                                             <div className="w-8 h-8 shrink-0">
-                                                {msg.sender?.profile_photo_url || msg.sender?.image ? (
+                                                {senderPhoto ? (
                                                     <img
-                                                        src={msg.sender.profile_photo_url || msg.sender.image || ""}
-                                                        alt={msg.sender?.full_name}
+                                                        src={senderPhoto}
+                                                        alt={senderName ?? "User"}
                                                         className="w-8 h-8 rounded-lg object-cover"
                                                     />
                                                 ) : (
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? "bg-[#a27cff]/20" : "bg-violet-100"}`}>
                                                         <span className="text-[#a27cff] text-[10px] font-bold">
-                                                            {msg.sender?.full_name?.[0] ?? "?"}
+                                                            {(senderName?.[0] ?? "?").toUpperCase()}
                                                         </span>
                                                     </div>
                                                 )}
@@ -453,15 +492,14 @@ export default function TenantInbox() {
                                                         isDark={isDark}
                                                     />
                                                 ) : (
-                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                                                        isMine
+                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
                                                             ? isDark
                                                                 ? "bg-[#a27cff]/15 text-white border border-[#a27cff]/20 rounded-tr-none"
                                                                 : "bg-violet-100 text-slate-900 rounded-tr-none"
                                                             : isDark
-                                                            ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
-                                                            : "bg-slate-100 text-slate-700 rounded-tl-none"
-                                                    }`}>
+                                                                ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
+                                                                : "bg-slate-100 text-slate-700 rounded-tl-none"
+                                                        }`}>
                                                         {msg.content}
                                                     </div>
                                                 )}
@@ -577,6 +615,71 @@ export default function TenantInbox() {
                     <p className={`text-sm mt-1 ${textVariant}`}>Choose from the left panel to start messaging</p>
                 </div>
             )}
+
+            {/* Start Chat by Email Modal */}
+            <AnimatePresence>
+                {showStartChatModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className={`w-full max-w-md p-6 rounded-2xl border ${isDark ? "bg-[#181818] border-white/5 text-white" : "bg-white border-slate-200 text-slate-900"} shadow-2xl`}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-headline font-bold">Start New Chat</h3>
+                                <button
+                                    onClick={() => { setShowStartChatModal(false); setStartChatError(""); }}
+                                    className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleStartChatByEmail} className="space-y-4">
+                                <div>
+                                    <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        User Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="landlord@example.com or user@example.com"
+                                        value={newChatEmail}
+                                        onChange={(e) => setNewChatEmail(e.target.value)}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                                            isDark
+                                                ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
+                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-purple-600/40"
+                                        }`}
+                                    />
+                                </div>
+
+                                {startChatError && (
+                                    <div className="flex items-center gap-2 text-red-500 text-xs font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                                        <AlertCircle size={14} />
+                                        <span>{startChatError}</span>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingChat || !newChatEmail.trim()}
+                                    className="w-full py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(162,124,255,0.3)]"
+                                >
+                                    {isCreatingChat ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" /> Creating Chat...
+                                        </>
+                                    ) : (
+                                        "Start Chat"
+                                    )}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

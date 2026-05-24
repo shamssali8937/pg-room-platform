@@ -16,7 +16,9 @@ import {
     LogOut,
     X,
     Sun,
-    Moon
+    Moon,
+    MessageSquare,
+    MessageCircle
 } from "lucide-react";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 
@@ -26,6 +28,8 @@ const navItems = [
     { icon: Building2, label: "Listings", id: "listings", href: "/admin/listings" },
     { icon: BarChart3, label: "Reports", id: "reports", href: "/admin/reports" },
     { icon: Star, label: "Points", id: "points", href: "/admin/points" },
+    { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "/admin/inquiries" },
+    { icon: MessageCircle, label: "Inbox", id: "inbox", href: "/admin/inbox" },
 ];
 
 interface SidebarProps {

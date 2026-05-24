@@ -12,6 +12,7 @@ router.post("/listings/:id/moderate", ctrl.moderateListing);
 
 router.get("/users", ctrl.getUsers);
 router.patch("/users/:id/status", ctrl.updateUserStatus);
+router.patch("/users/:id/verify", ctrl.verifyUser);
 
 router.get("/reports", ctrl.getReports);
 router.post("/reports/:id/resolve", ctrl.resolveReport);
@@ -20,5 +21,8 @@ router.get("/points/transactions", ctrl.getPointsTransactions);
 router.post("/points/:ownerId/adjust", ctrl.adjustPoints);
 
 router.get("/audit-actions", ctrl.getAuditActions);
+
+router.get("/inquiries", ctrl.getInquiries);
+router.patch("/inquiries/:id/status", ctrl.updateInquiryStatus);
 
 export default router;

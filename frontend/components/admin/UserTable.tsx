@@ -2,14 +2,33 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Eye, AlertTriangle, Gavel, ShieldCheck, Clock, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Eye, AlertTriangle, Gavel, ShieldCheck, Clock, X, ChevronLeft, ChevronRight, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { type AdminUser, type UserRole, type AccountStatus } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchAdminUsers, updateUserStatus } from "@/store/slices/adminSlice";
+import { fetchAdminUsers, updateUserStatus, verifyUser } from "@/store/slices/adminSlice";
 
 interface UserTableProps {
     searchQuery: string;
+}
+
+interface TableAdminUser {
+    id: string;
+    name: string;
+    email: string;
+    avatar: string;
+    role: UserRole;
+    verification: "Verified" | "Pending" | "Rejected";
+    accountStatus: AccountStatus;
+    joinDate: string;
+    mobile_number?: string | null;
+    documents?: Array<{
+        id: string;
+        doc_type: string;
+        file_url: string;
+        status: string;
+        created_at: string;
+    }>;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -20,30 +39,39 @@ export default function UserTable({ searchQuery }: UserTableProps) {
     const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
     const [statusFilter, setStatusFilter] = useState<AccountStatus | "Any">("Any");
     const [currentPage, setCurrentPage] = useState(1);
-    const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-    const [actionModal, setActionModal] = useState<{ user: AdminUser; action: "warn" | "ban" } | null>(null);
+    const [selectedUser, setSelectedUser] = useState<TableAdminUser | null>(null);
+    const [actionModal, setActionModal] = useState<{ user: TableAdminUser; action: "warn" | "ban" } | null>(null);
     const { isDark } = useAdminTheme();
 
     useEffect(() => {
         dispatch(fetchAdminUsers());
     }, [dispatch]);
 
-    const mappedUsers = useMemo((): AdminUser[] => {
+    const mappedUsers = useMemo((): TableAdminUser[] => {
         return reduxUsers.map((u) => {
             const roleFormatted = (u.role.charAt(0).toUpperCase() + u.role.slice(1)) as UserRole;
             let statusFormatted: AccountStatus = "Active";
             if (u.account_status.toLowerCase() === "suspended") statusFormatted = "Suspended";
             if (u.account_status.toLowerCase() === "warned") statusFormatted = "Warned";
 
+            let verificationFormatted: "Verified" | "Pending" | "Rejected" = "Pending";
+            if (u.verification_status && u.verification_status.toLowerCase() === "verified") {
+                verificationFormatted = "Verified";
+            } else if (u.verification_status && u.verification_status.toLowerCase() === "rejected") {
+                verificationFormatted = "Rejected";
+            }
+
             return {
                 id: u.id,
                 name: u.full_name,
                 email: u.email,
                 role: roleFormatted,
-                verification: "Verified",
+                verification: verificationFormatted,
                 accountStatus: statusFormatted,
                 joinDate: new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
                 avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=8b5cf6&color=fff`,
+                mobile_number: u.mobile_number,
+                documents: u.documents || []
             };
         });
     }, [reduxUsers]);
@@ -82,6 +110,16 @@ export default function UserTable({ searchQuery }: UserTableProps) {
 
     const handleRestore = (id: string) => {
         dispatch(updateUserStatus({ id, status: "active", reason: "Account status reinstated" }));
+    };
+
+    const handleVerify = (id: string) => {
+        dispatch(verifyUser({ id, status: "verified", reason: "Manually verified by Administrator" }));
+        setSelectedUser((prev) => prev ? { ...prev, verification: "Verified" } : null);
+    };
+
+    const handleRejectVerification = (id: string) => {
+        dispatch(verifyUser({ id, status: "rejected", reason: "Documents rejected by Administrator" }));
+        setSelectedUser((prev) => prev ? { ...prev, verification: "Rejected" } : null);
     };
 
     // Theme tokens
@@ -254,7 +292,103 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                                     <div><p className={`text-xs uppercase tracking-wider mb-1 ${modalLabelColor}`}>Joined</p><p className={modalValColor}>{selectedUser.joinDate}</p></div>
                                     <div><p className={`text-xs uppercase tracking-wider mb-1 ${modalLabelColor}`}>Verification</p><VerificationBadge status={selectedUser.verification} isDark={isDark} /></div>
                                     <div><p className={`text-xs uppercase tracking-wider mb-1 ${modalLabelColor}`}>Status</p><StatusBadge status={selectedUser.accountStatus} isDark={isDark} /></div>
+                                    {selectedUser.mobile_number && (
+                                        <div className="col-span-2">
+                                            <p className={`text-xs uppercase tracking-wider mb-1 ${modalLabelColor}`}>Mobile Number</p>
+                                            <p className={modalValColor}>{selectedUser.mobile_number}</p>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Uploaded Documents Section */}
+                                <div className={`pt-4 border-t ${isDark ? "border-white/5" : "border-slate-100"} space-y-3`}>
+                                    <h4 className={`text-xs uppercase font-extrabold tracking-wider ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        Verification Documents
+                                    </h4>
+                                    {selectedUser.documents && selectedUser.documents.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {selectedUser.documents.map((doc) => (
+                                                <div
+                                                    key={doc.id}
+                                                    className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                                                        isDark
+                                                            ? "bg-zinc-800/40 border-white/5 hover:bg-zinc-800/60"
+                                                            : "bg-slate-50 border-slate-200/60 hover:bg-slate-100/75"
+                                                    }`}
+                                                >
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className={`text-xs font-bold uppercase tracking-wide truncate ${isDark ? "text-white" : "text-slate-900"}`}>
+                                                            {doc.doc_type === "cnic" ? "CNIC / National ID" : 
+                                                             doc.doc_type === "photo" ? "Profile Photo Proof" :
+                                                             doc.doc_type === "employment" ? "Employment / Student ID" :
+                                                             doc.doc_type === "bank" ? "Bank Statement" : doc.doc_type}
+                                                        </span>
+                                                        <span className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
+                                                            Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                                            doc.status === "verified"
+                                                                ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                                                : doc.status === "rejected"
+                                                                ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                                                : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                                        }`}>
+                                                            {doc.status.toUpperCase()}
+                                                        </span>
+                                                        <a
+                                                            href={doc.file_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className={`p-1.5 rounded-lg border text-xs font-semibold flex items-center justify-center hover:scale-105 active:scale-95 transition-all ${
+                                                                isDark
+                                                                    ? "bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20"
+                                                                    : "bg-purple-50 text-purple-600 border-purple-100 hover:bg-purple-100"
+                                                            }`}
+                                                            title="Open Document"
+                                                        >
+                                                            <Eye size={13} />
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className={`text-xs italic ${isDark ? "text-zinc-600" : "text-slate-400"}`}>
+                                            No verification documents uploaded.
+                                        </p>
+                                    )}
+                                </div>
+
+                                 {selectedUser.verification !== "Verified" && (
+                                     <div className={`pt-4 border-t ${isDark ? "border-white/5" : "border-slate-100"} space-y-2`}>
+                                         <p className={`text-xs uppercase font-extrabold tracking-wider ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                             Verification Control
+                                         </p>
+                                         <div className="flex gap-2">
+                                             <button
+                                                 onClick={() => handleVerify(selectedUser.id)}
+                                                 className="flex-1 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.02] active:scale-95"
+                                             >
+                                                 <CheckCircle size={14} />
+                                                 Verify User
+                                             </button>
+                                             <button
+                                                 onClick={() => handleRejectVerification(selectedUser.id)}
+                                                 className={`flex-1 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all hover:scale-[1.02] active:scale-95 ${
+                                                     isDark
+                                                         ? "bg-red-500/10 hover:bg-red-500/20 border-red-500/20 text-red-400"
+                                                         : "bg-red-50 hover:bg-red-100 border-red-200 text-red-600"
+                                                 }`}
+                                             >
+                                                 <XCircle size={14} />
+                                                 Reject
+                                             </button>
+                                         </div>
+                                     </div>
+                                 )}
+
                                 {selectedUser.accountStatus === "Suspended" && (
                                     <button onClick={() => { handleRestore(selectedUser.id); setSelectedUser(null); }} className="w-full py-2.5 bg-green-500/10 text-green-500 rounded-lg text-sm font-semibold hover:bg-green-500/20 transition-colors">
                                         Restore Account

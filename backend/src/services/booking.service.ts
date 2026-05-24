@@ -42,7 +42,8 @@ export const getOwnerBookingsService = async (ownerId: string) => {
         where: { owner_id: ownerId },
         include: {
             tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
-            room: { select: { id: true, title: true, rent_amount: true, images: { take: 1, select: { file_url: true } } } }
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
+            room: { select: { id: true, title: true, rent_amount: true, price: true, address: true, city: true, locality: true, room_type: true, beds: true, baths: true, security_deposit_amount: true, furnished_status: true, images: { take: 1, select: { file_url: true } } } }
         },
         orderBy: { created_at: "desc" }
     });
@@ -54,7 +55,7 @@ export const getTenantBookingsService = async (tenantId: string) => {
         include: {
             tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
             owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true } },
-            room: { select: { id: true, title: true, rent_amount: true, city: true, locality: true, images: { take: 1, select: { file_url: true } } } }
+            room: { select: { id: true, title: true, rent_amount: true, price: true, address: true, city: true, locality: true, room_type: true, beds: true, baths: true, security_deposit_amount: true, furnished_status: true, images: { take: 1, select: { file_url: true } } } }
         },
         orderBy: { created_at: "desc" }
     });

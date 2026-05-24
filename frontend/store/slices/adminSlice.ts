@@ -34,6 +34,14 @@ export interface AdminRoom {
     size_value?: number;
 }
 
+export interface UserDocument {
+    id: string;
+    doc_type: string;
+    file_url: string;
+    status: string;
+    created_at: string;
+}
+
 export interface AdminUser {
     id: string;
     full_name: string;
@@ -41,7 +49,9 @@ export interface AdminUser {
     role: string;
     account_status: string;
     mobile_number?: string | null;
+    verification_status: string;
     created_at: string;
+    documents?: UserDocument[];
     _count?: { rooms: number; bookings_as_tenant: number };
 }
 
@@ -96,6 +106,8 @@ interface AdminState {
     pointsTransactions: AdminPointsTx[];
     auditActions: AdminAction[];
     dashboardStats: AdminDashboardStats | null;
+    recentReports: Array<{ id: string; title: string; description: string; severity: "high" | "medium" | "low" }>;
+    recentPointsActivity: Array<{ id: string; amount: number; type: "earned" | "spent"; user: string; reason: string; icon: string }>;
     isLoading: boolean;
     error: string | null;
 }
@@ -107,6 +119,8 @@ const initialState: AdminState = {
     pointsTransactions: [],
     auditActions: [],
     dashboardStats: null,
+    recentReports: [],
+    recentPointsActivity: [],
     isLoading: false,
     error: null,
 };
@@ -170,6 +184,18 @@ export const updateUserStatus = createAsyncThunk(
             return { id, status, user: data.data };
         } catch (err: any) {
             return rejectWithValue(err.response?.data?.message ?? "Failed to update user status");
+        }
+    }
+);
+
+export const verifyUser = createAsyncThunk(
+    "admin/verifyUser",
+    async ({ id, status, reason }: { id: string; status: string; reason?: string }, { rejectWithValue }) => {
+        try {
+            const { data } = await api.patch(`/admin/users/${id}/verify`, { status, reason });
+            return { id, status, user: data.data };
+        } catch (err: any) {
+            return rejectWithValue(err.response?.data?.message ?? "Failed to verify user");
         }
     }
 );
@@ -256,6 +282,8 @@ const adminSlice = createSlice({
         builder.addCase(fetchAdminDashboard.fulfilled, (state, action) => {
             state.isLoading = false;
             state.dashboardStats = action.payload?.stats ?? action.payload;
+            state.recentReports = action.payload?.recentReports ?? [];
+            state.recentPointsActivity = action.payload?.recentPointsActivity ?? [];
         });
 
         // Listings
@@ -285,6 +313,20 @@ const adminSlice = createSlice({
             const { id, status } = action.payload;
             const idx = state.users.findIndex((u) => u.id === id);
             if (idx >= 0) state.users[idx].account_status = status;
+        });
+
+        builder.addCase(verifyUser.fulfilled, (state, action) => {
+            const { id, status } = action.payload;
+            const idx = state.users.findIndex((u) => u.id === id);
+            if (idx >= 0) {
+                state.users[idx].verification_status = status;
+                if (state.users[idx].documents) {
+                    state.users[idx].documents = state.users[idx].documents?.map((d) => ({
+                        ...d,
+                        status: status === "verified" ? "verified" : "rejected"
+                    }));
+                }
+            }
         });
 
         // Reports

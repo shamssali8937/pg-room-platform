@@ -60,7 +60,7 @@ export default function TenantDashboard() {
             icon: <Home size={18} />,
             label: "Active Lease",
             value: activeBooking ? activeBooking.room.city : "None",
-            sub: activeBooking ? `PKR ${(activeBooking.monthly_rent ?? activeBooking.room?.rent_amount ?? activeBooking.room?.price ?? 0).toLocaleString()}/mo` : "No active lease",
+            sub: activeBooking ? `PKR ${(activeBooking.room?.rent_amount ?? activeBooking.room?.price ?? 0).toLocaleString()}/mo` : "No active lease",
             iconColor: "text-[#a27cff]",
             iconBg: "bg-[#a27cff]/10",
         },
@@ -173,7 +173,7 @@ export default function TenantDashboard() {
                                 <div className="relative sm:w-52 h-36 sm:h-auto shrink-0 overflow-hidden">
                                     {activeBooking.room.images?.[0] && (
                                         <img
-                                            src={activeBooking.room.images[0].url}
+                                            src={activeBooking.room.images[0].file_url}
                                             alt={activeBooking.room.title}
                                             className="w-full h-full object-cover"
                                         />
@@ -187,10 +187,10 @@ export default function TenantDashboard() {
                                     </p>
                                     <div className="grid grid-cols-2 gap-3 mb-4">
                                         {[
-                                            { label: "Monthly Rent", value: `PKR ${(activeBooking.monthly_rent ?? activeBooking.room?.rent_amount ?? activeBooking.room?.price ?? 0).toLocaleString()}` },
-                                            { label: "Next Payment", value: activeBooking.next_payment_due ?? "—" },
-                                            { label: "Lease End", value: new Date(activeBooking.check_out).toLocaleDateString() },
-                                            { label: "Total Paid", value: `PKR ${(activeBooking.total_paid ?? 0).toLocaleString()}` },
+                                            { label: "Monthly Rent", value: `PKR ${(activeBooking.room?.rent_amount ?? activeBooking.room?.price ?? 0).toLocaleString()}` },
+                                            { label: "Security Deposit", value: `PKR ${(activeBooking.room?.security_deposit_amount ?? 0).toLocaleString()}` },
+                                            { label: "Booked On", value: new Date(activeBooking.created_at).toLocaleDateString() },
+                                            { label: "Room Type", value: activeBooking.room?.room_type || "PG Room" },
                                         ].map((item, i) => (
                                             <div key={i} className={`px-3 py-2.5 rounded-xl ${isDark ? "bg-[#1a1919]" : "bg-slate-50"}`}>
                                                 <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>{item.label}</p>
@@ -253,14 +253,14 @@ export default function TenantDashboard() {
                                             className={`flex items-center gap-4 px-6 py-4 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"}`}
                                         >
                                             {booking.room.images?.[0] && (
-                                                <img src={booking.room.images[0].url} alt={booking.room.title} className="w-14 h-10 rounded-lg object-cover shrink-0" />
+                                                <img src={booking.room.images[0].file_url} alt={booking.room.title} className="w-14 h-10 rounded-lg object-cover shrink-0" />
                                             )}
                                             <div className="flex-1 min-w-0">
                                                 <p className={`text-sm font-bold truncate ${textPrimary}`}>{booking.room.title}</p>
                                                 <p className={`text-xs flex items-center gap-1 ${textVariant}`}><MapPin size={10} />{booking.room.city}</p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-sm font-bold text-[#a27cff]">PKR {(booking.monthly_rent ?? booking.room?.rent_amount ?? booking.room?.price ?? 0).toLocaleString()}</p>
+                                                <p className="text-sm font-bold text-[#a27cff]">PKR {(booking.room?.rent_amount ?? booking.room?.price ?? 0).toLocaleString()}</p>
                                                 <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full capitalize ${statusColors[booking.status] ?? "text-zinc-400 bg-zinc-400/10"}`}>
                                                     {booking.status}
                                                 </span>

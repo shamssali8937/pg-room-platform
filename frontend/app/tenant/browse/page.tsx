@@ -100,7 +100,7 @@ export default function TenantBrowse() {
     const [savingId, setSavingId] = useState<string | null>(null);
 
     useEffect(() => {
-        dispatch(fetchRooms({ status: "active" }));
+        dispatch(fetchRooms({}));
         if (user) dispatch(fetchSavedRooms());
     }, [dispatch, user]);
 
@@ -148,7 +148,7 @@ export default function TenantBrowse() {
     };
 
     const handleRetry = () => {
-        dispatch(fetchRooms({ status: "active" }));
+        dispatch(fetchRooms({}));
     };
 
     return (
@@ -299,13 +299,6 @@ export default function TenantBrowse() {
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                                    {room.status === "booked" && (
-                                        <div className="absolute inset-0 bg-red-950/40 backdrop-blur-[1px] flex items-center justify-center z-20 pointer-events-none select-none">
-                                            <div className="border-4 border-red-500 text-red-500 font-black uppercase text-xl tracking-[0.25em] px-6 py-2 rounded-xl rotate-[-12deg] shadow-lg bg-black/60 scale-105 animate-pulse">
-                                                RENTED OUT
-                                            </div>
-                                        </div>
-                                    )}
 
                                     {/* Hover overlay */}
                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center gap-3 backdrop-blur-[2px]">

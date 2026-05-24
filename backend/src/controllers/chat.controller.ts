@@ -28,6 +28,12 @@ export const getMessages = async (req: Request, res: Response, next: NextFunctio
 
 export const createConversation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+        const { email } = req.body;
+        if (email) {
+            const data = await service.createConversationByEmailService(req.user!.id, email);
+            res.status(201).json({ success: true, data });
+            return;
+        }
         const roomId = req.body.roomId ?? req.body.room_id;
         const ownerId = req.body.ownerId ?? req.body.recipient_id ?? req.body.owner_id;
         const data = await service.createConversationService(req.user!.id, roomId, ownerId);

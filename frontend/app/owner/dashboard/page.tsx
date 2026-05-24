@@ -224,11 +224,11 @@ export default function OwnerDashboard() {
                                         <div className="flex-1 min-w-0">
                                             <p className={`text-sm font-bold truncate ${textPrimary}`}>{booking.room.title}</p>
                                             <p className={`text-xs ${textVariant}`}>
-                                                {new Date(booking.check_in).toLocaleDateString()} → {new Date(booking.check_out).toLocaleDateString()}
+                                                Received: {new Date(booking.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-sm font-bold text-amber-400">PKR {(booking.monthly_rent ?? booking.room?.rent_amount ?? booking.room?.price ?? 0).toLocaleString()}/mo</p>
+                                            <p className="text-sm font-bold text-amber-400">PKR {(booking.room?.rent_amount ?? booking.room?.price ?? 0).toLocaleString()}/mo</p>
                                             <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-400/10 text-amber-400 border border-amber-400/20">
                                                 Pending
                                             </span>

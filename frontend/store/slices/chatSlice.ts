@@ -115,6 +115,22 @@ export const createConversation = createAsyncThunk(
     }
 );
 
+export const createConversationByEmail = createAsyncThunk(
+    "chat/createConversationByEmail",
+    async (
+        { email }: { email: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.post("/chat/conversations", { email });
+            return data.data as Conversation;
+        } catch (err: any) {
+            const msg = err.response?.data?.message ?? err.message ?? "Failed to create conversation";
+            return rejectWithValue(msg);
+        }
+    }
+);
+
 export const blockConversation = createAsyncThunk(
     "chat/blockConversation",
     async (conversationId: string, { rejectWithValue }) => {
@@ -193,8 +209,8 @@ const chatSlice = createSlice({
             state.isLoading = false;
             state.conversations = (action.payload || []).map((c: any) => {
                 const participants = c.participants ?? [
-                    ...(c.tenant ? [{ id: c.tenant.id, full_name: c.tenant.full_name, role: "tenant", profile_photo_url: c.tenant.profile_photo_url }] : []),
-                    ...(c.owner ? [{ id: c.owner.id, full_name: c.owner.full_name, role: "owner", profile_photo_url: c.owner.profile_photo_url }] : []),
+                    ...(c.tenant ? [{ id: c.tenant.id, full_name: c.tenant.full_name, role: c.tenant.role ?? "tenant", profile_photo_url: c.tenant.profile_photo_url }] : []),
+                    ...(c.owner ? [{ id: c.owner.id, full_name: c.owner.full_name, role: c.owner.role ?? "owner", profile_photo_url: c.owner.profile_photo_url }] : []),
                 ];
                 const lastMsg = c.last_message ?? (c.messages?.[0]?.message_body ?? null);
                 const lastMsgAt = c.last_message_at ?? (c.messages?.[0]?.created_at ?? null);
@@ -242,8 +258,20 @@ const chatSlice = createSlice({
             const mappedConv = {
                 ...action.payload,
                 participants: (action.payload as any).participants ?? [
-                    ...((action.payload as any).tenant ? [{ id: (action.payload as any).tenant.id, full_name: (action.payload as any).tenant.full_name, role: "tenant", profile_photo_url: (action.payload as any).tenant.profile_photo_url }] : []),
-                    ...((action.payload as any).owner ? [{ id: (action.payload as any).owner.id, full_name: (action.payload as any).owner.full_name, role: "owner", profile_photo_url: (action.payload as any).owner.profile_photo_url }] : []),
+                    ...((action.payload as any).tenant ? [{ id: (action.payload as any).tenant.id, full_name: (action.payload as any).tenant.full_name, role: (action.payload as any).tenant.role ?? "tenant", profile_photo_url: (action.payload as any).tenant.profile_photo_url }] : []),
+                    ...((action.payload as any).owner ? [{ id: (action.payload as any).owner.id, full_name: (action.payload as any).owner.full_name, role: (action.payload as any).owner.role ?? "owner", profile_photo_url: (action.payload as any).owner.profile_photo_url }] : []),
+                ]
+            };
+            const exists = state.conversations.find((c) => c.id === mappedConv.id);
+            if (!exists) state.conversations.unshift(mappedConv as any);
+            state.activeConversationId = mappedConv.id;
+        });
+        builder.addCase(createConversationByEmail.fulfilled, (state, action) => {
+            const mappedConv = {
+                ...action.payload,
+                participants: (action.payload as any).participants ?? [
+                    ...((action.payload as any).tenant ? [{ id: (action.payload as any).tenant.id, full_name: (action.payload as any).tenant.full_name, role: (action.payload as any).tenant.role ?? "tenant", profile_photo_url: (action.payload as any).tenant.profile_photo_url }] : []),
+                    ...((action.payload as any).owner ? [{ id: (action.payload as any).owner.id, full_name: (action.payload as any).owner.full_name, role: (action.payload as any).owner.role ?? "owner", profile_photo_url: (action.payload as any).owner.profile_photo_url }] : []),
                 ]
             };
             const exists = state.conversations.find((c) => c.id === mappedConv.id);

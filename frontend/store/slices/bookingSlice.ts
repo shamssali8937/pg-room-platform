@@ -7,31 +7,41 @@ export interface Booking {
     id: string;
     room_id: string;
     tenant_id: string;
+    owner_id: string;
+    request_type: string; // 'inquiry' | 'booking'
     status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
-    check_in: string;
-    check_out: string;
-    monthly_rent: number;
-    deposit_paid: number;
-    total_paid: number;
-    next_payment_due: string | null;
+    message: string | null;
+    owner_note: string | null;
+    expires_at: string | null;
+    created_at: string;
+    updated_at: string;
+    tenant?: {
+        id: string;
+        full_name: string;
+        profile_photo_url?: string | null;
+        mobile_number?: string | null;
+    };
+    owner?: {
+        id: string;
+        full_name: string;
+        profile_photo_url?: string | null;
+        mobile_number?: string | null;
+    };
     room: {
         id: string;
         title: string;
-        address: string;
-        city: string;
-        images: Array<{ url: string }>;
-        room_type?: string;
-        floor?: number;
-        amenities?: string[];
-        rent_amount?: number;
+        rent_amount: number;
         price?: number;
-        owner: {
-            id: string;
-            full_name: string;
-            email: string;
-        };
+        address?: string;
+        city?: string;
+        locality?: string;
+        room_type?: string;
+        beds?: number;
+        baths?: number;
+        security_deposit_amount?: number;
+        furnished_status?: string;
+        images?: Array<{ file_url: string }>;
     };
-    created_at: string;
 }
 
 interface BookingState {
@@ -79,7 +89,7 @@ export const fetchOwnerBookings = createAsyncThunk(
 export const createBooking = createAsyncThunk(
     "booking/createBooking",
     async (
-        { roomId, body }: { roomId: string; body: { check_in: string; check_out: string } },
+        { roomId, body }: { roomId: string; body: Record<string, any> },
         { rejectWithValue }
     ) => {
         try {

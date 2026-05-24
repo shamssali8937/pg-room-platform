@@ -59,6 +59,38 @@ export const getAdminDashboardStats = async () => {
         include: { admin: { select: { full_name: true } } },
     });
 
+    const pendingReportsList = await prisma.report.findMany({
+        where: { status: "pending" },
+        orderBy: { created_at: "desc" },
+        take: 5,
+        include: { reporter: { select: { full_name: true } } },
+    });
+
+    const pointsTxList = await prisma.pointsTransaction.findMany({
+        orderBy: { created_at: "desc" },
+        take: 5,
+        include: {
+            owner: { select: { full_name: true } },
+            room: { select: { title: true } },
+        },
+    });
+
+    const mappedReports = pendingReportsList.map(r => ({
+        id: r.id,
+        title: `${r.target_type.toUpperCase()} reported`,
+        description: `${r.reason_code}: ${r.description || "No description"} (by ${r.reporter?.full_name ?? "Anonymous"})`,
+        severity: r.reason_code.toLowerCase().includes("spam") || r.reason_code.toLowerCase().includes("fake") ? "medium" : "high",
+    }));
+
+    const mappedPointsActivity = pointsTxList.map(tx => ({
+        id: tx.id,
+        amount: tx.points,
+        type: tx.points > 0 ? "earned" : "spent",
+        user: tx.owner?.full_name ?? "Owner",
+        reason: `${tx.reason_code}${tx.room ? ` (${tx.room.title})` : ""}`,
+        icon: tx.points > 0 ? "star" : "shopping-bag",
+    }));
+
     return {
         stats: {
             totalUsers,
@@ -69,6 +101,8 @@ export const getAdminDashboardStats = async () => {
             pendingReports,
         },
         recentActivity,
+        recentReports: mappedReports,
+        recentPointsActivity: mappedPointsActivity,
     };
 };
 

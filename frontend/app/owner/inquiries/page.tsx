@@ -307,7 +307,7 @@ export default function OwnerInquiriesPage() {
                                                     <p className={`text-sm font-bold ${textPrimary}`}>{other?.full_name ?? "Tenant"}</p>
                                                     {conv.room && (
                                                         <p className={`text-[10px] truncate max-w-[120px] ${conv.unread_count > 0 ? "text-[#ba9eff]" : textVariant}`}>
-                                                            {conv.room.title}
+                                                            {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
                                                         </p>
                                                     )}
                                                 </div>
@@ -360,7 +360,9 @@ export default function OwnerInquiriesPage() {
                                 <h4 className={`font-headline font-bold text-base ${textPrimary}`}>{getOther(activeConversation)?.full_name ?? "Tenant"}</h4>
                                 <div className="flex items-center gap-2">
                                     {activeConversation.room && (
-                                        <span className="text-[10px] font-bold text-[#ba9eff] uppercase tracking-widest">{activeConversation.room.title}</span>
+                                        <span className="text-[10px] font-bold text-[#ba9eff] uppercase tracking-widest">
+                                            {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
+                                        </span>
                                     )}
                                     <span className={`w-1 h-1 rounded-full ${isDark ? "bg-zinc-600" : "bg-slate-300"}`} />
                                     <span className={`text-xs ${textVariant}`}>Prospective Tenant</span>
@@ -427,6 +429,9 @@ export default function OwnerInquiriesPage() {
                                 </div>
                                 {activeMessages.map((msg) => {
                                     const isMine = msg.sender_id === user?.id;
+                                    const otherParticipant = getOther(activeConversation);
+                                    const senderPhoto = isMine ? user?.profile_photo_url : (msg.sender?.profile_photo_url || msg.sender?.image || otherParticipant?.profile_photo_url);
+                                    const senderName = isMine ? user?.full_name : (msg.sender?.full_name || otherParticipant?.full_name);
                                     // Support both content field and message_body (fallback)
                                     const text = (msg as any).content ?? (msg as any).message_body ?? "";
                                     return (
@@ -437,15 +442,15 @@ export default function OwnerInquiriesPage() {
                                             className={`flex items-end gap-3 ${isMine ? "flex-row-reverse" : ""}`}
                                         >
                                             <div className="w-8 h-8 shrink-0">
-                                                {msg.sender?.profile_photo_url || msg.sender?.image ? (
+                                                {senderPhoto ? (
                                                     <img
-                                                        src={msg.sender.profile_photo_url || msg.sender.image || ""}
-                                                        alt={msg.sender?.full_name}
+                                                        src={senderPhoto}
+                                                        alt={senderName ?? "User"}
                                                         className="w-8 h-8 rounded-lg object-cover"
                                                     />
                                                 ) : (
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? "bg-[#ba9eff]/20" : "bg-violet-100"}`}>
-                                                        <span className="text-[#ba9eff] text-[10px] font-bold">{msg.sender?.full_name?.[0] ?? (isMine ? user?.full_name?.[0] : "T")}</span>
+                                                        <span className="text-[#ba9eff] text-[10px] font-bold">{(senderName?.[0] ?? "?").toUpperCase()}</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -469,15 +474,14 @@ export default function OwnerInquiriesPage() {
                                                         isDark={isDark}
                                                     />
                                                 ) : (
-                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-                                                        isMine
+                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
                                                             ? isDark
                                                                 ? "bg-[#ba9eff]/15 text-white border border-[#ba9eff]/20 rounded-tr-none"
                                                                 : "bg-violet-100 text-slate-900 rounded-tr-none"
                                                             : isDark
-                                                            ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
-                                                            : "bg-slate-100 text-slate-700 rounded-tl-none"
-                                                    }`}>
+                                                                ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
+                                                                : "bg-slate-100 text-slate-700 rounded-tl-none"
+                                                        }`}>
                                                         {text}
                                                     </div>
                                                 )}
