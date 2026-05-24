@@ -37,8 +37,16 @@ export interface TenantListing {
     postedDaysAgo: number;
     ownerName: string;
     ownerAvatar: string;
+    ownerId?: string;
     description: string;
     amenities: string[];
+    locality?: string;
+    landmark?: string;
+    furnishedStatus?: string;
+    securityDeposit?: number;
+    availableFor?: string;
+    genderPreference?: string;
+    gallery?: string[];
 }
 
 export interface TenantMessage {

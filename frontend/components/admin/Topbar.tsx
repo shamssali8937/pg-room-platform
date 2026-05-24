@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, Settings, X, Menu } from "lucide-react";
 import { mockNotifications, type Notification } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
+import { useAuth } from "@/context/AuthContext";
 
 interface TopbarProps {
     searchQuery: string;
@@ -18,6 +19,7 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
     const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark } = useAdminTheme();
+    const { user } = useAuth();
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -160,14 +162,20 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
                 {/* Profile */}
                 <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
                     <div className="text-right hidden sm:block">
-                        <p className={`text-xs font-bold tracking-tight ${profileName}`}>Admin Unit-01</p>
-                        <p className={`text-[10px] ${profileSub}`}>Super Admin</p>
+                        <p className={`text-xs font-bold tracking-tight ${profileName}`}>{user?.full_name ?? "Admin User"}</p>
+                        <p className={`text-[10px] ${profileSub}`}>{user?.role ? user.role.toUpperCase() : "Admin"}</p>
                     </div>
-                    <img
-                        src="https://i.pravatar.cc/100?img=12"
-                        alt="Admin avatar"
-                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-purple-500/20"
-                    />
+                    {user?.image ? (
+                        <img
+                            src={user.image}
+                            alt="Admin avatar"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-purple-500/20"
+                        />
+                    ) : (
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400 border-2 border-purple-500/20`}>
+                            {user?.full_name?.[0] ?? "?"}
+                        </div>
+                    )}
                 </div>
             </div>
         </header>

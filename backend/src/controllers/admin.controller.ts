@@ -94,3 +94,31 @@ export const getAuditActions = async (req: Request, res: Response, next: NextFun
         res.json({ success: true, data });
     } catch (error) { next(error); }
 };
+
+export const getInquiries = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await adminService.getInquiriesService();
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const updateInquiryStatus = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const { status, notes } = req.body;
+        const data = await adminService.moderateInquiryService(req.user!.id, id, status, notes);
+        logger.info("Inquiry moderated by admin", { bookingId: id, status, adminId: req.user!.id, requestId: req.requestId });
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const verifyUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const { status, reason } = req.body;
+        const data = await adminService.verifyUserService(req.user!.id, id, status, reason);
+        logger.info("User verification status updated by admin", { targetUserId: id, status, adminId: req.user!.id, requestId: req.requestId });
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+

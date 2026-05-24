@@ -31,6 +31,14 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
     const [baths, setBaths] = useState(String(listing?.baths ?? ""));
     const [description, setDescription] = useState(listing?.description ?? "");
     const [selectedAmenities, setSelectedAmenities] = useState<string[]>(listing?.amenities ?? []);
+    const [address, setAddress] = useState(listing?.address ?? "");
+    const [locality, setLocality] = useState(listing?.locality ?? "");
+    const [landmark, setLandmark] = useState(listing?.landmark ?? "");
+    const [furnishedStatus, setFurnishedStatus] = useState(listing?.furnishedStatus ?? "unfurnished");
+    const [securityDeposit, setSecurityDeposit] = useState(String(listing?.securityDeposit ?? ""));
+    const [availableFor, setAvailableFor] = useState(listing?.availableFor ?? "any");
+    const [genderPreference, setGenderPreference] = useState(listing?.genderPreference ?? "any");
+    const [sqft, setSqft] = useState(String(listing?.sqft ?? ""));
     const [saved, setSaved] = useState(false);
 
     if (!listing) return null;
@@ -64,6 +72,14 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                 baths: Number(baths),
                 description,
                 amenities: selectedAmenities,
+                address,
+                locality,
+                landmark,
+                furnishedStatus,
+                securityDeposit: Number(securityDeposit),
+                availableFor,
+                genderPreference,
+                sqft: Number(sqft),
             });
         }
         setSaved(true);
@@ -158,16 +174,81 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                         />
                                     </div>
 
-                                    <div>
-                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Location</label>
-                                        <div className="relative">
-                                            <MapPin size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>City</label>
                                             <input
                                                 type="text"
                                                 value={location}
                                                 onChange={e => setLocation(e.target.value)}
-                                                placeholder="e.g. DHA Phase 6, Karachi"
+                                                placeholder="e.g. Lahore"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Room Type</label>
+                                            <div className="relative">
+                                                <Building size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <select
+                                                    value={roomType}
+                                                    onChange={e => setRoomType(e.target.value)}
+                                                    className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all appearance-none ${inputBg}`}
+                                                >
+                                                    <option>Private Room</option>
+                                                    <option>Shared Room</option>
+                                                    <option>Entire Apartment</option>
+                                                    <option>Studio Apartment</option>
+                                                    <option>Entire Villa</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Furnished Status</label>
+                                            <select
+                                                value={furnishedStatus}
+                                                onChange={e => setFurnishedStatus(e.target.value)}
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            >
+                                                <option value="unfurnished">Unfurnished</option>
+                                                <option value="semi-furnished">Semi-Furnished</option>
+                                                <option value="furnished">Fully Furnished</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Full Address</label>
+                                        <div className="relative">
+                                            <MapPin size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                            <input
+                                                type="text"
+                                                value={address}
+                                                onChange={e => setAddress(e.target.value)}
+                                                placeholder="e.g. House 12, Block A, DHA Phase 6"
                                                 className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Locality</label>
+                                            <input
+                                                type="text"
+                                                value={locality}
+                                                onChange={e => setLocality(e.target.value)}
+                                                placeholder="e.g. DHA Phase 6"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Landmark</label>
+                                            <input
+                                                type="text"
+                                                value={landmark}
+                                                onChange={e => setLandmark(e.target.value)}
+                                                placeholder="e.g. Near Raya Club"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
                                             />
                                         </div>
                                     </div>
@@ -187,20 +268,16 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                             </div>
                                         </div>
                                         <div>
-                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Room Type</label>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
                                             <div className="relative">
-                                                <Building size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
-                                                <select
-                                                    value={roomType}
-                                                    onChange={e => setRoomType(e.target.value)}
-                                                    className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all appearance-none ${inputBg}`}
-                                                >
-                                                    <option>Private Room</option>
-                                                    <option>Shared Room</option>
-                                                    <option>Entire Apartment</option>
-                                                    <option>Studio Apartment</option>
-                                                    <option>Entire Villa</option>
-                                                </select>
+                                                <DollarSign size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <input
+                                                    type="number"
+                                                    value={securityDeposit}
+                                                    onChange={e => setSecurityDeposit(e.target.value)}
+                                                    placeholder="85000"
+                                                    className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -231,6 +308,44 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                                     className={`w-full pl-11 pr-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
                                                 />
                                             </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Area (sq ft)</label>
+                                            <input
+                                                type="number"
+                                                value={sqft}
+                                                onChange={e => setSqft(e.target.value)}
+                                                placeholder="800"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Gender Preference</label>
+                                            <select
+                                                value={genderPreference}
+                                                onChange={e => setGenderPreference(e.target.value)}
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            >
+                                                <option value="any">Any</option>
+                                                <option value="male">Male Only</option>
+                                                <option value="female">Female Only</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Available For</label>
+                                            <select
+                                                value={availableFor}
+                                                onChange={e => setAvailableFor(e.target.value)}
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            >
+                                                <option value="any">Any</option>
+                                                <option value="students">Students Only</option>
+                                                <option value="professionals">Professionals Only</option>
+                                                <option value="families">Families Only</option>
+                                            </select>
                                         </div>
                                     </div>
                                 </motion.div>

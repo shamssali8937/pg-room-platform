@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Star, ShoppingBag, Shield, AlertTriangle, ChevronRight } from "lucide-react";
 import { mockModerationReports, mockPointsActivity } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppSelector } from "@/store/hooks";
 
 const severityConfig = {
     high: { bg: "bg-red-500/10", text: "text-red-400", label: "HIGH" },
@@ -19,12 +20,15 @@ const pointsIcons: Record<string, React.ReactNode> = {
 };
 
 export default function ActivityPanel() {
-    const [reports, setReports] = useState(mockModerationReports);
+    const { recentReports, recentPointsActivity } = useAppSelector((state) => state.admin);
+    const [dismissedReportIds, setDismissedReportIds] = useState<string[]>([]);
     const [expandedReport, setExpandedReport] = useState<string | null>(null);
     const { isDark } = useAdminTheme();
 
+    const reports = (recentReports || []).filter(r => !dismissedReportIds.includes(r.id));
+
     const dismissReport = (id: string) => {
-        setReports((prev) => prev.filter((r) => r.id !== id));
+        setDismissedReportIds((prev) => [...prev, id]);
     };
 
     const cardBg = isDark ? "bg-zinc-900/60 border-white/[0.04] divide-white/[0.04]" : "bg-white border-slate-200 divide-slate-100";
@@ -100,23 +104,27 @@ export default function ActivityPanel() {
             <div className="space-y-3">
                 <h4 className={`text-lg font-bold tracking-tight ${headingColor}`}>Points Activity</h4>
                 <div className={`rounded-xl p-5 border space-y-5 ${pointsBg}`}>
-                    {mockPointsActivity.map((activity) => {
-                        const isPositive = activity.amount > 0;
-                        return (
-                            <div key={activity.id} className="flex items-center gap-4 group">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isPositive ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"}`}>
-                                    {pointsIcons[activity.icon] || <Star size={18} />}
+                    {(recentPointsActivity && recentPointsActivity.length > 0) ? (
+                        recentPointsActivity.map((activity) => {
+                            const isPositive = activity.amount > 0;
+                            return (
+                                <div key={activity.id} className="flex items-center gap-4 group">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${isPositive ? "bg-purple-500/10 text-purple-400" : "bg-blue-500/10 text-blue-400"}`}>
+                                        {pointsIcons[activity.icon] || <Star size={18} />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className={`text-sm font-medium ${titleColor}`}>
+                                            {isPositive ? "+" : ""}{activity.amount} Points {activity.type === "earned" ? "Earned" : activity.type === "spent" ? "Spent" : "Reward"}
+                                        </p>
+                                        <p className={`text-xs truncate ${subColor}`}>{activity.user} • {activity.reason}</p>
+                                    </div>
+                                    <ChevronRight size={14} className={`transition-colors flex-shrink-0 ${chevronColor}`} />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className={`text-sm font-medium ${titleColor}`}>
-                                        {isPositive ? "+" : ""}{activity.amount} Points {activity.type === "earned" ? "Earned" : activity.type === "spent" ? "Spent" : "Reward"}
-                                    </p>
-                                    <p className={`text-xs truncate ${subColor}`}>{activity.user} • {activity.reason}</p>
-                                </div>
-                                <ChevronRight size={14} className={`transition-colors flex-shrink-0 ${chevronColor}`} />
-                            </div>
-                        );
-                    })}
+                            );
+                        })
+                    ) : (
+                        <p className={`py-4 text-center text-sm ${emptyColor}`}>No recent points transactions</p>
+                    )}
 
                     <button className={`w-full py-3 rounded-lg text-[11px] font-bold uppercase tracking-[0.15em] transition-all duration-300 ${ledgerBtn}`}>
                         Manage Ledger

@@ -8,8 +8,9 @@ import LandpageFooter from "@/components/LandpageFooter";
 import FloatingInput from "@/components/FloatingInput";
 import Navbar from "@/components/Navbar";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import { loginApi, forgotPasswordApi } from "@/lib/auth.api";
+import { forgotPasswordApi } from "@/lib/auth.api";
+import { useAppDispatch } from "@/store/hooks";
+import { loginUser } from "@/store/slices/authSlice";
 
 function LoginContent() {
     const [email, setEmail] = useState("");
@@ -28,7 +29,7 @@ function LoginContent() {
 
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { saveSession } = useAuth();
+    const dispatch = useAppDispatch();
 
     // ─── Query Params Handling ────────────────────────────────────
     useEffect(() => {
@@ -68,11 +69,12 @@ function LoginContent() {
         setLoading(true);
 
         try {
-            const data = await loginApi({ email, password });
-            saveSession(data.user);
-            redirectByRole(data.user.role);
-        } catch (err: any) {
-            setError(err.message ?? "Invalid credentials. Please try again.");
+            const result = await dispatch(loginUser({ email, password }));
+            if (loginUser.fulfilled.match(result)) {
+                redirectByRole(result.payload.role);
+            } else {
+                setError((result.payload as string) ?? "Invalid credentials. Please try again.");
+            }
         } finally {
             setLoading(false);
         }

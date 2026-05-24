@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Eye,
@@ -21,12 +21,12 @@ import {
     Gavel,
     ShieldCheck,
     MessageCircle,
+    Loader2,
 } from "lucide-react";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import {
-    mockAdminReports,
     mockReportStats,
     reportCategoryLabels,
     type AdminReport,
@@ -35,6 +35,8 @@ import {
     type ReportTab,
 } from "@/components/admin/mockData";
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAdminReports, resolveReport } from "@/store/slices/adminSlice";
 
 // ── Priority config ──
 const priorityConfig: Record<ReportPriority, { dot: string; label: string }> = {
@@ -59,9 +61,11 @@ const tabs: { id: ReportTab; label: string }[] = [
 
 function ReportsContent() {
     const { isDark } = useAdminTheme();
+    const dispatch = useAppDispatch();
+    const { reports: reduxReports, isLoading } = useAppSelector((state) => state.admin);
+
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [reports, setReports] = useState<AdminReport[]>(mockAdminReports);
     const [activeTab, setActiveTab] = useState<ReportTab>("active");
     const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null);
     const [moderatorNote, setModeratorNote] = useState("");
@@ -72,6 +76,47 @@ function ReportsContent() {
 
     const ITEMS_PER_PAGE = 5;
 
+    useEffect(() => {
+        dispatch(fetchAdminReports());
+    }, [dispatch]);
+
+    const mappedReports = useMemo((): AdminReport[] => {
+        return reduxReports.map((r) => {
+            let cat: ReportCategory = "other";
+            const code = r.reason_code.toLowerCase();
+            if (code.includes("scam") || code.includes("fraud")) cat = "scam";
+            else if (code.includes("harass") || code.includes("abuse")) cat = "harassment";
+            else if (code.includes("inaccurate") || code.includes("wrong")) cat = "inaccurate";
+            else if (code.includes("spam")) cat = "spam";
+
+            let priority: ReportPriority = "medium";
+            if (cat === "scam" || cat === "harassment") priority = "high";
+
+            let statusFormatted: "open" | "resolved" | "escalated" = "open";
+            if (r.status === "resolved") statusFormatted = "resolved";
+            if (r.status === "escalated") statusFormatted = "escalated";
+
+            return {
+                id: r.id,
+                target: {
+                    name: r.target_type === "room" ? "Room Listing" : "Platform User",
+                    type: r.target_type === "room" ? "listing" : "user",
+                    avatar: r.target_type === "room"
+                        ? "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=100&h=100&fit=crop"
+                        : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reporter?.full_name ?? "U")}&background=ec4899&color=fff`,
+                    subLabel: `ID: ${r.target_id}`,
+                },
+                reason: cat,
+                priority,
+                time: new Date(r.created_at).toLocaleString(),
+                status: statusFormatted,
+                reportedBy: r.reporter?.full_name ?? "Anonymous",
+                description: r.description ?? "No description provided.",
+                evidence: [],
+            };
+        });
+    }, [reduxReports]);
+
     const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 3000);
@@ -79,7 +124,7 @@ function ReportsContent() {
 
     // Filter by tab + priority
     const filtered = useMemo(() => {
-        let result = reports;
+        let result = mappedReports;
         if (activeTab === "active") result = result.filter((r) => r.status === "open");
         else if (activeTab === "archived") result = result.filter((r) => r.status === "resolved");
         else if (activeTab === "appeals") result = result.filter((r) => r.status === "escalated");
@@ -96,29 +141,35 @@ function ReportsContent() {
             );
         }
         return result;
-    }, [reports, activeTab, searchQuery, filterPriority]);
+    }, [mappedReports, activeTab, searchQuery, filterPriority]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
     const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     // Actions
-    const resolveReport = (id: string) => {
-        setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status: "resolved" as const } : r)));
-        showToast(`Report ${id} resolved`, "success");
+    const resolveReportHandler = (id: string) => {
+        dispatch(resolveReport({ id, resolutionDetails: moderatorNote || "Resolved by Admin" })).then((res) => {
+            if (res.meta.requestStatus === "fulfilled") {
+                showToast(`Report ${id} resolved`, "success");
+                dispatch(fetchAdminReports());
+            } else {
+                showToast(`Failed to resolve report ${id}`, "error");
+            }
+        });
+        setModeratorNote("");
         if (selectedReport?.id === id) setSelectedReport(null);
     };
 
-    const escalateReport = (id: string) => {
-        setReports((prev) => prev.map((r) => (r.id === id ? { ...r, status: "escalated" as const } : r)));
-        showToast(`Report ${id} escalated`, "info");
+    const escalateReportHandler = (id: string) => {
+        showToast(`Report ${id} escalated (Mocked)`, "info");
     };
 
     // Stats computed from data
     const stats = useMemo(() => {
-        const open = reports.filter((r) => r.status === "open").length;
-        const appeals = reports.filter((r) => r.status === "escalated").length;
+        const open = mappedReports.filter((r) => r.status === "open").length;
+        const appeals = mappedReports.filter((r) => r.status === "escalated").length;
         return { open, appeals };
-    }, [reports]);
+    }, [mappedReports]);
 
     return (
         <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
@@ -234,69 +285,77 @@ function ReportsContent() {
                                     </tr>
                                 </thead>
                                 <tbody className={`divide-y ${isDark ? "divide-white/[0.04]" : "divide-slate-100"}`}>
-                                    <AnimatePresence mode="popLayout">
-                                        {paginated.length > 0 ? paginated.map((report) => {
-                                            const rc = reasonColors[report.reason];
-                                            const pc = priorityConfig[report.priority];
-                                            return (
-                                                <motion.tr
-                                                    key={report.id}
-                                                    layout
-                                                    initial={{ opacity: 0, x: -10 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: 20 }}
-                                                    className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}
-                                                >
-                                                    <td className="px-4 sm:px-6 py-4">
-                                                        <span className="text-sm font-mono text-purple-400">#{report.id}</span>
-                                                    </td>
-                                                    <td className="px-4 sm:px-6 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            {report.target.avatar ? (
-                                                                <img src={report.target.avatar} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-white/[0.06]" />
-                                                            ) : (
-                                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? "bg-zinc-800" : "bg-slate-100"}`}>
-                                                                    <MessageCircle size={16} className={isDark ? "text-zinc-500" : "text-slate-400"} />
+                                    {isLoading ? (
+                                        <tr>
+                                            <td colSpan={6} className="px-4 sm:px-6 py-12 text-center text-sm">
+                                                <Loader2 className="animate-spin text-purple-500 mx-auto" size={24} />
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        <AnimatePresence mode="popLayout">
+                                            {paginated.length > 0 ? paginated.map((report) => {
+                                                const rc = reasonColors[report.reason];
+                                                const pc = priorityConfig[report.priority];
+                                                return (
+                                                    <motion.tr
+                                                        key={report.id}
+                                                        layout
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        exit={{ opacity: 0, x: 20 }}
+                                                        className={`transition-colors group ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50"}`}
+                                                    >
+                                                        <td className="px-4 sm:px-6 py-4">
+                                                            <span className="text-sm font-mono text-purple-400">#{report.id}</span>
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                {report.target.avatar ? (
+                                                                    <img src={report.target.avatar} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-white/[0.06]" />
+                                                                ) : (
+                                                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${isDark ? "bg-zinc-800" : "bg-slate-100"}`}>
+                                                                        <MessageCircle size={16} className={isDark ? "text-zinc-500" : "text-slate-400"} />
+                                                                    </div>
+                                                                )}
+                                                                <div className="min-w-0">
+                                                                    <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{report.target.name}</p>
+                                                                    <p className={`text-[11px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.target.subLabel}</p>
                                                                 </div>
-                                                            )}
-                                                            <div className="min-w-0">
-                                                                <p className={`text-sm font-semibold truncate ${isDark ? "text-white" : "text-slate-900"}`}>{report.target.name}</p>
-                                                                <p className={`text-[11px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.target.subLabel}</p>
                                                             </div>
-                                                        </div>
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4">
+                                                            <span className={`px-2.5 py-1 rounded-full ${rc.bg} ${rc.text} text-[10px] font-bold uppercase tracking-tight`}>
+                                                                {reportCategoryLabels[report.reason]}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 sm:px-6 py-4">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-2 h-2 rounded-full ${pc.dot}`} />
+                                                                <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{pc.label}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.time}</td>
+                                                        <td className="px-4 sm:px-6 py-4 text-right">
+                                                            <div className="flex justify-end gap-1.5">
+                                                                <button onClick={() => setSelectedReport(report)} className={`p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-400 transition-all ${isDark ? "bg-zinc-800/80 text-zinc-400" : "bg-slate-100 text-slate-500"}`} title="View">
+                                                                    <Eye size={15} />
+                                                                </button>
+                                                                <button onClick={() => resolveReportHandler(report.id)} className="p-2 rounded-lg bg-purple-500 text-white hover:brightness-110 transition-all" title="Resolve">
+                                                                    <CheckCircle2 size={15} />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </motion.tr>
+                                                );
+                                            }) : (
+                                                <tr>
+                                                    <td colSpan={6} className={`px-6 py-16 text-center text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
+                                                        No reports in this category
                                                     </td>
-                                                    <td className="px-4 sm:px-6 py-4">
-                                                        <span className={`px-2.5 py-1 rounded-full ${rc.bg} ${rc.text} text-[10px] font-bold uppercase tracking-tight`}>
-                                                            {reportCategoryLabels[report.reason]}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 sm:px-6 py-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`w-2 h-2 rounded-full ${pc.dot}`} />
-                                                            <span className={`text-xs font-bold ${isDark ? "text-white" : "text-slate-900"}`}>{pc.label}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className={`px-4 sm:px-6 py-4 text-xs ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{report.time}</td>
-                                                    <td className="px-4 sm:px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-1.5">
-                                                            <button onClick={() => setSelectedReport(report)} className={`p-2 rounded-lg hover:bg-purple-500/20 hover:text-purple-400 transition-all ${isDark ? "bg-zinc-800/80 text-zinc-400" : "bg-slate-100 text-slate-500"}`} title="View">
-                                                                <Eye size={15} />
-                                                            </button>
-                                                            <button onClick={() => resolveReport(report.id)} className="p-2 rounded-lg bg-purple-500 text-white hover:brightness-110 transition-all" title="Resolve">
-                                                                <CheckCircle2 size={15} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </motion.tr>
-                                            );
-                                        }) : (
-                                            <tr>
-                                                <td colSpan={6} className={`px-6 py-16 text-center text-sm ${isDark ? "text-zinc-500" : "text-slate-500"}`}>
-                                                    No reports in this category
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </AnimatePresence>
+                                                </tr>
+                                            )}
+                                        </AnimatePresence>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -362,11 +421,11 @@ function ReportsContent() {
 
                                 {/* Quick Actions */}
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => { resolveReport(selectedReport.id); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button onClick={() => { resolveReportHandler(selectedReport.id); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-400 transition-all text-zinc-400 border border-white/[0.04]">
                                         <CheckCircle2 size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Resolve</span>
                                     </button>
-                                    <button onClick={() => { escalateReport(selectedReport.id); setSelectedReport(null); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-amber-500/10 hover:text-amber-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button onClick={() => { escalateReportHandler(selectedReport.id); setSelectedReport(null); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-amber-500/10 hover:text-amber-400 transition-all text-zinc-400 border border-white/[0.04]">
                                         <Flag size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Escalate</span>
                                     </button>
@@ -400,7 +459,7 @@ function ReportsContent() {
                                 className={`w-full rounded-xl text-sm py-3 px-4 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all mb-3 border ${isDark ? "bg-zinc-800/60 border-white/[0.04] text-white placeholder:text-zinc-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
                             />
                             <button
-                                onClick={() => { if (selectedReport) { resolveReport(selectedReport.id); setModeratorNote(""); } }}
+                                onClick={() => { if (selectedReport) { resolveReportHandler(selectedReport.id); setModeratorNote(""); } }}
                                 className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:brightness-110 transition-all active:scale-[0.98]"
                             >
                                 Finalize Resolution

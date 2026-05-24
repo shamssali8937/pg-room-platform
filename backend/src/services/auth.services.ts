@@ -35,13 +35,22 @@ export const signupService = async (data: any) => {
     const apiUrl = process.env.API_URL || "http://localhost:5000/api";
     const verifyLink = `${apiUrl}/auth/verify-email?token=${emailToken}`;
 
-    await sendEmail(
-        email,
-        "Verify your email",
-        `<h3>Click to verify:</h3><a href="${verifyLink}">${verifyLink}</a>`
-    );
+    // Print verification link to console as a convenient developer fallback
+    console.log("\n==========================================");
+    console.log("📨 VERIFICATION LINK:", verifyLink);
+    console.log("==========================================\n");
 
-    return { message: "Signup successful. Verify your email." };
+    try {
+        await sendEmail(
+            email,
+            "Verify your email",
+            `<h3>Click to verify:</h3><a href="${verifyLink}">${verifyLink}</a>`
+        );
+    } catch (err: any) {
+        console.warn("Verification email sending failed during signup:", err.message || err);
+    }
+
+    return { message: "Signup successful. Please verify your email using the link sent." };
 };
 export const loginService = async (email: string, password: string) => {
     // login user

@@ -3,6 +3,9 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store/hooks";
+import { logoutUser } from "@/store/slices/authSlice";
 import {
     Home,
     Building2,
@@ -15,13 +18,15 @@ import {
     Sun,
     Moon,
     Plus,
-    Settings
+    Settings,
+    ClipboardList
 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 
 const navItems = [
     { icon: Home, label: "Dashboard", id: "dashboard", href: "/owner/dashboard" },
     { icon: Building2, label: "My Listings", id: "listings", href: "/owner/listings" },
+    { icon: ClipboardList, label: "Bookings", id: "bookings", href: "/owner/bookings" },
     { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "/owner/inquiries" },
     { icon: Wallet, label: "Points Wallet", id: "wallet", href: "/owner/wallet" },
     { icon: Settings, label: "Settings", id: "settings", href: "/owner/settings" },
@@ -36,6 +41,13 @@ interface SidebarProps {
 export default function OwnerSidebar({ activeId = "listings", isOpen = false, onClose }: SidebarProps) {
     const touchStartX = useRef(0);
     const { isDark, toggleTheme } = useOwnerTheme();
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
+    const handleSignOut = async () => {
+        await dispatch(logoutUser());
+        router.push("/auth/signin");
+    };
 
     // Close on Escape key
     useEffect(() => {
@@ -60,18 +72,18 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
         ? "bg-[#131313] shadow-[4px_0_24px_rgba(0,0,0,0.5)]"
         : "bg-white border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.08)]";
     const brandTitle = isDark ? "text-white" : "text-slate-900";
-    
+
     const navActiveClass = isDark
         ? "bg-gradient-to-r from-violet-500/10 to-transparent text-violet-400 border-l-2 border-violet-500"
         : "bg-gradient-to-r from-violet-500/10 to-transparent text-violet-600 border-l-2 border-violet-500";
     const navInactiveClass = isDark
         ? "text-gray-500 hover:text-gray-300 hover:bg-white/5 border-l-2 border-transparent"
         : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border-l-2 border-transparent";
-    
+
     const bottomBtnColor = isDark
         ? "text-gray-500 hover:text-gray-300 hover:bg-white/5"
         : "text-slate-500 hover:text-slate-900 hover:bg-slate-100";
-    
+
     const themeToggleBg = isDark
         ? "hover:bg-white/5 text-gray-500 hover:text-gray-300"
         : "hover:bg-slate-100 text-slate-500 hover:text-slate-900";
@@ -167,7 +179,7 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
                         <HelpCircle size={18} strokeWidth={1.8} />
                         <span>Support</span>
                     </button>
-                    <button className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} hover:!text-red-500`}>
+                    <button onClick={handleSignOut} className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} hover:!text-red-500`}>
                         <LogOut size={18} strokeWidth={1.8} />
                         <span>Sign Out</span>
                     </button>

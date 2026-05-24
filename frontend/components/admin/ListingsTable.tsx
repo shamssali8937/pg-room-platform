@@ -1,23 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, XCircle, Eye, X } from "lucide-react";
-import { mockListings, type Listing } from "./mockData";
+import { CheckCircle2, XCircle, Eye, X, Loader2 } from "lucide-react";
+import { type Listing } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchAdminListings, moderateListing } from "@/store/slices/adminSlice";
 
 interface ListingsTableProps {
     searchQuery: string;
 }
 
 export default function ListingsTable({ searchQuery }: ListingsTableProps) {
-    const [listings, setListings] = useState<Listing[]>(mockListings);
+    const dispatch = useAppDispatch();
+    const { rooms, isLoading } = useAppSelector((state) => state.admin);
     const [preview, setPreview] = useState<Listing | null>(null);
     const { isDark } = useAdminTheme();
 
-    const filtered = listings.filter((l) => {
-        if (l.status !== "pending") return false;
+    useEffect(() => {
+        dispatch(fetchAdminListings("pending"));
+    }, [dispatch]);
+
+    const mappedListings: Listing[] = rooms
+        .filter((r) => r.status === "pending")
+        .map((r) => ({
+            id: r.id,
+            title: r.title,
+            owner: r.owner?.full_name ?? "Unknown",
+            location: r.city,
+            country: "Pakistan",
+            rent: `PKR ${r.price.toLocaleString()}/mo`,
+            rentNum: r.price,
+            submitted: new Date(r.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            }),
+            image: r.images?.[0]?.url ?? "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
+            status: "pending",
+        }));
+
+    const filtered = mappedListings.filter((l) => {
         if (!searchQuery) return true;
         const q = searchQuery.toLowerCase();
         return (
@@ -29,12 +54,12 @@ export default function ListingsTable({ searchQuery }: ListingsTableProps) {
     });
 
     const approve = (id: string) => {
-        setListings((p) => p.map((l) => (l.id === id ? { ...l, status: "approved" as const } : l)));
+        dispatch(moderateListing({ id, status: "active" }));
         if (preview?.id === id) setPreview(null);
     };
 
     const reject = (id: string) => {
-        setListings((p) => p.map((l) => (l.id === id ? { ...l, status: "rejected" as const } : l)));
+        dispatch(moderateListing({ id, status: "rejected", reason: "Rejected by Administrator" }));
         if (preview?.id === id) setPreview(null);
     };
 
@@ -74,39 +99,47 @@ export default function ListingsTable({ searchQuery }: ListingsTableProps) {
                             </tr>
                         </thead>
                         <tbody className={`divide-y ${divider}`}>
-                            <AnimatePresence mode="popLayout">
-                                {filtered.length > 0 ? filtered.map((listing) => (
-                                    <motion.tr key={listing.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }} className={`transition-colors ${rowHover}`}>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border ${isDark ? "border-white/[0.06]" : "border-slate-200"}`}>
-                                                    <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
+                            {isLoading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-sm">
+                                        <Loader2 className="animate-spin text-purple-500 mx-auto" size={24} />
+                                    </td>
+                                </tr>
+                            ) : (
+                                <AnimatePresence mode="popLayout">
+                                    {filtered.length > 0 ? filtered.map((listing) => (
+                                        <motion.tr key={listing.id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.3 }} className={`transition-colors ${rowHover}`}>
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border ${isDark ? "border-white/[0.06]" : "border-slate-200"}`}>
+                                                        <img src={listing.image} alt={listing.title} className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div>
+                                                        <p className={`text-sm font-semibold ${titleText}`}>{listing.title}</p>
+                                                        <p className={`text-xs ${subText}`}>Owner: {listing.owner}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className={`text-sm font-semibold ${titleText}`}>{listing.title}</p>
-                                                    <p className={`text-xs ${subText}`}>Owner: {listing.owner}</p>
+                                            </td>
+                                            <td className={`px-6 py-4 text-sm ${locationText}`}>{listing.location}, {listing.country}</td>
+                                            <td className={`px-6 py-4 text-sm font-medium ${rentText}`}>{listing.rent}</td>
+                                            <td className={`px-6 py-4 text-xs ${subText}`}>{listing.submitted}</td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => setPreview(listing)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-blue-400" : "text-slate-400 hover:text-blue-500"}`} title="Preview"><Eye size={16} /></motion.button>
+                                                    <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => approve(listing.id)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-green-400" : "text-slate-400 hover:text-green-500"}`} title="Approve"><CheckCircle2 size={18} /></motion.button>
+                                                    <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => reject(listing.id)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-red-400" : "text-slate-400 hover:text-red-500"}`} title="Reject"><XCircle size={18} /></motion.button>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className={`px-6 py-4 text-sm ${locationText}`}>{listing.location}, {listing.country}</td>
-                                        <td className={`px-6 py-4 text-sm font-medium ${rentText}`}>{listing.rent}</td>
-                                        <td className={`px-6 py-4 text-xs ${subText}`}>{listing.submitted}</td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-1">
-                                                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => setPreview(listing)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-blue-400" : "text-slate-400 hover:text-blue-500"}`} title="Preview"><Eye size={16} /></motion.button>
-                                                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => approve(listing.id)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-green-400" : "text-slate-400 hover:text-green-500"}`} title="Approve"><CheckCircle2 size={18} /></motion.button>
-                                                <motion.button whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} onClick={() => reject(listing.id)} className={`p-2 transition-colors ${isDark ? "text-zinc-500 hover:text-red-400" : "text-slate-400 hover:text-red-500"}`} title="Reject"><XCircle size={18} /></motion.button>
-                                            </div>
-                                        </td>
-                                    </motion.tr>
-                                )) : (
-                                    <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                        <td colSpan={5} className={`px-6 py-12 text-center text-sm ${emptyText}`}>
-                                            {searchQuery ? `No listings matching "${searchQuery}"` : "All listings reviewed! 🎉"}
-                                        </td>
-                                    </motion.tr>
-                                )}
-                            </AnimatePresence>
+                                            </td>
+                                        </motion.tr>
+                                    )) : (
+                                        <motion.tr initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                                            <td colSpan={5} className={`px-6 py-12 text-center text-sm ${emptyText}`}>
+                                                {searchQuery ? `No listings matching "${searchQuery}"` : "All listings reviewed! 🎉"}
+                                            </td>
+                                        </motion.tr>
+                                    )}
+                                </AnimatePresence>
+                            )}
                         </tbody>
                     </table>
                 </div>

@@ -4,73 +4,59 @@ import {
     createContext,
     useContext,
     useEffect,
-    useState,
     useCallback,
     ReactNode,
 } from "react";
-import { AuthUser, getMeApi } from "@/lib/auth.api";
+import { AuthUser } from "@/lib/auth.api";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { hydrateAuth, setUser, clearUser } from "@/store/slices/authSlice";
 
-// ─── Context Shape ────────────────────────────────────────────────
+// ─── Context Shape ────────────────────────────────────────────────────────────
 
 interface AuthContextValue {
     user: AuthUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    /** Call after a successful login to persist credentials. */
     saveSession: (user: AuthUser) => void;
-    /** Clear the session (logout). */
     clearSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// ─── Provider ────────────────────────────────────────────────────
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    const dispatch = useAppDispatch();
+    const { user, isAuthenticated, isLoading } = useAppSelector((s) => s.auth);
 
     // Rehydrate by verifying session cookie with the backend
     useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const response = await getMeApi();
-                if (response.success) {
-                    setUser(response.data);
-                }
-            } catch (error) {
-                setUser(null);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchUser();
+        dispatch(hydrateAuth());
 
         // Listen for session expiry event from Axios interceptor
         const handleAuthExpired = () => {
-            setUser(null);
+            dispatch(clearUser());
         };
         window.addEventListener("auth-expired", handleAuthExpired);
+        return () => window.removeEventListener("auth-expired", handleAuthExpired);
+    }, [dispatch]);
 
-        return () => {
-            window.removeEventListener("auth-expired", handleAuthExpired);
-        };
-    }, []);
-
-    const saveSession = useCallback((newUser: AuthUser) => {
-        setUser(newUser);
-    }, []);
+    const saveSession = useCallback(
+        (newUser: AuthUser) => {
+            dispatch(setUser(newUser));
+        },
+        [dispatch]
+    );
 
     const clearSession = useCallback(() => {
-        setUser(null);
-    }, []);
+        dispatch(clearUser());
+    }, [dispatch]);
 
     return (
         <AuthContext.Provider
             value={{
                 user,
-                isAuthenticated: !!user,
+                isAuthenticated,
                 isLoading,
                 saveSession,
                 clearSession,
@@ -81,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useAuth(): AuthContextValue {
     const ctx = useContext(AuthContext);

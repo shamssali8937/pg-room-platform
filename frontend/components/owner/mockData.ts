@@ -45,6 +45,14 @@ export interface OwnerListing {
     views?: number;
     inquiries?: number;
     rejectionReason?: string;
+    address?: string;
+    locality?: string;
+    landmark?: string;
+    furnishedStatus?: string;
+    securityDeposit?: number;
+    availableFor?: string;
+    genderPreference?: string;
+    sqft?: number;
 }
 
 export interface WalletTransaction {

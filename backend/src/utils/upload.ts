@@ -1,6 +1,6 @@
 import cloudinary from "../config/cloudinary.js";
 
-export const uploadToCloudinary = async (file: Express.Multer.File) => {
+export const uploadToCloudinary = async (buffer: Buffer) => {
     return new Promise((resolve, reject) => {
         cloudinary.uploader
             .upload_stream({ folder: "profiles" }, (error, result) => {
@@ -8,6 +8,6 @@ export const uploadToCloudinary = async (file: Express.Multer.File) => {
                 if (error) return reject(error);
                 resolve(result);
             })
-            .end(file.buffer);
+            .end(buffer);
     });
 };

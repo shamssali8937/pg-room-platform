@@ -1,24 +1,33 @@
 import { prisma } from "../config/prisma.js";
-import { NotFoundError } from "../middleware/errorHandler.middleware.js";
+
+// ─── Helper: normalize images for frontend ────────────────────────────────────
+const normalizeImages = (images: any[]) =>
+    (images ?? []).map((img) => ({ url: img.file_url, public_id: img.file_hash ?? "" }));
+
 
 export const getPendingListingsService = async () => {
-    return prisma.room.findMany({
+    const rooms = await prisma.room.findMany({
         where: { status: "pending" },
         include: {
-            owner: { select: { full_name: true, email: true, profile_photo_url: true } },
+            owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
             images: true,
         },
         orderBy: { created_at: "asc" }
     });
+    return rooms.map((r) => ({ ...r, images: normalizeImages(r.images) }));
 };
 
 export const getAllListingsService = async (status?: string) => {
     const where = status ? { status } : {};
-    return prisma.room.findMany({
+    const rooms = await prisma.room.findMany({
         where,
-        include: { owner: { select: { full_name: true, email: true } } },
+        include: {
+            owner: { select: { id: true, full_name: true, email: true } },
+            images: true,
+        },
         orderBy: { created_at: "desc" }
     });
+    return rooms.map((r) => ({ ...r, images: normalizeImages(r.images) }));
 };
 
 export const moderateListingService = async (adminId: string, roomId: string, status: string, reason?: string) => {
@@ -33,7 +42,7 @@ export const moderateListingService = async (adminId: string, roomId: string, st
     await prisma.adminAction.create({
         data: {
             admin_id: adminId,
-            action_type: status === "approved" ? "APPROVE_LISTING" : "REJECT_LISTING",
+            action_type: status === "active" ? "APPROVE_LISTING" : status === "rejected" ? "REJECT_LISTING" : "SUSPEND_LISTING",
             target_type: "room",
             target_id: roomId,
             notes: reason || "",
@@ -47,7 +56,17 @@ export const getUsersService = async () => {
     return prisma.user.findMany({
         select: {
             id: true, full_name: true, email: true, role: true, created_at: true,
-            account_status: true, mobile_number: true, _count: { select: { rooms: true, bookings_as_tenant: true } }
+            account_status: true, mobile_number: true, verification_status: true,
+            documents: {
+                select: {
+                    id: true,
+                    doc_type: true,
+                    file_url: true,
+                    status: true,
+                    created_at: true
+                }
+            },
+            _count: { select: { rooms: true, bookings_as_tenant: true } }
         },
         orderBy: { created_at: "desc" }
     });
@@ -124,7 +143,8 @@ export const adjustPointsService = async (adminId: string, ownerId: string, poin
             points,
             reason_code: reasonCode,
             balance_after: balanceAfter
-        }
+        },
+        include: { owner: { select: { full_name: true, email: true } } }
     });
 
     await prisma.adminAction.create({
@@ -146,3 +166,66 @@ export const getAuditActionsService = async () => {
         orderBy: { created_at: "desc" }
     });
 };
+
+export const getInquiriesService = async () => {
+    return prisma.booking.findMany({
+        include: {
+            tenant: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+            owner: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+            room: { select: { id: true, title: true, price: true, rent_amount: true, city: true, locality: true } }
+        },
+        orderBy: { created_at: "desc" }
+    });
+};
+
+export const moderateInquiryService = async (adminId: string, bookingId: string, status: string, notes?: string) => {
+    const booking = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+            status,
+            ...(notes !== undefined && { owner_note: notes })
+        },
+        include: {
+            tenant: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+            owner: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+            room: { select: { id: true, title: true, price: true, rent_amount: true, city: true, locality: true } }
+        }
+    });
+
+    await prisma.adminAction.create({
+        data: {
+            admin_id: adminId,
+            action_type: `MODERATE_INQUIRY_${status.toUpperCase()}`,
+            target_type: "booking",
+            target_id: bookingId,
+            notes: notes || `Inquiry status set to ${status}`
+        }
+    });
+
+    return booking;
+};
+
+export const verifyUserService = async (adminId: string, userId: string, status: string, reason?: string) => {
+    const user = await prisma.user.update({
+        where: { id: userId },
+        data: { verification_status: status }
+    });
+
+    await prisma.userDocument.updateMany({
+        where: { user_id: userId, status: "pending" },
+        data: { status: status === "verified" ? "verified" : "rejected" }
+    });
+
+    await prisma.adminAction.create({
+        data: {
+            admin_id: adminId,
+            action_type: status === "verified" ? "VERIFY_USER" : "REJECT_USER_VERIFICATION",
+            target_type: "user",
+            target_id: userId,
+            notes: `Verification status changed to ${status}. Notes: ${reason || "N/A"}`,
+        }
+    });
+
+    return user;
+};
+

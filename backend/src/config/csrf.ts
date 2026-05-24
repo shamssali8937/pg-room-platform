@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { Request, Response, NextFunction } from "express";
+import { logger } from "./logger.js";
 
 export const generateToken = (req: Request, res: Response) => {
     const token = crypto.randomBytes(32).toString("hex");
@@ -22,14 +23,27 @@ export const csrfSynchronisedProtection = (req: Request, res: Response, next: Ne
         return;
     }
 
-    console.log("CSRF Debug - Headers:", req.headers);
-    console.log("CSRF Debug - Cookies:", req.cookies);
-
     const cookieToken = req.cookies?._csrf;
     const headerToken = req.headers["x-csrf-token"];
 
+    logger.info("CSRF Validation Attempt", {
+        cookieTokenPresent: !!cookieToken,
+        headerTokenPresent: !!headerToken,
+        cookieToken,
+        headerToken,
+        method: req.method,
+        path: req.path,
+        requestId: req.requestId,
+    });
+
     if (!cookieToken || !headerToken || cookieToken !== headerToken) {
-        console.error("CSRF Validation Failed:", { cookieToken, headerToken });
+        logger.warn("CSRF Validation Failed", {
+            cookieToken,
+            headerToken,
+            method: req.method,
+            path: req.path,
+            requestId: req.requestId,
+        });
         res.status(403).json({ 
             success: false, 
             code: "FORBIDDEN", 

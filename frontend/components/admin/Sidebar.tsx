@@ -3,6 +3,9 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAppDispatch } from "@/store/hooks";
+import { logoutUser } from "@/store/slices/authSlice";
 import {
     LayoutDashboard,
     Building2,
@@ -13,7 +16,9 @@ import {
     LogOut,
     X,
     Sun,
-    Moon
+    Moon,
+    MessageSquare,
+    MessageCircle
 } from "lucide-react";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 
@@ -23,6 +28,8 @@ const navItems = [
     { icon: Building2, label: "Listings", id: "listings", href: "/admin/listings" },
     { icon: BarChart3, label: "Reports", id: "reports", href: "/admin/reports" },
     { icon: Star, label: "Points", id: "points", href: "/admin/points" },
+    { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "/admin/inquiries" },
+    { icon: MessageCircle, label: "Inbox", id: "inbox", href: "/admin/inbox" },
 ];
 
 interface SidebarProps {
@@ -34,6 +41,13 @@ interface SidebarProps {
 export default function Sidebar({ activeId = "dashboard", isOpen = false, onClose }: SidebarProps) {
     const touchStartX = useRef(0);
     const { isDark, toggleTheme } = useAdminTheme();
+    const dispatch = useAppDispatch();
+    const router = useRouter();
+
+    const handleSignOut = async () => {
+        await dispatch(logoutUser());
+        router.push("/auth/signin");
+    };
 
     // Close on Escape key
     useEffect(() => {
@@ -168,7 +182,7 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
                             <HelpCircle size={18} strokeWidth={1.8} />
                             <span>Help Center</span>
                         </button>
-                        <button className="flex items-center gap-4 py-2 text-slate-500 hover:text-red-500 transition-colors w-full text-sm">
+                        <button onClick={handleSignOut} className="flex items-center gap-4 py-2 text-slate-500 hover:text-red-500 transition-colors w-full text-sm">
                             <LogOut size={18} strokeWidth={1.8} />
                             <span>Logout</span>
                         </button>
