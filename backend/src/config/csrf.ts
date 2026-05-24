@@ -10,7 +10,7 @@ export const generateToken = (req: Request, res: Response) => {
     res.cookie("_csrf", token, {
         httpOnly: true,
         secure: isProd,
-        sameSite: isProd ? "strict" : "lax",
+        sameSite: isProd ? "none" : "lax",
     });
     
     return token;
