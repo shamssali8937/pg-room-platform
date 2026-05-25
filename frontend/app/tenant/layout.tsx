@@ -75,9 +75,17 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
 
             <div className={`flex flex-col min-h-screen transition-all duration-300 ${mainMargin}`}>
                 <TenantTopbar onMenuToggle={() => setSidebarOpen(true)} />
-                <main className="flex-1 p-6 md:p-10 pb-32 md:pb-10 mt-16 lg:mt-20">
-                    {children}
-                </main>
+                {(() => {
+                    const isChatPage = pathname?.includes("/inbox");
+                    const mainPadding = isChatPage
+                        ? "p-0 md:p-6 lg:p-8 mt-16 lg:mt-20 pb-0"
+                        : "p-6 md:p-10 pb-32 md:pb-10 mt-16 lg:mt-20";
+                    return (
+                        <main className={`flex-1 ${mainPadding}`}>
+                            {children}
+                        </main>
+                    );
+                })()}
             </div>
 
             {/* Floating Dock (Mobile) */}

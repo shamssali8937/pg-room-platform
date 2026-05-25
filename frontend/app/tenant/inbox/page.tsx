@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAuth } from "@/context/AuthContext";
@@ -8,13 +8,15 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchConversations, fetchMessages, sendMessage,
     setActiveConversation, blockConversation, deleteMessage,
-    createConversationByEmail
+    createConversationByEmail, pinConversation, muteConversation, unblockConversation
 } from "@/store/slices/chatSlice";
 import type { Conversation } from "@/store/slices/chatSlice";
+import { useSocket } from "@/hooks/useSocket";
 import {
     Send, Paperclip, Search, MessageSquare, Loader2,
     AlertCircle, Phone, MoreVertical, CheckCircle, Filter,
-    ShieldX, Image, MapPin, Video, FileText, Trash2, Plus, X
+    ShieldX, Image, MapPin, Video, FileText, Trash2, Plus, X,
+    ArrowLeft, Pin, Volume2, VolumeX
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -86,17 +88,17 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
 
             <div className={`p-3 rounded-xl ${isDark ? "bg-[#252233]" : "bg-white"} border ${isDark ? "border-white/5" : "border-slate-100"} text-xs space-y-1.5`}>
                 <p className={`${isDark ? "text-zinc-300" : "text-slate-600"}`}>
-                    <strong className="text-[#a27cff]">Tenant:</strong> {booking.tenant?.full_name}
+                    <strong className="text-[#a27cff]">Owner:</strong> {booking.room?.owner?.full_name ?? "Room Owner"}
                 </p>
                 <p className={`${isDark ? "text-zinc-300" : "text-slate-600"}`}>
-                    <strong className="text-[#a27cff]">Contact:</strong> {booking.tenant?.mobile_number ?? "N/A"}
+                    <strong className="text-[#a27cff]">Status Note:</strong> {booking.owner_note ?? "Awaiting confirmation from host."}
                 </p>
             </div>
         </div>
     );
 }
 
-export default function TenantInbox() {
+export default function TenantInboxPage() {
     const { isDark } = useTenantTheme();
     const { user } = useAuth();
     const dispatch = useAppDispatch();
@@ -135,17 +137,17 @@ export default function TenantInbox() {
         }
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setInputText(`🖼️ Shared an Image: https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600 [file: ${file.name}]`);
+        if (file && activeConversationId) {
+            await dispatch(sendMessage({ conversationId: activeConversationId, content: "Shared an image", files: [file] }));
         }
     };
 
-    const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setInputText(`🎥 Shared a Video: property_walkthrough.mp4 [file: ${file.name}]`);
+        if (file && activeConversationId) {
+            await dispatch(sendMessage({ conversationId: activeConversationId, content: "Shared a video", files: [file] }));
         }
     };
 
@@ -153,16 +155,16 @@ export default function TenantInbox() {
         dispatch(fetchConversations());
     }, [dispatch]);
 
-    const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? conversations[0] ?? null;
+    const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+    useSocket(conversationIds);
+
+    const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? null;
 
     useEffect(() => {
-        if (activeConversation?.id && !messages[activeConversation.id]) {
-            dispatch(fetchMessages(activeConversation.id));
+        if (activeConversationId) {
+            dispatch(fetchMessages(activeConversationId));
         }
-        if (activeConversation && !activeConversationId) {
-            dispatch(setActiveConversation(activeConversation.id));
-        }
-    }, [activeConversation?.id, dispatch, activeConversationId]);
+    }, [activeConversationId, dispatch]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -170,7 +172,7 @@ export default function TenantInbox() {
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
-    const surfaceLow = isDark ? "bg-[#131313]" : "bg-white border border-slate-200";
+    const surfaceLow = isDark ? "bg-[#131313]" : "bg-white border border-slate-200 shadow-sm";
     const divider = isDark ? "border-white/5" : "border-slate-200";
     const inputBg = isDark ? "bg-[#131313] text-white placeholder:text-zinc-600" : "bg-slate-100 text-slate-900 placeholder:text-slate-400";
 
@@ -228,12 +230,12 @@ export default function TenantInbox() {
     };
 
     const activeMessages = activeConversationId ? (messages[activeConversationId] ?? []) : [];
+    const isOnline = activeConversation?.other_participant?.is_online;
 
     return (
-        <div className="max-w-[1400px] mx-auto h-[calc(100vh-5rem)] flex flex-col md:flex-row gap-6 pl-14 xl:pl-0 pb-24 lg:pb-0">
-
+        <div className="max-w-[1400px] mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
             {/* Left Panel: Conversation List */}
-            <div className={`w-full md:w-80 lg:w-96 flex flex-col rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
+            <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
                 {/* Header */}
                 <div className={`p-5 border-b ${divider}`}>
                     <div className="flex items-end justify-between mb-4">
@@ -246,7 +248,7 @@ export default function TenantInbox() {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setShowStartChatModal(true)}
-                                className="p-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center"
+                                className="p-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center shadow-lg shadow-purple-500/25"
                                 title="Start Chat by Email"
                             >
                                 <Plus size={16} />
@@ -270,7 +272,7 @@ export default function TenantInbox() {
 
                 {/* Conversations */}
                 <div className="flex-1 overflow-y-auto space-y-1 p-3">
-                    {isLoading ? (
+                    {isLoading && conversations.length === 0 ? (
                         <div className="space-y-2 p-2">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className={`h-16 rounded-xl animate-pulse ${isDark ? "bg-[#1a1919]" : "bg-slate-100"}`} />
@@ -292,14 +294,13 @@ export default function TenantInbox() {
                                         key={conv.id}
                                         onClick={() => {
                                             dispatch(setActiveConversation(conv.id));
-                                            if (!messages[conv.id]) dispatch(fetchMessages(conv.id));
                                         }}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className={`w-full text-left p-4 rounded-xl transition-all relative ${
+                                        className={`w-full text-left p-4 rounded-xl transition-all relative border ${
                                             isActive
-                                                ? isDark ? "bg-[#a27cff]/10 border border-[#a27cff]/20" : "bg-violet-50 border border-violet-200"
-                                                : isDark ? "hover:bg-white/5 border border-transparent" : "hover:bg-slate-50 border border-transparent"
+                                                ? isDark ? "bg-[#a27cff]/10 border-[#a27cff]/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]" : "bg-violet-50 border-violet-200"
+                                                : isDark ? "bg-transparent border-transparent hover:bg-white/5" : "hover:bg-slate-50 border-transparent"
                                         }`}
                                     >
                                         {conv.unread_count > 0 && (
@@ -307,7 +308,7 @@ export default function TenantInbox() {
                                         )}
                                         <div className="flex justify-between items-start">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 shrink-0">
+                                                <div className="w-9 h-9 shrink-0 relative">
                                                     {other?.profile_photo_url || other?.image ? (
                                                         <img
                                                             src={other.profile_photo_url || other.image || ""}
@@ -319,9 +320,17 @@ export default function TenantInbox() {
                                                             <span className="text-[#a27cff] text-sm font-bold">{other?.full_name?.[0] ?? "?"}</span>
                                                         </div>
                                                     )}
+                                                    {conv.other_participant?.is_online && (
+                                                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#131313]" />
+                                                    )}
                                                 </div>
                                                 <div>
-                                                    <p className={`text-sm font-bold ${textPrimary}`}>{other?.full_name ?? "Unknown"}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className={`text-sm font-bold truncate max-w-[100px] ${textPrimary}`}>{other?.full_name ?? "Unknown"}</p>
+                                                        {conv.is_pinned && (
+                                                            <Pin size={10} className="text-[#a27cff] fill-[#a27cff]" />
+                                                        )}
+                                                    </div>
                                                     {conv.room && (
                                                         <p className={`text-[10px] truncate max-w-[130px] ${conv.unread_count > 0 ? "text-[#a27cff]" : textVariant}`}>
                                                             {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
@@ -355,10 +364,18 @@ export default function TenantInbox() {
 
             {/* Right Panel: Chat Window */}
             {activeConversation ? (
-                <div className={`flex-1 flex flex-col rounded-2xl overflow-hidden ${surfaceLow}`}>
+                <div className={`flex-1 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
                     {/* Chat Header */}
-                    <div className={`p-5 flex items-center justify-between border-b ${isDark ? "border-white/5 bg-[#201f1f]/60 backdrop-blur-xl" : "border-slate-200 bg-white"}`}>
+                    <div className={`p-5 flex items-center justify-between border-b relative z-20 ${isDark ? "border-white/5 bg-[#201f1f]/60 backdrop-blur-xl" : "border-slate-200 bg-white"}`}>
                         <div className="flex items-center gap-4">
+                            {/* Back button on mobile */}
+                            <button
+                                onClick={() => dispatch(setActiveConversation(null))}
+                                className={`p-2 -ml-2 rounded-xl transition-all md:hidden ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
+                                title="Back to Chats"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
                             <div className="relative w-11 h-11 shrink-0">
                                 {getOtherParticipant(activeConversation)?.profile_photo_url || getOtherParticipant(activeConversation)?.image ? (
                                     <img
@@ -373,7 +390,7 @@ export default function TenantInbox() {
                                         </span>
                                     </div>
                                 )}
-                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#131313]" />
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${isDark ? "border-[#131313]" : "border-white"} ${isOnline ? "bg-emerald-400" : "bg-zinc-400"}`} />
                             </div>
                             <div>
                                 <h4 className={`font-headline font-bold text-base ${textPrimary}`}>
@@ -386,6 +403,7 @@ export default function TenantInbox() {
                                 )}
                             </div>
                         </div>
+
                         <div className="flex items-center gap-2">
                             {getOtherParticipant(activeConversation)?.mobile_number && (
                                 <a
@@ -410,19 +428,53 @@ export default function TenantInbox() {
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 4, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-xl border p-1.5 flex flex-col gap-1 z-50 ${
+                                            className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-[200] ${
                                                 isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
                                             }`}
                                         >
                                             <button
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     setShowHeaderDropdown(false);
-                                                    handleBlock(activeConversation.id);
+                                                    const isPinned = !activeConversation.is_pinned;
+                                                    await dispatch(pinConversation({ conversationId: activeConversation.id, isPinned }));
                                                 }}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left text-red-500 hover:bg-red-500/10 w-full`}
+                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
+                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                }`}
+                                            >
+                                                <Pin size={14} className={activeConversation.is_pinned ? "text-[#a27cff] fill-[#a27cff]" : ""} />
+                                                <span>{activeConversation.is_pinned ? "Unpin Chat" : "Pin Chat"}</span>
+                                            </button>
+
+                                            <button
+                                                onClick={async () => {
+                                                    setShowHeaderDropdown(false);
+                                                    const isMuted = !activeConversation.is_muted;
+                                                    await dispatch(muteConversation({ conversationId: activeConversation.id, isMuted }));
+                                                }}
+                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
+                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                }`}
+                                            >
+                                                {activeConversation.is_muted ? <Volume2 size={14} className="text-[#a27cff]" /> : <VolumeX size={14} className="text-zinc-500" />}
+                                                <span>{activeConversation.is_muted ? "Unmute Alerts" : "Mute Alerts"}</span>
+                                            </button>
+
+                                            <div className={`h-[1px] my-1 ${isDark ? "bg-white/5" : "bg-slate-100"}`} />
+
+                                            <button
+                                                onClick={async () => {
+                                                    setShowHeaderDropdown(false);
+                                                    if (activeConversation.is_blocked) {
+                                                        await dispatch(unblockConversation(activeConversation.id));
+                                                    } else {
+                                                        await dispatch(blockConversation(activeConversation.id));
+                                                    }
+                                                }}
+                                                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full text-red-500 hover:bg-red-500/10"
                                             >
                                                 <ShieldX size={14} />
-                                                Block Contact
+                                                <span>{activeConversation.is_blocked ? "Unblock Contact" : "Block Contact"}</span>
                                             </button>
                                         </motion.div>
                                     )}
@@ -492,15 +544,56 @@ export default function TenantInbox() {
                                                         isDark={isDark}
                                                     />
                                                 ) : (
-                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
-                                                            ? isDark
-                                                                ? "bg-[#a27cff]/15 text-white border border-[#a27cff]/20 rounded-tr-none"
-                                                                : "bg-violet-100 text-slate-900 rounded-tr-none"
-                                                            : isDark
-                                                                ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
-                                                                : "bg-slate-100 text-slate-700 rounded-tl-none"
-                                                        }`}>
-                                                        {msg.content}
+                                                    <div className="flex flex-col gap-2">
+                                                        {msg.attachments && msg.attachments.length > 0 && (
+                                                            <div className="rounded-xl overflow-hidden max-w-xs border border-white/5 shadow-md flex flex-col gap-1">
+                                                                {msg.attachments.map((att: any) => {
+                                                                    if (att.file_type === "image") {
+                                                                        return (
+                                                                            <img
+                                                                                key={att.id}
+                                                                                src={att.file_url}
+                                                                                alt={att.file_name}
+                                                                                className="w-full object-cover max-h-48 cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+                                                                                onClick={() => window.open(att.file_url, "_blank")}
+                                                                            />
+                                                                        );
+                                                                    } else if (att.file_type === "video") {
+                                                                        return (
+                                                                            <video
+                                                                                key={att.id}
+                                                                                src={att.file_url}
+                                                                                controls
+                                                                                className="w-full max-h-48 object-cover rounded-lg"
+                                                                            />
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <a
+                                                                                key={att.id}
+                                                                                href={att.file_url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-xs rounded-xl"
+                                                                            >
+                                                                                <FileText size={16} className="text-[#a27cff]" />
+                                                                                <span className="truncate max-w-[150px]">{att.file_name}</span>
+                                                                            </a>
+                                                                        );
+                                                                    }
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
+                                                                ? isDark
+                                                                    ? "bg-[#a27cff]/15 text-white border border-[#a27cff]/20 rounded-tr-none"
+                                                                    : "bg-violet-100 text-slate-900 rounded-tr-none"
+                                                                : isDark
+                                                                    ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
+                                                                    : "bg-slate-100 text-slate-700 rounded-tl-none"
+                                                            }`}>
+                                                            {msg.content}
+                                                        </div>
                                                     </div>
                                                 )}
                                                 <div className={`flex items-center gap-1 mt-1 ${isMine ? "flex-row-reverse" : ""}`}>
@@ -525,94 +618,100 @@ export default function TenantInbox() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
-                    <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#201f1f]/60 backdrop-blur-xl" : "border-slate-200 bg-white"}`}>
-                        <div className={`flex items-center gap-3 rounded-2xl px-3 py-2 focus-within:ring-1 focus-within:ring-[#a27cff]/40 transition-all ${isDark ? "bg-[#131313]" : "bg-slate-100"}`}>
-                            <div className="relative shrink-0 flex items-center">
+                    {/* Chat Input */}
+                    <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
+                        <div className="flex items-center gap-3 relative">
+                            {/* Hidden File Inputs */}
+                            <input
+                                type="file"
+                                ref={imageInputRef}
+                                onChange={handleImageChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <input
+                                type="file"
+                                ref={videoInputRef}
+                                onChange={handleVideoChange}
+                                accept="video/*"
+                                className="hidden"
+                            />
+
+                            <div className="relative">
                                 <button
                                     onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                                    title="Attachments"
-                                    className={`transition-colors ${textVariant} hover:text-[#a27cff] p-1`}
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? "bg-white/5 text-zinc-400 hover:text-[#a27cff]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                                 >
                                     <Paperclip size={18} />
                                 </button>
                                 <AnimatePresence>
                                     {showAttachmentMenu && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: -8, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className={`absolute bottom-full left-0 mb-2 w-48 rounded-xl shadow-xl border p-2 flex flex-col gap-1 z-50 ${
-                                                isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
+                                            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 4, scale: 1 }}
+                                            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${
+                                                isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
                                             }`}
                                         >
                                             <button
                                                 onClick={() => handleAttachmentSelect("image")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#a27cff]"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
                                             >
-                                                <Image size={14} className="text-[#a27cff]" />
-                                                Send Image
-                                            </button>
-                                            <button
-                                                onClick={() => handleAttachmentSelect("location")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#a27cff]"
-                                                }`}
-                                            >
-                                                <MapPin size={14} className="text-[#a27cff]" />
-                                                Send Location
+                                                <Image size={14} className="text-purple-400" />
+                                                <span>Send Photo</span>
                                             </button>
                                             <button
                                                 onClick={() => handleAttachmentSelect("video")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#a27cff]"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
                                             >
-                                                <Video size={14} className="text-[#a27cff]" />
-                                                Send Video
+                                                <Video size={14} className="text-indigo-400" />
+                                                <span>Send Video</span>
                                             </button>
-                                            {activeConversation?.room && (
-                                                <button
-                                                    onClick={() => handleAttachmentSelect("offer")}
-                                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                        isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#a27cff]"
-                                                    }`}
-                                                >
-                                                    <FileText size={14} className="text-[#a27cff]" />
-                                                    Send Booking Offer
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => handleAttachmentSelect("location")}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                            >
+                                                <MapPin size={14} className="text-emerald-400" />
+                                                <span>Share Location</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleAttachmentSelect("offer")}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all border-t ${isDark ? "hover:bg-white/5 text-zinc-300 border-white/5" : "hover:bg-slate-50 text-slate-700 border-slate-100"}`}
+                                            >
+                                                <Plus size={14} className="text-[#a27cff]" />
+                                                <span>Booking Offer</span>
+                                            </button>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
+
                             <input
                                 type="text"
+                                placeholder="Type a message..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                                placeholder={`Message ${getOtherParticipant(activeConversation)?.full_name ?? "..."}...`}
-                                className={`flex-1 bg-transparent border-none outline-none text-sm ${isDark ? "text-white placeholder:text-zinc-600" : "text-slate-900 placeholder:text-slate-400"}`}
+                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                className={`flex-grow rounded-xl py-3 px-4 text-sm outline-none focus:ring-1 focus:ring-[#a27cff]/40 ${inputBg}`}
                             />
                             <button
                                 onClick={handleSend}
                                 disabled={isSending || !inputText.trim()}
-                                className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#a27cff] to-[#6e3bd7] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shrink-0 shadow-[0_4px_14px_rgba(162,124,255,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#a27cff] to-[#8d69e8] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_4px_12px_rgba(162,124,255,0.25)] shrink-0 disabled:opacity-50"
                             >
-                                {isSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} fill="currentColor" />}
+                                <Send size={16} />
                             </button>
                         </div>
                     </div>
-                    <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoChange} />
                 </div>
             ) : (
-                <div className={`flex-1 flex flex-col items-center justify-center rounded-2xl ${surfaceLow}`}>
-                    <MessageSquare size={48} className={textVariant} />
-                    <p className={`mt-4 font-bold text-lg ${textPrimary}`}>Select a conversation</p>
-                    <p className={`text-sm mt-1 ${textVariant}`}>Choose from the left panel to start messaging</p>
+                <div className={`flex-grow ${activeConversationId ? "flex" : "hidden md:flex"} flex-col items-center justify-center rounded-none md:rounded-2xl p-8 text-center ${surfaceLow}`}>
+                    <MessageSquare size={40} className={`mb-3 animate-pulse text-[#a27cff]`} />
+                    <h3 className={`text-lg font-headline font-bold mb-1 ${textPrimary}`}>Welcome to your PG Inbox</h3>
+                    <p className={`text-xs max-w-sm ${textVariant}`}>
+                        Select a conversation thread from the left menu to start typing and negotiating.
+                    </p>
                 </div>
             )}
 
@@ -644,13 +743,13 @@ export default function TenantInbox() {
                                     <input
                                         type="email"
                                         required
-                                        placeholder="landlord@example.com or user@example.com"
+                                        placeholder="owner@example.com or admin@example.com"
                                         value={newChatEmail}
                                         onChange={(e) => setNewChatEmail(e.target.value)}
                                         className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
                                             isDark
                                                 ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
-                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-purple-600/40"
+                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
                                         }`}
                                     />
                                 </div>
@@ -665,7 +764,7 @@ export default function TenantInbox() {
                                 <button
                                     type="submit"
                                     disabled={isCreatingChat || !newChatEmail.trim()}
-                                    className="w-full py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(162,124,255,0.3)]"
+                                    className="w-full py-3 bg-gradient-to-r from-[#a27cff] to-[#8d69e8] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 shadow-[0_4px_14px_rgba(162,124,255,0.3)]"
                                 >
                                     {isCreatingChat ? (
                                         <>

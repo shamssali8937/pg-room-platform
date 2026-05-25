@@ -103,7 +103,7 @@ function ReportsContent() {
                     type: r.target_type === "room" ? "listing" : "user",
                     avatar: r.target_type === "room"
                         ? "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=100&h=100&fit=crop"
-                        : `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reporter?.full_name ?? "U")}&background=ec4899&color=fff`,
+                        : r.reporter?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reporter?.full_name ?? "U")}&background=ec4899&color=fff`,
                     subLabel: `ID: ${r.target_id}`,
                 },
                 reason: cat,

@@ -42,3 +42,11 @@ export const getOwnerPointTransactions = async (req: Request, res: Response, nex
         res.json({ success: true, data });
     } catch (error) { next(error); }
 };
+
+export const buyPoints = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const { packageId } = req.body;
+        const data = await service.buyPointsService(req.user!.id, packageId);
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};

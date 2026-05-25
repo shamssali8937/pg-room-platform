@@ -7,14 +7,16 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchConversations, fetchMessages, sendMessage,
-    setActiveConversation, blockConversation, deleteMessage
+    setActiveConversation, blockConversation, deleteMessage,
+    pinConversation, muteConversation, unblockConversation, createConversationByEmail
 } from "@/store/slices/chatSlice";
 import type { Conversation } from "@/store/slices/chatSlice";
 import { useSocket } from "@/hooks/useSocket";
 import {
     Send, Paperclip, Smile, Phone, MoreVertical, CheckCircle,
     Filter, Search, Loader2, MessageSquare, ShieldX,
-    Image, MapPin, Video, FileText, Trash2
+    Image, MapPin, Video, FileText, Trash2, ArrowLeft, Pin,
+    Volume2, VolumeX, Plus, X, AlertCircle
 } from "lucide-react";
 import api from "@/lib/api";
 
@@ -86,15 +88,14 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isDark ? "bg-[#ba9eff]/20 text-[#ba9eff]" : "bg-violet-100 text-violet-600"}`}>
                     ⚡ Booking Offer
                 </span>
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    isApproved ? "bg-emerald-500/20 text-emerald-400" :
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${isApproved ? "bg-emerald-500/20 text-emerald-400" :
                     isCancelled ? "bg-red-500/20 text-red-400" :
-                    "bg-amber-500/20 text-amber-400 animate-pulse"
-                }`}>
+                        "bg-amber-500/20 text-amber-400 animate-pulse"
+                    }`}>
                     {booking.status}
                 </span>
             </div>
-            
+
             <div className="space-y-1">
                 <h5 className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-800"}`}>
                     {booking.room?.title ?? "Room Booking"}
@@ -140,17 +141,42 @@ export default function OwnerInquiriesPage() {
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setInputText(`🖼️ Shared an Image: https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600 [file: ${file.name}]`);
+    const [showStartChatModal, setShowStartChatModal] = useState(false);
+    const [newChatEmail, setNewChatEmail] = useState("");
+    const [startChatError, setStartChatError] = useState("");
+    const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+    const handleStartChatByEmail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newChatEmail.trim()) return;
+        setIsCreatingChat(true);
+        setStartChatError("");
+        try {
+            const resultAction = await dispatch(createConversationByEmail({ email: newChatEmail.trim() }));
+            if (createConversationByEmail.fulfilled.match(resultAction)) {
+                setShowStartChatModal(false);
+                setNewChatEmail("");
+            } else {
+                setStartChatError(resultAction.payload as string || "Failed to start chat.");
+            }
+        } catch (err: any) {
+            setStartChatError("An unexpected error occurred.");
+        } finally {
+            setIsCreatingChat(false);
         }
     };
 
-    const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (file) {
-            setInputText(`🎥 Shared a Video: property_walkthrough.mp4 [file: ${file.name}]`);
+        if (file && activeConversationId) {
+            await dispatch(sendMessage({ conversationId: activeConversationId, content: "Shared an image", files: [file] }));
+        }
+    };
+
+    const handleVideoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file && activeConversationId) {
+            await dispatch(sendMessage({ conversationId: activeConversationId, content: "Shared a video", files: [file] }));
         }
     };
 
@@ -174,16 +200,13 @@ export default function OwnerInquiriesPage() {
     const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
     useSocket(conversationIds);
 
-    const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? conversations[0] ?? null;
+    const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? null;
 
     useEffect(() => {
-        if (activeConversation?.id && !messages[activeConversation.id]) {
-            dispatch(fetchMessages(activeConversation.id));
+        if (activeConversationId) {
+            dispatch(fetchMessages(activeConversationId));
         }
-        if (activeConversation && !activeConversationId) {
-            dispatch(setActiveConversation(activeConversation.id));
-        }
-    }, [activeConversation?.id, dispatch, activeConversationId]);
+    }, [activeConversationId, dispatch]);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -191,7 +214,8 @@ export default function OwnerInquiriesPage() {
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
-    const surfaceLow = isDark ? "bg-[#131313]" : "bg-white border border-slate-200";
+    const surfaceLow = isDark ? "bg-[#131313]" : "bg-white border border-slate-200 shadow-sm";
+    const divider = isDark ? "border-white/5" : "border-slate-200";
     const inputBg = isDark ? "bg-[#131313] text-white placeholder:text-zinc-600" : "bg-slate-100 text-slate-900 placeholder:text-slate-400";
 
     const filteredConversations = conversations.filter((c) => {
@@ -205,7 +229,12 @@ export default function OwnerInquiriesPage() {
         );
     });
 
-    const getOther = (conv: Conversation) => conv.participants.find((p) => p.id !== user?.id) ?? conv.participants[0];
+    const getOther = (conv: Conversation) => {
+        return conv.participants.find((p) => p.id !== user?.id) ?? conv.participants[0];
+    };
+
+    const activeMessages = activeConversationId ? (messages[activeConversationId] ?? []) : [];
+    const isOnline = activeConversation?.other_participant?.is_online;
 
     const handleSend = async () => {
         if (!inputText.trim() || !activeConversationId) return;
@@ -216,35 +245,40 @@ export default function OwnerInquiriesPage() {
 
     const handleBlock = async () => {
         if (!activeConversationId) return;
-        if (confirm("Block this conversation? The tenant won't be able to message you.")) {
-            await dispatch(blockConversation(activeConversationId));
-        }
+        await dispatch(blockConversation(activeConversationId));
     };
 
-    const activeMessages = activeConversationId ? (messages[activeConversationId] ?? []) : [];
-
     return (
-        <div className="max-w-[1400px] mx-auto h-[calc(100vh-5rem)] flex flex-col md:flex-row gap-6 pl-14 xl:pl-0 pb-24 lg:pb-0">
-
+        <div className="max-w-[1400px] mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
             {/* Left Panel */}
-            <div className={`w-full md:w-80 lg:w-96 flex flex-col rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
-                <div className={`p-5 border-b ${isDark ? "border-white/5" : "border-slate-200"}`}>
+            <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
+                {/* Header */}
+                <div className={`p-5 border-b ${divider}`}>
                     <div className="flex items-end justify-between mb-4">
                         <div>
                             <h3 className={`text-xl font-headline font-extrabold tracking-tight ${textPrimary}`}>Inquiries</h3>
                             <p className={`text-xs mt-0.5 ${textVariant}`}>
-                                {conversations.reduce((a, c) => a + c.unread_count, 0)} new messages
+                                {conversations.reduce((a, c) => a + c.unread_count, 0)} pending
                             </p>
                         </div>
-                        <button className={`p-2 rounded-lg transition-colors ${isDark ? "text-zinc-400 hover:bg-white/5" : "text-slate-400 hover:bg-slate-100"}`}>
-                            <Filter size={16} />
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowStartChatModal(true)}
+                                className="p-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white transition-colors flex items-center justify-center shadow-lg shadow-purple-500/25"
+                                title="Start Chat by Email"
+                            >
+                                <Plus size={16} />
+                            </button>
+                            <button className={`p-2 rounded-lg transition-colors ${isDark ? "text-zinc-400 hover:bg-white/5" : "text-slate-400 hover:bg-slate-100"}`}>
+                                <Filter size={16} />
+                            </button>
+                        </div>
                     </div>
                     <div className="relative">
                         <Search size={14} className={`absolute left-3 top-1/2 -translate-y-1/2 ${textVariant}`} />
                         <input
                             type="text"
-                            placeholder="Search inquiries..."
+                            placeholder="Search active chats..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             className={`w-full rounded-xl py-2.5 pl-9 pr-4 text-sm border-none outline-none focus:ring-1 focus:ring-[#ba9eff]/40 ${inputBg}`}
@@ -252,18 +286,19 @@ export default function OwnerInquiriesPage() {
                     </div>
                 </div>
 
+                {/* List Container */}
                 <div className="flex-1 overflow-y-auto space-y-1 p-3">
-                    {isLoading ? (
-                        <div className="space-y-2">
+                    {isLoading && conversations.length === 0 ? (
+                        <div className="space-y-2 p-2">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className={`h-16 rounded-xl animate-pulse ${isDark ? "bg-[#1a1919]" : "bg-slate-100"}`} />
                             ))}
                         </div>
                     ) : filteredConversations.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-48 text-center">
+                        <div className="flex flex-col items-center justify-center h-48 text-center px-4">
                             <MessageSquare size={28} className={textVariant} />
-                            <p className={`text-sm mt-2 font-bold ${textPrimary}`}>No inquiries yet</p>
-                            <p className={`text-xs mt-1 ${textVariant}`}>Tenants can message you from your listings</p>
+                            <p className={`text-sm mt-2 font-bold ${textPrimary}`}>No support tickets</p>
+                            <p className={`text-xs mt-1 ${textVariant}`}>All direct inquiry details will show here.</p>
                         </div>
                     ) : (
                         <AnimatePresence>
@@ -275,22 +310,20 @@ export default function OwnerInquiriesPage() {
                                         key={conv.id}
                                         onClick={() => {
                                             dispatch(setActiveConversation(conv.id));
-                                            if (!messages[conv.id]) dispatch(fetchMessages(conv.id));
                                         }}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className={`w-full text-left p-4 rounded-xl transition-all relative ${
-                                            isActive
-                                                ? isDark ? "bg-[#ba9eff]/10 border border-[#ba9eff]/20" : "bg-violet-50 border border-violet-200"
-                                                : isDark ? "hover:bg-white/5 border border-transparent" : "hover:bg-slate-50 border border-transparent"
-                                        }`}
+                                        className={`w-full text-left p-4 rounded-xl transition-all relative border ${isActive
+                                            ? isDark ? "bg-[#ba9eff]/10 border-[#ba9eff]/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]" : "bg-violet-50 border-violet-200"
+                                            : isDark ? "bg-transparent border-transparent hover:bg-white/5" : "hover:bg-slate-50 border-transparent"
+                                            }`}
                                     >
                                         {conv.unread_count > 0 && (
                                             <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-[#ba9eff] rounded-full" />
                                         )}
                                         <div className="flex justify-between items-start mb-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-9 h-9 shrink-0">
+                                                <div className="w-9 h-9 shrink-0 relative">
                                                     {other?.profile_photo_url || other?.image ? (
                                                         <img
                                                             src={other.profile_photo_url || other.image || ""}
@@ -302,9 +335,17 @@ export default function OwnerInquiriesPage() {
                                                             <span className="text-[#ba9eff] text-sm font-bold">{other?.full_name?.[0] ?? "?"}</span>
                                                         </div>
                                                     )}
+                                                    {conv.other_participant?.is_online && (
+                                                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full border-2 border-[#131313]" />
+                                                    )}
                                                 </div>
                                                 <div>
-                                                    <p className={`text-sm font-bold ${textPrimary}`}>{other?.full_name ?? "Tenant"}</p>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <p className={`text-sm font-bold truncate max-w-[100px] ${textPrimary}`}>{other?.full_name ?? "Tenant"}</p>
+                                                        {conv.is_pinned && (
+                                                            <Pin size={10} className="text-[#ba9eff] fill-[#ba9eff]" />
+                                                        )}
+                                                    </div>
                                                     {conv.room && (
                                                         <p className={`text-[10px] truncate max-w-[120px] ${conv.unread_count > 0 ? "text-[#ba9eff]" : textVariant}`}>
                                                             {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
@@ -338,10 +379,18 @@ export default function OwnerInquiriesPage() {
 
             {/* Right Panel */}
             {activeConversation ? (
-                <div className={`flex-1 flex flex-col rounded-2xl overflow-hidden ${surfaceLow}`}>
+                <div className={`flex-1 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
                     {/* Chat Header */}
                     <div className={`p-5 flex items-center justify-between border-b ${isDark ? "border-white/5 bg-[#201f1f]/60 backdrop-blur-xl" : "border-slate-200 bg-white"}`}>
                         <div className="flex items-center gap-4">
+                            {/* Back button on mobile */}
+                            <button
+                                onClick={() => dispatch(setActiveConversation(null))}
+                                className={`p-2 -ml-2 rounded-xl transition-all md:hidden ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
+                                title="Back to Chats"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
                             <div className="relative w-11 h-11 shrink-0">
                                 {getOther(activeConversation)?.profile_photo_url || getOther(activeConversation)?.image ? (
                                     <img
@@ -351,24 +400,25 @@ export default function OwnerInquiriesPage() {
                                     />
                                 ) : (
                                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${isDark ? "bg-[#ba9eff]/20" : "bg-violet-100"}`}>
-                                        <span className="text-[#ba9eff] text-lg font-bold">{getOther(activeConversation)?.full_name?.[0] ?? "?"}</span>
+                                        <span className="text-[#ba9eff] text-lg font-bold">
+                                            {getOther(activeConversation)?.full_name?.[0] ?? "?"}
+                                        </span>
                                     </div>
                                 )}
-                                <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-400 rounded-full border-2 border-[#131313]" />
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 ${isDark ? "border-[#131313]" : "border-white"} ${isOnline ? "bg-emerald-400" : "bg-zinc-400"}`} />
                             </div>
                             <div>
-                                <h4 className={`font-headline font-bold text-base ${textPrimary}`}>{getOther(activeConversation)?.full_name ?? "Tenant"}</h4>
-                                <div className="flex items-center gap-2">
-                                    {activeConversation.room && (
-                                        <span className="text-[10px] font-bold text-[#ba9eff] uppercase tracking-widest">
-                                            {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
-                                        </span>
-                                    )}
-                                    <span className={`w-1 h-1 rounded-full ${isDark ? "bg-zinc-600" : "bg-slate-300"}`} />
-                                    <span className={`text-xs ${textVariant}`}>Prospective Tenant</span>
-                                </div>
+                                <h4 className={`font-headline font-bold text-base ${textPrimary}`}>
+                                    {getOther(activeConversation)?.full_name ?? "Unknown"}
+                                </h4>
+                                {activeConversation.room && (
+                                    <p className="text-[10px] font-bold text-[#ba9eff] uppercase tracking-widest">
+                                        {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
+                                    </p>
+                                )}
                             </div>
                         </div>
+
                         <div className="flex items-center gap-2">
                             {getOther(activeConversation)?.mobile_number && (
                                 <a
@@ -379,7 +429,7 @@ export default function OwnerInquiriesPage() {
                                     <Phone size={16} />
                                 </a>
                             )}
-                            <div className="relative animate-fade-in">
+                            <div className="relative">
                                 <button
                                     onClick={() => setShowHeaderDropdown(!showHeaderDropdown)}
                                     title="More Options"
@@ -393,16 +443,43 @@ export default function OwnerInquiriesPage() {
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 4, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-xl border p-1.5 flex flex-col gap-1 z-50 ${
-                                                isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
-                                            }`}
+                                            className={`absolute right-0 top-full mt-1 w-44 rounded-xl shadow-xl border p-1.5 flex flex-col gap-1 z-[100] ${isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
+                                                }`}
                                         >
                                             <button
-                                                onClick={() => {
+                                                onClick={async () => {
+                                                    setShowHeaderDropdown(false);
+                                                    const isPinned = !activeConversation.is_pinned;
+                                                    await dispatch(pinConversation({ conversationId: activeConversation.id, isPinned }));
+                                                }}
+                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                    }`}
+                                            >
+                                                <Pin size={14} className={activeConversation.is_pinned ? "text-[#ba9eff] fill-[#ba9eff]" : ""} />
+                                                {activeConversation.is_pinned ? "Unpin Inquiry" : "Pin Inquiry"}
+                                            </button>
+
+                                            <button
+                                                onClick={async () => {
+                                                    setShowHeaderDropdown(false);
+                                                    const isMuted = !activeConversation.is_muted;
+                                                    await dispatch(muteConversation({ conversationId: activeConversation.id, isMuted }));
+                                                }}
+                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                    }`}
+                                            >
+                                                {activeConversation.is_muted ? <Volume2 size={14} /> : <VolumeX size={14} />}
+                                                {activeConversation.is_muted ? "Unmute Alerts" : "Mute Alerts"}
+                                            </button>
+
+                                            <div className={`h-[1px] my-1 ${isDark ? "bg-white/5" : "bg-slate-100"}`} />
+
+                                            <button
+                                                onClick={async () => {
                                                     setShowHeaderDropdown(false);
                                                     handleBlock();
                                                 }}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left text-red-500 hover:bg-red-500/10 w-full`}
+                                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left text-red-500 hover:bg-red-500/10 w-full"
                                             >
                                                 <ShieldX size={14} />
                                                 Block Contact
@@ -414,7 +491,7 @@ export default function OwnerInquiriesPage() {
                         </div>
                     </div>
 
-                    {/* Messages */}
+                    {/* Messages Panel */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-6">
                         {activeMessages.length === 0 ? (
                             <div className="flex items-center justify-center h-full">
@@ -432,8 +509,7 @@ export default function OwnerInquiriesPage() {
                                     const otherParticipant = getOther(activeConversation);
                                     const senderPhoto = isMine ? user?.profile_photo_url : (msg.sender?.profile_photo_url || msg.sender?.image || otherParticipant?.profile_photo_url);
                                     const senderName = isMine ? user?.full_name : (msg.sender?.full_name || otherParticipant?.full_name);
-                                    // Support both content field and message_body (fallback)
-                                    const text = (msg as any).content ?? (msg as any).message_body ?? "";
+                                    const text = msg.content ?? "";
                                     return (
                                         <motion.div
                                             key={msg.id}
@@ -474,15 +550,56 @@ export default function OwnerInquiriesPage() {
                                                         isDark={isDark}
                                                     />
                                                 ) : (
-                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
+                                                    <div className="flex flex-col gap-2">
+                                                        {msg.attachments && msg.attachments.length > 0 && (
+                                                            <div className="rounded-xl overflow-hidden max-w-xs border border-white/5 shadow-md flex flex-col gap-1">
+                                                                {msg.attachments.map((att: any) => {
+                                                                    if (att.file_type === "image") {
+                                                                        return (
+                                                                            <img
+                                                                                key={att.id}
+                                                                                src={att.file_url}
+                                                                                alt={att.file_name}
+                                                                                className="w-full object-cover max-h-48 cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+                                                                                onClick={() => window.open(att.file_url, "_blank")}
+                                                                            />
+                                                                        );
+                                                                    } else if (att.file_type === "video") {
+                                                                        return (
+                                                                            <video
+                                                                                key={att.id}
+                                                                                src={att.file_url}
+                                                                                controls
+                                                                                className="w-full max-h-48 object-cover rounded-lg"
+                                                                            />
+                                                                        );
+                                                                    } else {
+                                                                        return (
+                                                                            <a
+                                                                                key={att.id}
+                                                                                href={att.file_url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-xs rounded-xl"
+                                                                            >
+                                                                                <FileText size={16} className="text-[#ba9eff]" />
+                                                                                <span className="truncate max-w-[150px]">{att.file_name}</span>
+                                                                            </a>
+                                                                        );
+                                                                    }
+                                                                })}
+                                                            </div>
+                                                        )}
+                                                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
                                                             ? isDark
                                                                 ? "bg-[#ba9eff]/15 text-white border border-[#ba9eff]/20 rounded-tr-none"
                                                                 : "bg-violet-100 text-slate-900 rounded-tr-none"
                                                             : isDark
                                                                 ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
                                                                 : "bg-slate-100 text-slate-700 rounded-tl-none"
-                                                        }`}>
-                                                        {text}
+                                                            }`}>
+                                                            {text}
+                                                        </div>
                                                     </div>
                                                 )}
                                                 <div className={`flex items-center gap-1 mt-1 ${isMine ? "flex-row-reverse" : ""}`}>
@@ -502,88 +619,158 @@ export default function OwnerInquiriesPage() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input Area */}
-                    <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#201f1f]/60 backdrop-blur-xl" : "border-slate-200 bg-white"}`}>
-                        <div className={`flex items-center gap-3 rounded-2xl px-3 py-2 focus-within:ring-1 focus-within:ring-[#ba9eff]/40 transition-all ${isDark ? "bg-[#131313]" : "bg-slate-100"}`}>
-                            <div className="relative shrink-0 flex items-center">
+                    {/* Chat Input */}
+                    <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
+                        <div className="flex items-center gap-3 relative">
+                            {/* Hidden File Inputs */}
+                            <input
+                                type="file"
+                                ref={imageInputRef}
+                                onChange={handleImageChange}
+                                accept="image/*"
+                                className="hidden"
+                            />
+                            <input
+                                type="file"
+                                ref={videoInputRef}
+                                onChange={handleVideoChange}
+                                accept="video/*"
+                                className="hidden"
+                            />
+
+                            <div className="relative">
                                 <button
                                     onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                                    title="Attachments"
-                                    className={`transition-colors ${textVariant} hover:text-[#ba9eff] p-1`}
+                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? "bg-white/5 text-zinc-400 hover:text-[#ba9eff]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
                                 >
                                     <Paperclip size={18} />
                                 </button>
                                 <AnimatePresence>
                                     {showAttachmentMenu && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: -8, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className={`absolute bottom-full left-0 mb-2 w-48 rounded-xl shadow-xl border p-2 flex flex-col gap-1 z-50 ${
-                                                isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
-                                            }`}
+                                            initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 4, scale: 1 }}
+                                            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                            className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
+                                                }`}
                                         >
                                             <button
                                                 onClick={() => handleAttachmentSelect("image")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#ba9eff]"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
                                             >
                                                 <Image size={14} className="text-[#ba9eff]" />
-                                                Send Image
-                                            </button>
-                                            <button
-                                                onClick={() => handleAttachmentSelect("location")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#ba9eff]"
-                                                }`}
-                                            >
-                                                <MapPin size={14} className="text-[#ba9eff]" />
-                                                Send Location
+                                                <span>Send Photo</span>
                                             </button>
                                             <button
                                                 onClick={() => handleAttachmentSelect("video")}
-                                                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
-                                                    isDark ? "text-zinc-300 hover:bg-white/5 hover:text-white" : "text-slate-600 hover:bg-slate-50 hover:text-[#ba9eff]"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
                                             >
-                                                <Video size={14} className="text-[#ba9eff]" />
-                                                Send Video
+                                                <Video size={14} className="text-indigo-400" />
+                                                <span>Send Video</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleAttachmentSelect("location")}
+                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                            >
+                                                <MapPin size={14} className="text-emerald-400" />
+                                                <span>Share Location</span>
                                             </button>
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
                             </div>
+
                             <input
                                 type="text"
+                                placeholder="Write your reply..."
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-                                placeholder={`Reply to ${getOther(activeConversation)?.full_name ?? "tenant"}...`}
-                                className={`flex-1 bg-transparent border-none outline-none text-sm ${isDark ? "text-white placeholder:text-zinc-600" : "text-slate-900 placeholder:text-slate-400"}`}
+                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                className={`flex-grow rounded-xl py-3 px-4 text-sm outline-none focus:ring-1 focus:ring-[#ba9eff]/40 ${inputBg}`}
                             />
-                            <button className={`transition-colors shrink-0 ${textVariant} hover:text-[#ba9eff]`}>
-                                <Smile size={18} />
-                            </button>
                             <button
                                 onClick={handleSend}
                                 disabled={isSending || !inputText.trim()}
-                                className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ba9eff] to-[#699cff] text-[#39008c] flex items-center justify-center hover:scale-105 active:scale-95 transition-all shrink-0 shadow-[0_4px_14px_rgba(186,158,255,0.3)] disabled:opacity-50"
+                                className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ba9eff] to-[#8d69e8] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_4px_12px_rgba(186,158,255,0.25)] shrink-0 disabled:opacity-50"
                             >
-                                {isSending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} fill="currentColor" />}
+                                <Send size={16} />
                             </button>
                         </div>
                     </div>
-                    <input type="file" ref={imageInputRef} className="hidden" accept="image/*" onChange={handleImageChange} />
-                    <input type="file" ref={videoInputRef} className="hidden" accept="video/*" onChange={handleVideoChange} />
                 </div>
             ) : (
-                <div className={`flex-1 flex flex-col items-center justify-center rounded-2xl ${surfaceLow}`}>
-                    <MessageSquare size={48} className={textVariant} />
-                    <p className={`mt-4 font-bold text-lg ${textPrimary}`}>Select an inquiry</p>
-                    <p className={`text-sm mt-1 ${textVariant}`}>Choose a conversation from the left</p>
+                <div className={`flex-grow ${activeConversationId ? "flex" : "hidden md:flex"} flex-col items-center justify-center rounded-none md:rounded-2xl p-8 text-center ${surfaceLow}`}>
+                    <MessageSquare size={40} className={`mb-3 animate-pulse text-[#ba9eff]`} />
+                    <h3 className={`text-lg font-headline font-bold mb-1 ${textPrimary}`}>No active inquiry open</h3>
+                    <p className={`text-xs max-w-sm ${textVariant}`}>
+                        Select any active message request on the left menu to view the chat and manage bookings.
+                    </p>
                 </div>
             )}
+
+            {/* Start Chat by Email Modal */}
+            <AnimatePresence>
+                {showStartChatModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className={`w-full max-w-md p-6 rounded-2xl border ${isDark ? "bg-[#181818] border-white/5 text-white" : "bg-white border-slate-200 text-slate-900"} shadow-2xl`}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-headline font-bold">Start New Chat</h3>
+                                <button
+                                    onClick={() => { setShowStartChatModal(false); setStartChatError(""); }}
+                                    className={`p-1.5 rounded-lg transition-colors ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleStartChatByEmail} className="space-y-4">
+                                <div>
+                                    <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        User Email Address
+                                    </label>
+                                    <input
+                                        type="email"
+                                        required
+                                        placeholder="tenant@example.com or admin@example.com"
+                                        value={newChatEmail}
+                                        onChange={(e) => setNewChatEmail(e.target.value)}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${isDark
+                                            ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#ba9eff]/40"
+                                            : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#ba9eff]/40"
+                                            }`}
+                                    />
+                                </div>
+
+                                {startChatError && (
+                                    <div className="flex items-center gap-2 text-red-500 text-xs font-medium bg-red-500/10 p-3 rounded-xl border border-red-500/20">
+                                        <AlertCircle size={14} />
+                                        <span>{startChatError}</span>
+                                    </div>
+                                )}
+
+                                <button
+                                    type="submit"
+                                    disabled={isCreatingChat || !newChatEmail.trim()}
+                                    className="w-full py-3 bg-gradient-to-r from-[#ba9eff] to-[#8d69e8] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 shadow-[0_4px_14px_rgba(186,158,255,0.3)]"
+                                >
+                                    {isCreatingChat ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" /> Creating Chat...
+                                        </>
+                                    ) : (
+                                        "Start Chat"
+                                    )}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

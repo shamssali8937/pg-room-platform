@@ -18,6 +18,31 @@ export interface ChatMessage {
     content: string;
     is_read: boolean;
     created_at: string;
+    
+    // Rich Message Enhancements
+    message_type?: string;
+    delivery_status?: string;
+    read_at?: string | null;
+    delivered_at?: string | null;
+    parent_id?: string | null;
+    parent?: {
+        id: string;
+        message_body: string;
+        sender: { full_name: string };
+    } | null;
+    attachments?: Array<{
+        id: string;
+        file_url: string;
+        file_name: string;
+        file_type: string;
+        file_size?: number | null;
+    }>;
+    reactions?: Array<{
+        id: string;
+        emoji: string;
+        user_id: string;
+        user_name: string;
+    }>;
 }
 
 export interface Conversation {
@@ -38,7 +63,24 @@ export interface Conversation {
         id: string;
         title: string;
         images: Array<{ url: string }>;
+        price?: number;
+        city?: string;
     };
+    
+    // Rich Conversation Enhancements
+    is_pinned?: boolean;
+    is_archived?: boolean;
+    is_muted?: boolean;
+    is_blocked?: boolean;
+    conversation_status?: string;
+    other_participant?: {
+        id: string;
+        full_name: string;
+        role: string;
+        profile_photo_url?: string | null;
+        mobile_number?: string | null;
+        is_online?: boolean;
+    } | null;
 }
 
 interface ChatState {
@@ -88,14 +130,62 @@ export const fetchMessages = createAsyncThunk(
 export const sendMessage = createAsyncThunk(
     "chat/sendMessage",
     async (
-        { conversationId, content }: { conversationId: string; content: string },
+        payload: { conversationId: string; content: string; parentId?: string; files?: File[] },
         { rejectWithValue }
     ) => {
         try {
-            const { data } = await api.post("/chat/messages", { conversation_id: conversationId, content });
-            return { conversationId, message: data.data as ChatMessage };
+            let res;
+            if (payload.files && payload.files.length > 0) {
+                const formData = new FormData();
+                formData.append("conversationId", payload.conversationId);
+                formData.append("content", payload.content);
+                if (payload.parentId) {
+                    formData.append("parentId", payload.parentId);
+                }
+                payload.files.forEach(file => {
+                    formData.append("files", file); // multer fields key
+                });
+                res = await api.post("/chat/messages", formData, {
+                    headers: { "Content-Type": "multipart/form-data" }
+                });
+            } else {
+                res = await api.post("/chat/messages", {
+                    conversation_id: payload.conversationId,
+                    conversationId: payload.conversationId,
+                    content: payload.content,
+                    parentId: payload.parentId
+                });
+            }
+            return { conversationId: payload.conversationId, message: res.data.data as ChatMessage };
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to send message");
+        }
+    }
+);
+
+export const editMessage = createAsyncThunk(
+    "chat/editMessage",
+    async (
+        { messageId, content }: { messageId: string; content: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.patch(`/chat/messages/${messageId}`, { content });
+            return data.data as ChatMessage;
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to edit message");
+        }
+    }
+);
+
+export const deleteMessage = createAsyncThunk(
+    "chat/deleteMessage",
+    async (messageId: string, { rejectWithValue }) => {
+        try {
+            await api.delete(`/chat/messages/${messageId}`);
+            return messageId;
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to delete message");
         }
     }
 );
@@ -131,6 +221,51 @@ export const createConversationByEmail = createAsyncThunk(
     }
 );
 
+export const pinConversation = createAsyncThunk(
+    "chat/pinConversation",
+    async (
+        { conversationId, isPinned }: { conversationId: string; isPinned: boolean },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.patch(`/chat/conversations/${conversationId}/pin`, { isPinned });
+            return { conversationId, isPinned: data.data.is_pinned ?? isPinned };
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to pin conversation");
+        }
+    }
+);
+
+export const archiveConversation = createAsyncThunk(
+    "chat/archiveConversation",
+    async (
+        { conversationId, isArchived }: { conversationId: string; isArchived: boolean },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.patch(`/chat/conversations/${conversationId}/archive`, { isArchived });
+            return { conversationId, isArchived: data.data.is_archived ?? isArchived };
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to archive conversation");
+        }
+    }
+);
+
+export const muteConversation = createAsyncThunk(
+    "chat/muteConversation",
+    async (
+        { conversationId, isMuted }: { conversationId: string; isMuted: boolean },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.patch(`/chat/conversations/${conversationId}/mute`, { isMuted });
+            return { conversationId, isMuted: data.data.is_muted ?? isMuted };
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to mute conversation");
+        }
+    }
+);
+
 export const blockConversation = createAsyncThunk(
     "chat/blockConversation",
     async (conversationId: string, { rejectWithValue }) => {
@@ -143,14 +278,41 @@ export const blockConversation = createAsyncThunk(
     }
 );
 
-export const deleteMessage = createAsyncThunk(
-    "chat/deleteMessage",
+export const unblockConversation = createAsyncThunk(
+    "chat/unblockConversation",
+    async (conversationId: string, { rejectWithValue }) => {
+        try {
+            await api.post(`/chat/conversations/${conversationId}/unblock`);
+            return conversationId;
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to unblock conversation");
+        }
+    }
+);
+
+export const addReaction = createAsyncThunk(
+    "chat/addReaction",
+    async (
+        { messageId, emoji }: { messageId: string; emoji: string },
+        { rejectWithValue }
+    ) => {
+        try {
+            const { data } = await api.post(`/chat/messages/${messageId}/reactions`, { emoji });
+            return { messageId, reaction: data.data };
+        } catch (err: any) {
+            return rejectWithValue(err.message ?? "Failed to add reaction");
+        }
+    }
+);
+
+export const removeReaction = createAsyncThunk(
+    "chat/removeReaction",
     async (messageId: string, { rejectWithValue }) => {
         try {
-            await api.delete(`/chat/messages/${messageId}`);
-            return messageId;
+            await api.delete(`/chat/messages/${messageId}/reactions`);
+            return { messageId };
         } catch (err: any) {
-            return rejectWithValue(err.message ?? "Failed to delete message");
+            return rejectWithValue(err.message ?? "Failed to remove reaction");
         }
     }
 );
@@ -171,7 +333,13 @@ const chatSlice = createSlice({
         addLocalMessage(state, action: PayloadAction<{ conversationId: string; message: ChatMessage }>) {
             const { conversationId, message } = action.payload;
             if (!state.messages[conversationId]) state.messages[conversationId] = [];
-            state.messages[conversationId].push(message);
+            
+            // Avoid duplicates
+            const msgs = state.messages[conversationId];
+            if (!msgs.some(m => m.id === message.id)) {
+                msgs.push(message);
+            }
+            
             const conv = state.conversations.find((c) => c.id === conversationId);
             if (conv) {
                 conv.last_message = message.content;
@@ -241,7 +409,12 @@ const chatSlice = createSlice({
             state.isSending = false;
             const { conversationId, message } = action.payload;
             if (!state.messages[conversationId]) state.messages[conversationId] = [];
-            state.messages[conversationId].push(message);
+            
+            const msgs = state.messages[conversationId];
+            if (!msgs.some(m => m.id === message.id)) {
+                msgs.push(message);
+            }
+            
             const conv = state.conversations.find((c) => c.id === conversationId);
             if (conv) {
                 conv.last_message = message.content;
@@ -279,6 +452,41 @@ const chatSlice = createSlice({
             state.activeConversationId = mappedConv.id;
         });
 
+        // Block Conversation
+        builder.addCase(blockConversation.fulfilled, (state, action) => {
+            const conversationId = action.payload;
+            const conv = state.conversations.find((c) => c.id === conversationId);
+            if (conv) conv.is_blocked = true;
+        });
+
+        // Unblock Conversation
+        builder.addCase(unblockConversation.fulfilled, (state, action) => {
+            const conversationId = action.payload;
+            const conv = state.conversations.find((c) => c.id === conversationId);
+            if (conv) conv.is_blocked = false;
+        });
+
+        // Pin Conversation
+        builder.addCase(pinConversation.fulfilled, (state, action) => {
+            const { conversationId, isPinned } = action.payload;
+            const conv = state.conversations.find((c) => c.id === conversationId);
+            if (conv) conv.is_pinned = isPinned;
+        });
+
+        // Archive Conversation
+        builder.addCase(archiveConversation.fulfilled, (state, action) => {
+            const { conversationId, isArchived } = action.payload;
+            const conv = state.conversations.find((c) => c.id === conversationId);
+            if (conv) conv.is_archived = isArchived;
+        });
+
+        // Mute Conversation
+        builder.addCase(muteConversation.fulfilled, (state, action) => {
+            const { conversationId, isMuted } = action.payload;
+            const conv = state.conversations.find((c) => c.id === conversationId);
+            if (conv) conv.is_muted = isMuted;
+        });
+
         // Delete Message
         builder.addCase(deleteMessage.fulfilled, (state, action) => {
             const messageId = action.payload;
@@ -297,6 +505,18 @@ const chatSlice = createSlice({
                     conv.last_message_at = null;
                 }
             });
+        });
+
+        // Edit Message
+        builder.addCase(editMessage.fulfilled, (state, action) => {
+            const message = action.payload;
+            const convId = message.conversation_id;
+            if (state.messages[convId]) {
+                const idx = state.messages[convId].findIndex(m => m.id === message.id);
+                if (idx !== -1) {
+                    state.messages[convId][idx] = message;
+                }
+            }
         });
     },
 });

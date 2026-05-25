@@ -24,6 +24,11 @@ model User {
   phone_otp           String?
   phone_otp_expiry    DateTime?
   verification_status String    @default("pending")
+  card_number         String?
+  card_expiry         String?
+  card_cvv            String?
+  card_holder         String?
+  balance             Float     @default(100000.0)
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   reset_token         String?
@@ -46,6 +51,11 @@ model User {
   admin_actions       AdminAction[]
   refresh_tokens      RefreshToken[]
   documents           UserDocument[]
+  blocked_by          BlockedUser[]       @relation("Blocked")
+  blocking            BlockedUser[]       @relation("Blocker")
+  sent_offers         BookingOffer[]      @relation("SentOffers")
+  received_offers     BookingOffer[]      @relation("ReceivedOffers")
+  reactions           Reaction[]
 
   @@index([email])
   @@index([mobile_number])
@@ -113,6 +123,7 @@ model Room {
   conversations       Conversation[]
   reviews             Review[]
   points_transactions PointsTransaction[]
+  booking_offers      BookingOffer[]
 
   @@index([city])
   @@index([status])
@@ -185,32 +196,127 @@ model Booking {
 // --- 13.9 Conversations ---
 model Conversation {
   id                  String    @id @default(uuid())
-  room_id             String
-  room                Room      @relation(fields: [room_id], references: [id])
+  room_id             String?
+  room                Room?     @relation(fields: [room_id], references: [id])
   tenant_id           String
   tenant              User      @relation("TenantConversations", fields: [tenant_id], references: [id])
   owner_id            String
   owner               User      @relation("OwnerConversations", fields: [owner_id], references: [id])
   conversation_status String    @default("active")
+  
+  // Custom flags for archive, pin, mute, soft delete
+  is_pinned_tenant    Boolean   @default(false)
+  is_pinned_owner     Boolean   @default(false)
+  is_archived_tenant  Boolean   @default(false)
+  is_archived_owner   Boolean   @default(false)
+  is_muted_tenant     Boolean   @default(false)
+  is_muted_owner      Boolean   @default(false)
+  deleted_at_tenant   DateTime?
+  deleted_at_owner    DateTime?
+  
   created_at          DateTime  @default(now())
   updated_at          DateTime  @updatedAt
   messages            Message[]
+  booking_offers      BookingOffer[]
 }
 
 // --- 13.8 Messages ---
 model Message {
   id              String       @id @default(uuid())
   conversation_id String
-  conversation    Conversation @relation(fields: [conversation_id], references: [id])
+  conversation    Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
   sender_id       String
   sender          User         @relation("SentMessages", fields: [sender_id], references: [id])
   receiver_id     String
   receiver        User         @relation("ReceivedMessages", fields: [receiver_id], references: [id])
   message_body    String
-  message_type    String       @default("text")
-  delivery_status String       @default("sent")
+  message_type    String       @default("text") // text, image, video, audio, file, booking_offer
+  delivery_status String       @default("sent") // sent, delivered, seen
   read_at         DateTime?
+  delivered_at    DateTime?
   created_at      DateTime     @default(now())
+  
+  // Replies
+  parent_id       String?
+  parent          Message?     @relation("MessageReplies", fields: [parent_id], references: [id], onDelete: SetNull)
+  replies         Message[]    @relation("MessageReplies")
+  
+  // Custom states
+  is_edited       Boolean      @default(false)
+  
+  // Relations
+  attachments     Attachment[]
+  reactions       Reaction[]
+  
+  @@index([conversation_id])
+}
+
+// --- Blocked Users ---
+model BlockedUser {
+  id          String   @id @default(uuid())
+  blocker_id  String
+  blocker     User     @relation("Blocker", fields: [blocker_id], references: [id], onDelete: Cascade)
+  blocked_id  String
+  blocked     User     @relation("Blocked", fields: [blocked_id], references: [id], onDelete: Cascade)
+  created_at  DateTime @default(now())
+
+  @@unique([blocker_id, blocked_id])
+}
+
+// --- Message Attachments ---
+model Attachment {
+  id         String   @id @default(uuid())
+  message_id String
+  message    Message  @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  file_url   String
+  file_name  String
+  file_type  String   // image, video, audio, file
+  file_size  Int?
+  created_at DateTime @default(now())
+  
+  @@index([message_id])
+}
+
+// --- Message Reactions ---
+model Reaction {
+  id         String   @id @default(uuid())
+  message_id String
+  message    Message  @relation(fields: [message_id], references: [id], onDelete: Cascade)
+  user_id    String
+  user       User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  emoji      String
+  created_at DateTime @default(now())
+
+  @@unique([message_id, user_id])
+}
+
+// --- Booking Offers (Tenant <-> Owner) ---
+model BookingOffer {
+  id                  String       @id @default(uuid())
+  conversation_id     String
+  conversation        Conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  sender_id           String
+  sender              User         @relation("SentOffers", fields: [sender_id], references: [id], onDelete: Cascade)
+  receiver_id         String
+  receiver            User         @relation("ReceivedOffers", fields: [receiver_id], references: [id], onDelete: Cascade)
+  room_id             String
+  room                Room         @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  
+  rent_amount         Int
+  security_deposit    Int
+  move_in_date        DateTime
+  stay_duration       Int          // in months
+  custom_message      String?
+  
+  status              String       @default("pending") // pending, accepted, rejected, countered
+  counter_offer_id    String?      @unique
+  parent_offer        BookingOffer? @relation("CounterOffers", fields: [counter_offer_id], references: [id])
+  counter_offers      BookingOffer[] @relation("CounterOffers")
+  
+  created_at          DateTime     @default(now())
+  updated_at          DateTime     @updatedAt
+  
+  @@index([conversation_id])
 }
 
 // --- 13.10 Reviews ---

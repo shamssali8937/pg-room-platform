@@ -18,7 +18,7 @@ export interface AdminRoom {
     is_boosted: boolean;
     views: number;
     rejected_reason?: string | null;
-    owner: { id: string; full_name: string; email: string };
+    owner: { id: string; full_name: string; email: string; profile_photo_url?: string | null };
     images: Array<{ url: string; public_id: string }>;
     created_at: string;
     description?: string;
@@ -47,6 +47,7 @@ export interface AdminUser {
     full_name: string;
     email: string;
     role: string;
+    profile_photo_url?: string | null;
     account_status: string;
     mobile_number?: string | null;
     verification_status: string;
@@ -58,7 +59,7 @@ export interface AdminUser {
 export interface AdminReport {
     id: string;
     reporter_id: string;
-    reporter: { full_name: string; email: string };
+    reporter: { full_name: string; email: string; profile_photo_url?: string | null };
     target_type: string;
     target_id: string;
     reason_code: string;
@@ -72,7 +73,7 @@ export interface AdminReport {
 export interface AdminPointsTx {
     id: string;
     owner_id: string;
-    owner: { full_name: string; email: string };
+    owner: { full_name: string; email: string; profile_photo_url?: string | null };
     transaction_type: string;
     points: number;
     reason_code: string;

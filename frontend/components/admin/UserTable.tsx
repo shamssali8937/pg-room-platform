@@ -69,7 +69,7 @@ export default function UserTable({ searchQuery }: UserTableProps) {
                 verification: verificationFormatted,
                 accountStatus: statusFormatted,
                 joinDate: new Date(u.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=8b5cf6&color=fff`,
+                avatar: u.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.full_name)}&background=8b5cf6&color=fff`,
                 mobile_number: u.mobile_number,
                 documents: u.documents || []
             };
