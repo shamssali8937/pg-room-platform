@@ -12,5 +12,6 @@ router.post("/rooms/:id/boost", ctrl.boostRoom);
 router.post("/rooms/:id/feature", ctrl.featureRoom);
 router.get("/points", ctrl.getOwnerPoints);
 router.get("/points/transactions", ctrl.getOwnerPointTransactions);
+router.post("/points/buy", ctrl.buyPoints);
 
 export default router;

@@ -22,7 +22,7 @@ export const getAllListingsService = async (status?: string) => {
     const rooms = await prisma.room.findMany({
         where,
         include: {
-            owner: { select: { id: true, full_name: true, email: true } },
+            owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
             images: true,
         },
         orderBy: { created_at: "desc" }
@@ -57,6 +57,7 @@ export const getUsersService = async () => {
         select: {
             id: true, full_name: true, email: true, role: true, created_at: true,
             account_status: true, mobile_number: true, verification_status: true,
+            profile_photo_url: true,
             documents: {
                 select: {
                     id: true,
@@ -93,7 +94,7 @@ export const updateUserStatusService = async (adminId: string, userId: string, s
 
 export const getReportsService = async () => {
     return prisma.report.findMany({
-        include: { reporter: { select: { full_name: true, email: true } } },
+        include: { reporter: { select: { full_name: true, email: true, profile_photo_url: true } } },
         orderBy: { created_at: "desc" }
     });
 };
@@ -123,7 +124,7 @@ export const resolveReportService = async (adminId: string, reportId: string, re
 
 export const getAdminPointsTransactionsService = async () => {
     return prisma.pointsTransaction.findMany({
-        include: { owner: { select: { full_name: true, email: true } } },
+        include: { owner: { select: { full_name: true, email: true, profile_photo_url: true } } },
         orderBy: { created_at: "desc" }
     });
 };

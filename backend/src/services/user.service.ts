@@ -16,9 +16,34 @@ export const getMeService = async (userId: string) => {
             email_verified_at: true,
             mobile_verified_at: true,
             verification_status: true,
+            card_number: true,
+            card_expiry: true,
+            card_cvv: true,
+            card_holder: true,
+            balance: true,
             created_at: true,
             updated_at: true,
         },
+    });
+};
+
+export const saveCardService = async (userId: string, data: { card_number: string; card_expiry: string; card_cvv: string; card_holder: string }) => {
+    return prisma.user.update({
+        where: { id: userId },
+        data: {
+            card_number: data.card_number,
+            card_expiry: data.card_expiry,
+            card_cvv: data.card_cvv,
+            card_holder: data.card_holder,
+        },
+        select: {
+            id: true,
+            card_number: true,
+            card_expiry: true,
+            card_cvv: true,
+            card_holder: true,
+            balance: true,
+        }
     });
 };
 

@@ -155,3 +155,90 @@ export const getOwnerPointTransactionsService = async (ownerId: string) => {
         orderBy: { created_at: "desc" },
     });
 };
+
+export const buyPointsService = async (ownerId: string, packageId: string) => {
+    // 1. Determine points and amount based on packageId
+    let pointsToAdd = 0;
+    let costAmount = 0.0;
+    let reasonText = "";
+
+    if (packageId === "starter") {
+        pointsToAdd = 100;
+        costAmount = 500.0;
+        reasonText = "starter_points_package";
+    } else if (packageId === "growth") {
+        pointsToAdd = 500;
+        costAmount = 2000.0;
+        reasonText = "growth_points_package";
+    } else if (packageId === "elite") {
+        pointsToAdd = 1500;
+        costAmount = 5000.0;
+        reasonText = "elite_points_package";
+    } else {
+        throw new Error("Invalid points package selection");
+    }
+
+    // 2. Fetch owner and validate debit card attachment
+    const owner = await prisma.user.findUnique({ where: { id: ownerId } });
+    if (!owner) throw new Error("Owner not found");
+    if (!owner.card_number) {
+        throw new Error("No payment method configured. Please attach a debit card in settings first.");
+    }
+
+    // 3. Check if owner has sufficient balance
+    if (owner.balance < costAmount) {
+        throw new Error(`Insufficient funds. Package costs PKR ${costAmount.toLocaleString()}, but your card account balance is PKR ${owner.balance.toLocaleString()}.`);
+    }
+
+    // 4. Find the first admin user to transfer the funds to
+    const admin = await prisma.user.findFirst({ where: { role: "admin" } });
+
+    // 5. Run a database transaction to deduct, transfer, update balance, and create transaction records
+    const result = await prisma.$transaction(async (tx) => {
+        // Deduct from owner
+        const updatedOwner = await tx.user.update({
+            where: { id: ownerId },
+            data: { balance: { decrement: costAmount } },
+        });
+
+        // Transfer to admin (if admin exists)
+        if (admin) {
+            await tx.user.update({
+                where: { id: admin.id },
+                data: { balance: { increment: costAmount } },
+            });
+        }
+
+        // Calculate points balance after
+        const currentPointsResult = await tx.pointsTransaction.aggregate({
+            where: { owner_id: ownerId },
+            _sum: { points: true },
+        });
+        const currentPoints = currentPointsResult._sum.points ?? 0;
+        const balanceAfter = currentPoints + pointsToAdd;
+
+        // Create points transaction
+        const ptsTx = await tx.pointsTransaction.create({
+            data: {
+                owner_id: ownerId,
+                transaction_type: "EARNED",
+                points: pointsToAdd,
+                reason_code: reasonText,
+                balance_after: balanceAfter,
+            },
+        });
+
+        return {
+            updatedOwner,
+            ptsTx,
+            points: balanceAfter,
+        };
+    });
+
+    return {
+        message: `Successfully purchased points!`,
+        points: result.points,
+        balance: result.updatedOwner.balance,
+        transaction: result.ptsTx,
+    };
+};

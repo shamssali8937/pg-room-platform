@@ -5,7 +5,7 @@ import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch } from "@/store/hooks";
 import { hydrateAuth } from "@/store/slices/authSlice";
-import { Camera, BadgeCheck, Mail, Smartphone, IdCard, CheckCircle2, Edit, X, UploadCloud, Loader2 } from "lucide-react";
+import { Camera, BadgeCheck, Mail, Smartphone, IdCard, CheckCircle2, Edit, X, UploadCloud, Loader2, CreditCard } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 
@@ -37,6 +37,15 @@ export default function OwnerSettingsPage() {
         city: "",
     });
 
+    const [cardData, setCardData] = useState({
+        card_number: "",
+        card_expiry: "",
+        card_cvv: "",
+        card_holder: "",
+    });
+    const [isSavingCard, setIsSavingCard] = useState(false);
+    const [cardSaveSuccess, setCardSaveSuccess] = useState(false);
+
     const fetchDocuments = async () => {
         try {
             const { data } = await api.get("/users/me/documents");
@@ -57,9 +66,29 @@ export default function OwnerSettingsPage() {
                 city: user.city ?? "",
             });
             setProfileImage(user.profile_photo_url ?? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.full_name ?? "U")}&background=ba9eff&color=fff`);
+            setCardData({
+                card_number: (user as any).card_number ?? "",
+                card_expiry: (user as any).card_expiry ?? "",
+                card_cvv: (user as any).card_cvv ?? "",
+                card_holder: (user as any).card_holder ?? "",
+            });
             fetchDocuments();
         }
     }, [user]);
+
+    const handleSaveCard = async () => {
+        setIsSavingCard(true);
+        try {
+            await api.patch("/users/me/card", cardData);
+            setCardSaveSuccess(true);
+            dispatch(hydrateAuth());
+            setTimeout(() => setCardSaveSuccess(false), 3000);
+        } catch (err) {
+            console.error("Failed to save card", err);
+        } finally {
+            setIsSavingCard(false);
+        }
+    };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -378,6 +407,145 @@ export default function OwnerSettingsPage() {
                                 </label>
                             </div>
                         ))}
+                    </div>
+                </motion.div>
+
+                {/* Debit Card Settings / Payment Method */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className={`col-span-12 rounded-3xl p-6 md:p-8 ${surfaceLow} ${ghostBorder} relative overflow-hidden`}
+                >
+                    <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+                        <div className="lg:col-span-6 space-y-6">
+                            <div>
+                                <h3 className={`text-xs md:text-sm font-headline font-bold uppercase tracking-widest mb-2 ${secondaryColor}`}>Payment Method</h3>
+                                <h2 className={`text-xl font-bold font-display ${textPrimary}`}>Mock Debit Card Details</h2>
+                                <p className={`text-xs mt-1 ${textVariant}`}>
+                                    Attach a debit card to acquire curator points. Transactions are securely simulated in developer mode. Your mock balance starts at <strong>PKR {((user as any)?.balance ?? 100000).toLocaleString()}</strong>.
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className={`text-[9px] font-bold uppercase tracking-wider ml-1 ${textVariant}`}>Cardholder Name</label>
+                                    <input
+                                        type="text"
+                                        placeholder="John Doe"
+                                        value={cardData.card_holder}
+                                        onChange={(e) => setCardData((p) => ({ ...p, card_holder: e.target.value }))}
+                                        className={`w-full rounded-xl py-2.5 px-4 text-xs outline-none ${
+                                            isDark ? "bg-[#201f1f] text-white border-none focus:ring-1 focus:ring-[#ba9eff]" : "bg-slate-50 text-slate-900 border border-slate-200 focus:ring-1 focus:ring-violet-400"
+                                        }`}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className={`text-[9px] font-bold uppercase tracking-wider ml-1 ${textVariant}`}>Card Number</label>
+                                    <input
+                                        type="text"
+                                        placeholder="4242 •••• •••• 4242"
+                                        maxLength={19}
+                                        value={cardData.card_number}
+                                        onChange={(e) => {
+                                            let val = e.target.value.replace(/\D/g, "");
+                                            let formatted = val.match(/.{1,4}/g)?.join(" ") ?? val;
+                                            setCardData((p) => ({ ...p, card_number: formatted }));
+                                        }}
+                                        className={`w-full rounded-xl py-2.5 px-4 text-xs outline-none ${
+                                            isDark ? "bg-[#201f1f] text-white border-none focus:ring-1 focus:ring-[#ba9eff]" : "bg-slate-50 text-slate-900 border border-slate-200 focus:ring-1 focus:ring-violet-400"
+                                        }`}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className={`text-[9px] font-bold uppercase tracking-wider ml-1 ${textVariant}`}>Expiration Date</label>
+                                    <input
+                                        type="text"
+                                        placeholder="MM/YY"
+                                        maxLength={5}
+                                        value={cardData.card_expiry}
+                                        onChange={(e) => {
+                                            let val = e.target.value.replace(/\D/g, "");
+                                            if (val.length > 2) {
+                                                val = val.substring(0, 2) + "/" + val.substring(2, 4);
+                                            }
+                                            setCardData((p) => ({ ...p, card_expiry: val }));
+                                        }}
+                                        className={`w-full rounded-xl py-2.5 px-4 text-xs outline-none ${
+                                            isDark ? "bg-[#201f1f] text-white border-none focus:ring-1 focus:ring-[#ba9eff]" : "bg-slate-50 text-slate-900 border border-slate-200 focus:ring-1 focus:ring-violet-400"
+                                        }`}
+                                    />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className={`text-[9px] font-bold uppercase tracking-wider ml-1 ${textVariant}`}>CVV Security Code</label>
+                                    <input
+                                        type="password"
+                                        placeholder="•••"
+                                        maxLength={3}
+                                        value={cardData.card_cvv}
+                                        onChange={(e) => setCardData((p) => ({ ...p, card_cvv: e.target.value.replace(/\D/g, "") }))}
+                                        className={`w-full rounded-xl py-2.5 px-4 text-xs outline-none ${
+                                            isDark ? "bg-[#201f1f] text-white border-none focus:ring-1 focus:ring-[#ba9eff]" : "bg-slate-50 text-slate-900 border border-slate-200 focus:ring-1 focus:ring-violet-400"
+                                        }`}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="pt-2 flex justify-between items-center">
+                                <span className="text-[10px] text-zinc-500 font-semibold flex items-center gap-1">
+                                    <BadgeCheck className="text-emerald-400" size={14} /> Mock bank connection active
+                                </span>
+                                <button
+                                    onClick={handleSaveCard}
+                                    disabled={isSavingCard}
+                                    className={`px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                        cardSaveSuccess
+                                            ? "bg-emerald-500 text-white"
+                                            : isDark
+                                            ? "bg-white text-slate-900 hover:bg-[#ba9eff] hover:text-white"
+                                            : "bg-slate-900 text-white hover:bg-violet-600"
+                                    }`}
+                                >
+                                    {isSavingCard ? <Loader2 size={12} className="animate-spin" /> : null}
+                                    {cardSaveSuccess ? "Card Saved Successfully!" : "Attach debit card"}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Glassmorphic Card Preview */}
+                        <div className="lg:col-span-6 flex justify-center items-center">
+                            <div className="w-[340px] h-[200px] rounded-2xl p-6 relative overflow-hidden bg-gradient-to-tr from-violet-600/90 via-purple-600/80 to-blue-500/70 border border-white/20 shadow-2xl flex flex-col justify-between text-white shrink-0">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent)]" />
+                                <div className="flex justify-between items-start z-10">
+                                    <div>
+                                        <p className="text-[10px] uppercase font-bold tracking-[0.2em] opacity-80">PG Room Platform</p>
+                                        <p className="text-xs font-semibold opacity-60">DEBIT CARD</p>
+                                    </div>
+                                    <CreditCard size={28} className="opacity-90" />
+                                </div>
+
+                                <div className="z-10">
+                                    <p className="text-lg font-mono font-medium tracking-[0.25em]">
+                                        {cardData.card_number || "•••• •••• •••• ••••"}
+                                    </p>
+                                </div>
+
+                                <div className="flex justify-between items-end z-10">
+                                    <div>
+                                        <p className="text-[8px] uppercase tracking-widest opacity-50">Cardholder</p>
+                                        <p className="text-xs font-bold font-headline truncate max-w-[160px]">
+                                            {cardData.card_holder || "YOUR LEGAL NAME"}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[8px] uppercase tracking-widest opacity-50">Expires</p>
+                                        <p className="text-xs font-bold font-mono">
+                                            {cardData.card_expiry || "MM/YY"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </motion.div>
             </div>

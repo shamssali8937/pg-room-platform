@@ -70,7 +70,7 @@ function ListingsContent() {
                 location: `${r.locality ? r.locality + ", " : ""}${r.city}`,
                 host: {
                     name: r.owner?.full_name ?? "Unknown Host",
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(r.owner?.full_name ?? "U")}&background=8b5cf6&color=fff`,
+                    avatar: r.owner?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.owner?.full_name ?? "U")}&background=8b5cf6&color=fff`,
                     badge: "Verified Owner",
                     detail: r.owner?.email ?? "",
                 },

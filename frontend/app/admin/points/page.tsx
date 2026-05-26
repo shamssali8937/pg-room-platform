@@ -76,7 +76,7 @@ function PointsContent() {
                 user: {
                     name: tx.owner?.full_name ?? "System / Owner",
                     uid: tx.owner_id,
-                    avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.owner?.full_name ?? "O")}&background=3b82f6&color=fff`,
+                    avatar: tx.owner?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(tx.owner?.full_name ?? "O")}&background=3b82f6&color=fff`,
                 },
                 action: tx.reason_code,
                 type: typeFormatted,

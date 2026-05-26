@@ -6,9 +6,13 @@ import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchOwnerPoints, fetchOwnerPointTransactions } from "@/store/slices/ownerSlice";
 import type { PointTransaction } from "@/store/slices/ownerSlice";
+import { useAuth } from "@/context/AuthContext";
+import { hydrateAuth } from "@/store/slices/authSlice";
+import api from "@/lib/api";
+import Link from "next/link";
 import {
     TrendingUp, ArrowUpRight, ArrowDownRight, Rocket, BadgeCheck,
-    Megaphone, ArrowRight, ChevronDown, Loader2
+    Megaphone, ArrowRight, ChevronDown, Loader2, CreditCard
 } from "lucide-react";
 
 const promoCards = [
@@ -51,14 +55,37 @@ export default function OwnerWalletPage() {
     const { isDark } = useOwnerTheme();
     const dispatch = useAppDispatch();
     const { points, pointTransactions, isLoading } = useAppSelector((s) => s.owner);
+    const { user } = useAuth();
 
     const [historyFilter, setHistoryFilter] = useState<"All" | "EARNED" | "SPENT">("All");
     const [showAll, setShowAll] = useState(false);
+
+    const [purchasingPackageId, setPurchasingPackageId] = useState<string | null>(null);
+    const [purchaseError, setPurchaseError] = useState<string | null>(null);
+    const [purchaseSuccessMessage, setPurchaseSuccessMessage] = useState<string | null>(null);
 
     useEffect(() => {
         dispatch(fetchOwnerPoints());
         dispatch(fetchOwnerPointTransactions());
     }, [dispatch]);
+
+    const handleBuyPoints = async (packageId: string) => {
+        setPurchasingPackageId(packageId);
+        setPurchaseError(null);
+        setPurchaseSuccessMessage(null);
+        try {
+            const { data } = await api.post("/owner/points/buy", { packageId });
+            setPurchaseSuccessMessage(data.data?.message ?? "Successfully acquired curator points!");
+            dispatch(fetchOwnerPoints());
+            dispatch(fetchOwnerPointTransactions());
+            dispatch(hydrateAuth());
+            setTimeout(() => setPurchaseSuccessMessage(null), 5000);
+        } catch (err: any) {
+            setPurchaseError(err.response?.data?.message ?? err.message ?? "Payment failed. Please try again.");
+        } finally {
+            setPurchasingPackageId(null);
+        }
+    };
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
@@ -149,6 +176,146 @@ export default function OwnerWalletPage() {
                         </motion.div>
                     ))}
                 </div>
+            </section>
+
+            {/* Acquire Curator Points */}
+            <section className="relative">
+                <div className="flex flex-col justify-between items-start gap-4 mb-8">
+                    <div>
+                        <h3 className={`text-2xl md:text-3xl font-display font-bold tracking-tight mb-1 ${textPrimary}`}>Acquire Curator Points</h3>
+                        <p className={`text-sm ${textVariant}`}>Replenish your reserve instantly using your attached debit card account.</p>
+                    </div>
+                </div>
+
+                {purchaseSuccessMessage && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 mb-6 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-bold flex items-center gap-2"
+                    >
+                        <BadgeCheck size={18} fill="currentColor" className="text-emerald-950" />
+                        <span>{purchaseSuccessMessage}</span>
+                    </motion.div>
+                )}
+
+                {purchaseError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 mb-6 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-sm font-bold"
+                    >
+                        {purchaseError}
+                    </motion.div>
+                )}
+
+                {!((user as any)?.card_number) ? (
+                    <div className={`p-8 rounded-2xl text-center space-y-4 ${surfaceLow} border border-amber-500/25`}>
+                        <div className="mx-auto w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400">
+                            <CreditCard size={24} />
+                        </div>
+                        <h4 className={`text-lg font-bold font-headline ${textPrimary}`}>No Debit Card Connected</h4>
+                        <p className={`text-sm max-w-md mx-auto ${textVariant}`}>
+                            To acquire points, you must link your mock debit card. Linking can be done securely in your account settings.
+                        </p>
+                        <Link
+                            href="/owner/settings"
+                            className={`inline-flex px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider ${
+                                isDark ? "bg-white text-slate-900 hover:bg-[#ba9eff] hover:text-white" : "bg-slate-900 text-white hover:bg-violet-600"
+                            } transition-colors`}
+                        >
+                            Link Debit Card in Settings
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {[
+                            {
+                                id: "starter",
+                                title: "Curator Starter",
+                                points: 100,
+                                pkr: 500,
+                                bg: "from-blue-500/5 to-cyan-500/5",
+                                border: isDark ? "border-white/5" : "border-slate-100",
+                                desc: "Ideal for boosting a single property list to get swift tenant enquiries.",
+                                tag: "Casual",
+                            },
+                            {
+                                id: "growth",
+                                title: "Growth Curator",
+                                points: 500,
+                                pkr: 2000,
+                                bg: "from-violet-500/10 to-indigo-500/10",
+                                border: isDark ? "border-[#ba9eff]/20" : "border-violet-200",
+                                desc: "Our most popular curator tier. Grants sufficient reserve for multiple boosts.",
+                                tag: "Best Value",
+                            },
+                            {
+                                id: "elite",
+                                title: "Elite Curator",
+                                points: 1500,
+                                pkr: 5000,
+                                bg: "from-pink-500/5 to-rose-500/5",
+                                border: isDark ? "border-white/5" : "border-slate-100",
+                                desc: "For professional agencies. Maximize views and seal occupancy records instantly.",
+                                tag: "Enterprise",
+                            },
+                        ].map((pkg, i) => (
+                            <motion.div
+                                key={pkg.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.1 }}
+                                className={`group relative overflow-hidden rounded-2xl border ${pkg.border} p-6 flex flex-col justify-between ${surfaceHigh} bg-gradient-to-br ${pkg.bg} hover:scale-[1.02] transition-transform duration-300`}
+                            >
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center">
+                                        <span className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                                            pkg.id === "growth"
+                                                ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
+                                                : "bg-zinc-500/10 text-zinc-400"
+                                        }`}>
+                                            {pkg.tag}
+                                        </span>
+                                        <span className={`text-xs font-semibold ${textVariant}`}>PKR {pkg.pkr.toLocaleString()}</span>
+                                    </div>
+
+                                    <div>
+                                        <h4 className={`text-lg font-bold font-headline ${textPrimary}`}>{pkg.title}</h4>
+                                        <div className="flex items-baseline gap-1.5 mt-2">
+                                            <span className="font-display font-extrabold text-3xl text-transparent bg-clip-text bg-gradient-to-r from-[#ba9eff] to-[#699cff]">
+                                                {pkg.points.toLocaleString()}
+                                            </span>
+                                            <span className="text-xs font-bold text-zinc-500 uppercase">PTS</span>
+                                        </div>
+                                    </div>
+
+                                    <p className={`text-xs leading-relaxed ${textVariant}`}>{pkg.desc}</p>
+                                </div>
+
+                                <button
+                                    onClick={() => handleBuyPoints(pkg.id)}
+                                    disabled={purchasingPackageId !== null}
+                                    className={`w-full mt-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+                                        pkg.id === "growth"
+                                            ? "bg-gradient-to-r from-violet-500 to-blue-500 text-white shadow-[0_0_15px_rgba(138,92,246,0.3)] hover:brightness-110"
+                                            : isDark
+                                            ? "bg-[#262626] text-white hover:bg-white hover:text-slate-900"
+                                            : "bg-slate-200 text-slate-800 hover:bg-slate-900 hover:text-white"
+                                    }`}
+                                >
+                                    {purchasingPackageId === pkg.id ? (
+                                        <>
+                                            <Loader2 size={12} className="animate-spin" />
+                                            <span>Processing...</span>
+                                        </>
+                                    ) : (
+                                        <span>Acquire Package</span>
+                                    )}
+                                </button>
+                            </motion.div>
+                        ))}
+                    </div>
+                )}
             </section>
 
             {/* Transaction History */}
