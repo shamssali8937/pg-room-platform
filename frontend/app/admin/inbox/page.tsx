@@ -227,7 +227,7 @@ function AdminInboxContent() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="flex-1 lg:ml-64 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col h-[calc(100vh-0.5rem)] lg:h-[calc(100vh-2rem)] overflow-hidden max-w-[1400px] mx-auto w-full">
+            <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col h-[calc(100vh-0.5rem)] lg:h-[calc(100vh-2rem)] overflow-hidden max-w-[1400px] mx-auto w-full">
                 {/* Header */}
                 <div className="mb-4 px-4 sm:px-0">
                     <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2" style={{ fontFamily: "Outfit, sans-serif" }}>
