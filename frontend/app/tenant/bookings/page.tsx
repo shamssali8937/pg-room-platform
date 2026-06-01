@@ -9,19 +9,23 @@ import type { Booking } from "@/store/slices/bookingSlice";
 import {
     CalendarCheck, MapPin, CheckCircle2, Clock,
     X, Bed, Bath, ShieldCheck, ChevronDown, ChevronUp,
-    Loader2, AlertCircle, Home, Phone, User, Tag
+    Loader2, AlertCircle, Home, Phone, User, Tag, Star
 } from "lucide-react";
+import api from "@/lib/api";
+
 
 const STATUS_CONFIG: Record<string, { badge: string; icon: React.ReactNode; label: string }> = {
     approved: { badge: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20", icon: <CheckCircle2 size={11} />, label: "Confirmed" },
     pending: { badge: "bg-[#699cff]/10 text-[#699cff] border-[#699cff]/20", icon: <Clock size={11} />, label: "Pending" },
-    completed: { badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20", icon: <CheckCircle2 size={11} />, label: "Completed" },
+    completed: { badge: "bg-purple-500/10 text-[#ba9eff] border-purple-500/20", icon: <CheckCircle2 size={11} />, label: "Completed" },
     cancelled: { badge: "bg-red-500/10 text-red-400 border-red-500/20", icon: <X size={11} />, label: "Cancelled" },
     rejected: { badge: "bg-red-500/10 text-red-400 border-red-500/20", icon: <X size={11} />, label: "Rejected" },
+    closed: { badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20", icon: <X size={11} />, label: "Closed" },
+    expired: { badge: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20", icon: <X size={11} />, label: "Expired" },
 };
 
 function BookingCard({
-    booking, isDark, onExpand, isExpanded, onCancel, isCancelling,
+    booking, isDark, onExpand, isExpanded, onCancel, isCancelling, onLeaveReview
 }: {
     booking: Booking;
     isDark: boolean;
@@ -29,7 +33,9 @@ function BookingCard({
     isExpanded: boolean;
     onCancel: (id: string) => void;
     isCancelling: boolean;
+    onLeaveReview: (booking: Booking) => void;
 }) {
+
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
     const surfaceMid = isDark ? "bg-[#1a1919]" : "bg-slate-50";
@@ -135,10 +141,10 @@ function BookingCard({
                             </div>
                         </div>
 
-                        {/* Owner Contact */}
+                        {/* Owner Info (name only, no phone) */}
                         {booking.owner && (
                             <div className="px-5 pb-4">
-                                <p className={`text-[10px] uppercase tracking-widest mb-2 ${textVariant}`}>Owner Contact</p>
+                                <p className={`text-[10px] uppercase tracking-widest mb-2 ${textVariant}`}>Owner</p>
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-full overflow-hidden shrink-0 ${isDark ? "bg-[#a27cff]/20" : "bg-violet-100"} flex items-center justify-center`}>
                                         {booking.owner.profile_photo_url ? (
@@ -147,14 +153,7 @@ function BookingCard({
                                             <User size={14} className="text-[#a27cff]" />
                                         )}
                                     </div>
-                                    <div>
-                                        <p className={`text-xs font-bold ${textPrimary}`}>{booking.owner.full_name}</p>
-                                        {booking.owner.mobile_number && (
-                                            <a href={`tel:${booking.owner.mobile_number}`} className="flex items-center gap-1 text-[11px] text-[#a27cff] hover:underline">
-                                                <Phone size={10} /> {booking.owner.mobile_number}
-                                            </a>
-                                        )}
-                                    </div>
+                                    <p className={`text-xs font-bold ${textPrimary}`}>{booking.owner.full_name}</p>
                                 </div>
                             </div>
                         )}
@@ -179,17 +178,28 @@ function BookingCard({
                             </div>
                         )}
 
-                        {/* Cancel Action */}
-                        {(booking.status === "pending") && (
+                        {/* Actions */}
+                        {(booking.status === "pending" || booking.status === "completed") && (
                             <div className="mx-5 mb-5 flex gap-3">
-                                <button
-                                    onClick={() => onCancel(booking.id)}
-                                    disabled={isCancelling}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 font-bold text-xs hover:bg-red-500/20 transition-colors disabled:opacity-50"
-                                >
-                                    {isCancelling ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
-                                    Cancel Booking
-                                </button>
+                                {booking.status === "pending" && (
+                                    <button
+                                        onClick={() => onCancel(booking.id)}
+                                        disabled={isCancelling}
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 text-red-400 font-bold text-xs hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                        {isCancelling ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                                        Cancel Booking
+                                    </button>
+                                )}
+                                {booking.status === "completed" && (
+                                    <button
+                                        onClick={() => onLeaveReview(booking)}
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs transition-colors shadow-lg shadow-violet-500/20"
+                                    >
+                                        <Star size={14} className="fill-white" />
+                                        Leave Stay Review
+                                    </button>
+                                )}
                             </div>
                         )}
                     </motion.div>
@@ -204,12 +214,51 @@ export default function TenantBookings() {
     const dispatch = useAppDispatch();
     const { tenantBookings, isLoading, error } = useAppSelector((s) => s.booking);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [filter, setFilter] = useState<"all" | "approved" | "pending" | "completed" | "cancelled" | "rejected">("all");
+    const [filter, setFilter] = useState<"all" | "approved" | "pending" | "completed" | "cancelled" | "rejected" | "closed" | "expired">("all");
     const [cancellingId, setCancellingId] = useState<string | null>(null);
+
+    // Review Modal State
+    const [reviewModalBooking, setReviewModalBooking] = useState<Booking | null>(null);
+    const [rating, setRating] = useState(5);
+    const [comment, setComment] = useState("");
+    const [submittingReview, setSubmittingReview] = useState(false);
+    const [reviewError, setReviewError] = useState<string | null>(null);
+    const [reviewSuccess, setReviewSuccess] = useState(false);
 
     useEffect(() => {
         dispatch(fetchTenantBookings());
     }, [dispatch]);
+
+    const handleSubmitReview = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!reviewModalBooking) return;
+        try {
+            setSubmittingReview(true);
+            setReviewError(null);
+            const { data } = await api.post("/reviews", {
+                bookingId: reviewModalBooking.id,
+                rating,
+                comment,
+                revieweeId: reviewModalBooking.owner_id,
+                roomId: reviewModalBooking.room_id
+            });
+            if (data?.success) {
+                setReviewSuccess(true);
+                setTimeout(() => {
+                    setReviewModalBooking(null);
+                    setReviewSuccess(false);
+                    setRating(5);
+                    setComment("");
+                }, 1500);
+            }
+        } catch (err: any) {
+            console.error("Failed to submit review:", err);
+            setReviewError(err.response?.data?.message ?? "Failed to submit review");
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
+
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
@@ -220,8 +269,11 @@ export default function TenantBookings() {
         { key: "all", label: "All" },
         { key: "approved", label: "Confirmed" },
         { key: "pending", label: "Pending" },
+        { key: "completed", label: "Completed" },
         { key: "rejected", label: "Rejected" },
         { key: "cancelled", label: "Cancelled" },
+        { key: "closed", label: "Closed" },
+        { key: "expired", label: "Expired" },
     ];
 
     const filtered = filter === "all" ? tenantBookings : tenantBookings.filter((b) => b.status === filter);
@@ -304,10 +356,100 @@ export default function TenantBookings() {
                             onExpand={() => setExpandedId(expandedId === booking.id ? null : booking.id)}
                             onCancel={handleCancel}
                             isCancelling={cancellingId === booking.id}
+                            onLeaveReview={setReviewModalBooking}
                         />
                     ))}
                 </div>
             )}
+
+            {/* Review Modal */}
+            <AnimatePresence>
+                {reviewModalBooking && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            className={`w-full max-w-md p-6 rounded-2xl border shadow-2xl ${isDark ? "bg-[#131313] border-white/10" : "bg-white border-slate-200"}`}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className={`font-headline font-bold text-lg ${textPrimary}`}>Leave a Review</h3>
+                                <button
+                                    onClick={() => setReviewModalBooking(null)}
+                                    className={`p-1.5 rounded-lg hover:bg-white/5 transition-colors ${textVariant}`}
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+
+                            {reviewSuccess ? (
+                                <div className="text-center py-6 space-y-3">
+                                    <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto">
+                                        <CheckCircle2 size={24} />
+                                    </div>
+                                    <p className={`font-bold text-sm ${textPrimary}`}>Review Submitted Successfully!</p>
+                                    <p className={`text-xs ${textVariant}`}>Thank you for your feedback.</p>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleSubmitReview} className="space-y-4">
+                                    <div>
+                                        <label className={`text-[10px] uppercase font-bold tracking-widest ${textVariant}`}>Rating</label>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            {[1, 2, 3, 4, 5].map((star) => (
+                                                <button
+                                                    key={star}
+                                                    type="button"
+                                                    onClick={() => setRating(star)}
+                                                    className="transition-transform active:scale-90"
+                                                >
+                                                    <Star
+                                                        size={28}
+                                                        className={star <= rating ? "fill-amber-400 text-amber-400" : `text-zinc-500`}
+                                                    />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`text-[10px] uppercase font-bold tracking-widest ${textVariant}`}>Your Review</label>
+                                        <textarea
+                                            value={comment}
+                                            onChange={(e) => setComment(e.target.value)}
+                                            placeholder="Tell us about your experience with this room, locality, and landlord..."
+                                            rows={4}
+                                            required
+                                            className={`w-full mt-1.5 p-3 text-xs rounded-xl border focus:outline-none focus:ring-1 focus:ring-violet-500/50 resize-none ${isDark ? "bg-[#1c1c1c] border-white/5 text-white placeholder:text-zinc-500" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
+                                        />
+                                    </div>
+
+                                    {reviewError && (
+                                        <div className="flex items-center gap-2 p-3.5 rounded-xl bg-red-500/10 text-red-400 text-xs border border-red-500/10">
+                                            <AlertCircle size={14} className="shrink-0" />
+                                            <p>{reviewError}</p>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        type="submit"
+                                        disabled={submittingReview}
+                                        className="w-full py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs shadow-lg shadow-violet-500/20 active:scale-98 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {submittingReview ? <Loader2 size={14} className="animate-spin" /> : null}
+                                        Submit Review
+                                    </button>
+                                </form>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
+
     );
 }

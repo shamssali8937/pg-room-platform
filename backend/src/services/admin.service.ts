@@ -11,6 +11,11 @@ export const getPendingListingsService = async () => {
         include: {
             owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
             images: true,
+            reviews: {
+                include: {
+                    reviewer: { select: { full_name: true, profile_photo_url: true } }
+                }
+            }
         },
         orderBy: { created_at: "asc" }
     });
@@ -24,6 +29,11 @@ export const getAllListingsService = async (status?: string) => {
         include: {
             owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
             images: true,
+            reviews: {
+                include: {
+                    reviewer: { select: { full_name: true, profile_photo_url: true } }
+                }
+            }
         },
         orderBy: { created_at: "desc" }
     });

@@ -96,6 +96,7 @@ export default function TenantBrowse() {
     const [maxPrice, setMaxPrice] = useState(200000);
     const [showFilters, setShowFilters] = useState(false);
     const [favorites, setFavorites] = useState<Set<string>>(new Set());
+    const [showSavedOnly, setShowSavedOnly] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [savingId, setSavingId] = useState<string | null>(null);
 
@@ -107,6 +108,25 @@ export default function TenantBrowse() {
     useEffect(() => {
         setFavorites(new Set(savedRooms.map((r) => r.id)));
     }, [savedRooms]);
+
+    useEffect(() => {
+        const savedMaxPrice = localStorage.getItem("tenant_preferences_budget_max");
+        if (savedMaxPrice) {
+            setMaxPrice(Number(savedMaxPrice));
+        }
+        const savedCities = localStorage.getItem("tenant_preferences_cities");
+        if (savedCities) {
+            try {
+                const parsed = JSON.parse(savedCities);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setSelectedCity(parsed[0]);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }, []);
+
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
@@ -121,6 +141,7 @@ export default function TenantBrowse() {
         : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100";
 
     let filtered = rooms.filter((r) => {
+        if (showSavedOnly && !favorites.has(r.id)) return false;
         if (selectedCity !== "All" && r.city !== selectedCity) return false;
         if (r.price > maxPrice) return false;
         if (searchQuery) {
@@ -129,6 +150,7 @@ export default function TenantBrowse() {
         }
         return true;
     });
+
 
     if (sortBy === "Price: Low to High") filtered = [...filtered].sort((a, b) => a.price - b.price);
     else if (sortBy === "Price: High to Low") filtered = [...filtered].sort((a, b) => b.price - a.price);
@@ -234,6 +256,20 @@ export default function TenantBrowse() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Saved Only Filter */}
+                            {user && (
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Bookmarks</p>
+                                    <button
+                                        onClick={() => setShowSavedOnly(!showSavedOnly)}
+                                        className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${showSavedOnly ? chipActive : chipInactive}`}
+                                    >
+                                        Saved Rooms Only
+                                    </button>
+                                </div>
+                            )}
+
                         </div>
                     </motion.section>
                 )}

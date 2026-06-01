@@ -94,6 +94,7 @@ function ListingsContent() {
                 genderPreference: r.gender_preference ?? "any",
                 sqft: r.sqft ?? r.size_value ?? 0,
                 baths: r.baths ?? 1,
+                reviews: r.reviews,
             };
         });
     }, [reduxRooms]);
@@ -165,6 +166,33 @@ function ListingsContent() {
 
     const handleViewDetail = (listing: ModerationListing) => {
         setDetailListing(listing);
+    };
+
+    const handleExportCSV = () => {
+        const headers = ["ID", "Title", "Price (PKR)", "Location", "Host Name", "Host Email", "Status", "Room Type", "Submitted At"];
+        const rows = filtered.map(l => [
+            l.id,
+            `"${l.title.replace(/"/g, '""')}"`,
+            l.price,
+            `"${l.location.replace(/"/g, '""')}"`,
+            `"${l.host.name.replace(/"/g, '""')}"`,
+            l.host.detail,
+            l.status,
+            l.roomType,
+            l.submittedAt
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `listings_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSV exported successfully", "success");
     };
 
     // ── Filtered + searched listings ──
@@ -301,7 +329,10 @@ function ListingsContent() {
                             <SlidersHorizontal size={14} />
                             <span className="hidden sm:inline">Advanced</span> Filters
                         </button>
-                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}>
+                        <button
+                            onClick={handleExportCSV}
+                            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}
+                        >
                             <Download size={14} />
                             <span className="hidden sm:inline">Export</span> CSV
                         </button>

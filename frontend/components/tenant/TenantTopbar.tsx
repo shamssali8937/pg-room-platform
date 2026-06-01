@@ -4,20 +4,71 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, X, Menu, CalendarCheck, MessageSquare, CreditCard } from "lucide-react";
 import { useTenantTheme } from "@/context/TenantThemeContext";
-import { mockTenantNotifications } from "@/components/tenant/mockData";
 import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
 
 interface TopbarProps {
     onMenuToggle?: () => void;
     searchPlaceholder?: string;
 }
 
+interface TenantNotification {
+    id: string;
+    title: string;
+    description: string;
+    time: string;
+    read: boolean;
+    type: string;
+}
+
+const formatTime = (dateStr: string) => {
+    try {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return "Just now";
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return new Date(dateStr).toLocaleDateString();
+    } catch {
+        return "";
+    }
+};
+
 export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities..." }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState(mockTenantNotifications);
+    const [notifications, setNotifications] = useState<TenantNotification[]>([]);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
     const { user } = useAuth();
+
+    const fetchNotifications = async () => {
+        try {
+            const { data } = await api.get("/users/me/notifications");
+            if (data?.success && Array.isArray(data?.data)) {
+                const mapped = data.data.map((n: any) => ({
+                    id: n.id,
+                    title: n.title,
+                    description: n.body,
+                    time: formatTime(n.created_at),
+                    read: n.is_read,
+                    type: n.notification_type?.includes("booking") ? "booking" : n.notification_type?.includes("payment") ? "payment" : "system"
+                }));
+                setNotifications(mapped);
+            }
+        } catch (err) {
+            console.error("Failed to fetch notifications:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            // Poll every 30 seconds for live notifications
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -31,8 +82,26 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    const markAsRead = (id: string) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+    const markAllRead = async () => {
+        // Optimistic update
+        setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        try {
+            // Sequentially mark them read in DB
+            const unread = notifications.filter((n) => !n.read);
+            await Promise.all(unread.map(n => api.patch(`/users/me/notifications/${n.id}/read`)));
+        } catch (err) {
+            console.error("Failed to mark all as read:", err);
+        }
+    };
+
+    const markAsRead = async (id: string) => {
+        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n));
+        try {
+            await api.patch(`/users/me/notifications/${id}/read`);
+        } catch (err) {
+            console.error("Failed to mark notification as read:", err);
+        }
+    };
 
     const notifIconMap: Record<string, React.ReactNode> = {
         booking: <CalendarCheck size={14} className="text-emerald-400" />,
@@ -40,6 +109,7 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
         payment: <CreditCard size={14} className="text-amber-400" />,
         system: <Bell size={14} className="text-[#699cff]" />,
     };
+
 
     const headerBg = isDark
         ? "bg-[#0e0e0e]/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"

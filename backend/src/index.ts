@@ -3,6 +3,7 @@ import app from "./app.js";
 import { logger } from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 import { initSocket } from "./config/socket.js";
+import { startExpireBookingsScheduler } from "./jobs/expireBookings.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -11,6 +12,9 @@ const server = createServer(app);
 
 // ─── Initialize Socket.IO ────────────────────────────────────────
 initSocket(server);
+
+// ─── Start Scheduled Jobs ────────────────────────────────────────
+startExpireBookingsScheduler();
 
 // ─── Start Server ─────────────────────────────────────────────────
 server.listen(PORT, () => {

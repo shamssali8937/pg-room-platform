@@ -6,6 +6,23 @@ import { Bell, Search, Settings, X, Menu } from "lucide-react";
 import { mockNotifications, type Notification } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
+
+const formatTime = (dateStr: string) => {
+    try {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 1) return "Just now";
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours}h ago`;
+        return date.toLocaleDateString();
+    } catch {
+        return "Recent";
+    }
+};
 
 interface TopbarProps {
     searchQuery: string;
@@ -16,10 +33,36 @@ interface TopbarProps {
 
 export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder = "Search Listings...", onMenuToggle }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark } = useAdminTheme();
     const { user } = useAuth();
+
+    const fetchNotifications = async () => {
+        try {
+            const { data } = await api.get("/users/me/notifications");
+            if (data?.success && Array.isArray(data?.data)) {
+                const mapped = data.data.map((n: any) => ({
+                    id: n.id,
+                    title: n.title,
+                    description: n.body,
+                    time: formatTime(n.created_at),
+                    read: n.is_read,
+                }));
+                setNotifications(mapped);
+            }
+        } catch (err) {
+            console.error("Failed to fetch admin notifications:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -33,12 +76,23 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        try {
+            await api.patch(`/users/me/notifications/${id}/read`);
+        } catch (err) {
+            console.error(err);
+        }
     };
 
-    const markAllRead = () => {
+    const markAllRead = async () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        try {
+            const unread = notifications.filter(n => !n.read);
+            await Promise.all(unread.map(n => api.patch(`/users/me/notifications/${n.id}/read`)));
+        } catch (err) {
+            console.error(err);
+        }
     };
 
     // Theme classes

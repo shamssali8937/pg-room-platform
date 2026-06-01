@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, MapPin, Users, BedDouble, Calendar, Shield, ShieldCheck, ShieldAlert,
     Clock, CheckCircle2, Ban, Flag, ChevronLeft, ChevronRight,
     Wifi, Wind, Car, Utensils, Waves, Dumbbell, Tv, Zap, Video, BookOpen, Coffee, Sparkles,
+    Star, Loader2
 } from "lucide-react";
 import { type ModerationListing, type ModerationStatus } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
+import api from "@/lib/api";
 
 const statusConfig: Record<ModerationStatus, { label: string; bg: string; text: string; border: string; dot: string }> = {
     pending: { label: "Pending Review", bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30", dot: "bg-purple-400" },
@@ -41,6 +43,27 @@ interface ListingDetailModalProps {
 export default function ListingDetailModal({ listing, onClose, onApprove, onSuspend, onFlag, onAudit }: ListingDetailModalProps) {
     const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
     const { isDark } = useAdminTheme();
+    const [reviewsList, setReviewsList] = useState<any[]>([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+
+    useEffect(() => {
+        if (listing?.id) {
+            const fetchReviews = async () => {
+                try {
+                    setLoadingReviews(true);
+                    const { data } = await api.get(`/rooms/${listing.id}/reviews`);
+                    if (data?.success && Array.isArray(data?.data)) {
+                        setReviewsList(data.data);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch room reviews for admin:", err);
+                } finally {
+                    setLoadingReviews(false);
+                }
+            };
+            fetchReviews();
+        }
+    }, [listing?.id]);
 
     if (!listing) return null;
 
@@ -256,6 +279,52 @@ export default function ListingDetailModal({ listing, onClose, onApprove, onSusp
                                 </div>
                             </div>
                         )}
+
+                        {/* Reviews Section */}
+                        <div className={`pt-4 border-t ${isDark ? "border-white/5" : "border-slate-200"} space-y-4`}>
+                            <div className="flex items-center justify-between">
+                                <h4 className={`text-xs uppercase tracking-widest font-semibold ${descLabel}`}>Stay Reviews</h4>
+                                <div className="flex items-center gap-1">
+                                    <Star size={14} className="text-amber-400 fill-amber-400" />
+                                    <span className={`text-xs ${locationColor}`}>({reviewsList.length} reviews)</span>
+                                </div>
+                            </div>
+
+                            {loadingReviews ? (
+                                <div className="flex items-center gap-2 text-xs py-4 text-zinc-500">
+                                    <Loader2 size={14} className="animate-spin text-purple-500" />
+                                    <span>Loading stay reviews...</span>
+                                </div>
+                            ) : reviewsList.length === 0 ? (
+                                <p className={`text-xs italic py-2 ${locationColor}`}>No reviews yet for this room.</p>
+                            ) : (
+                                <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
+                                    {reviewsList.map((rev: any) => (
+                                        <div key={rev.id} className={`p-3.5 rounded-xl border space-y-1.5 ${isDark ? "bg-[#201f1f] border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDark ? "bg-purple-500/20 text-purple-400" : "bg-purple-100 text-purple-700"}`}>
+                                                        {rev.reviewer?.full_name?.[0] ?? "T"}
+                                                    </div>
+                                                    <span className={`text-xs font-bold ${titleColor}`}>{rev.reviewer?.full_name ?? "Verified Tenant"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                        <Star
+                                                            key={s}
+                                                            size={10}
+                                                            className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-zinc-500"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {rev.comment && <p className={`text-xs leading-relaxed ${descText}`}>"{rev.comment}"</p>}
+                                            <p className={`text-[9px] ${locationColor}`}>{new Date(rev.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Alerts */}
                         {listing.flagReason && (

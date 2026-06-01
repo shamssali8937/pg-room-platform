@@ -6,7 +6,8 @@ import { Bell, Search, Settings, X, Menu } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
 
-// Reuse admin mock notifications structure
+import api from "@/lib/api";
+
 interface Notification {
     id: string;
     title: string;
@@ -15,10 +16,19 @@ interface Notification {
     read: boolean;
 }
 
-const mockNotifications: Notification[] = [
-    { id: "1", title: "New Inquiry", description: "Sara Ahmed asked about Executive 2BR Penthouse", time: "2 mins ago", read: false },
-    { id: "2", title: "Listing Approved", description: "Your listing 'Seaside Luxury Studio' is now live", time: "1 hour ago", read: true },
-];
+const formatTime = (dateStr: string) => {
+    try {
+        const diff = Date.now() - new Date(dateStr).getTime();
+        const mins = Math.floor(diff / 60000);
+        if (mins < 1) return "Just now";
+        if (mins < 60) return `${mins}m ago`;
+        const hrs = Math.floor(mins / 60);
+        if (hrs < 24) return `${hrs}h ago`;
+        return new Date(dateStr).toLocaleDateString();
+    } catch {
+        return "";
+    }
+};
 
 interface TopbarProps {
     searchQuery?: string;
@@ -32,10 +42,36 @@ export default function OwnerTopbar({
     onMenuToggle 
 }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
-    const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
     const { user } = useAuth();
+
+    const fetchNotifications = async () => {
+        try {
+            const { data } = await api.get("/users/me/notifications");
+            if (data?.success && Array.isArray(data?.data)) {
+                const mapped = data.data.map((n: any) => ({
+                    id: n.id,
+                    title: n.title,
+                    description: n.body,
+                    time: formatTime(n.created_at),
+                    read: n.is_read
+                }));
+                setNotifications(mapped);
+            }
+        } catch (err) {
+            console.error("Failed to fetch owner notifications:", err);
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -49,13 +85,25 @@ export default function OwnerTopbar({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const markAsRead = (id: string) => {
+    const markAsRead = async (id: string) => {
         setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+        try {
+            await api.patch(`/users/me/notifications/${id}/read`);
+        } catch (err) {
+            console.error("Failed to mark notification read:", err);
+        }
     };
 
-    const markAllRead = () => {
+    const markAllRead = async () => {
         setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+        try {
+            const unread = notifications.filter((n) => !n.read);
+            await Promise.all(unread.map(n => api.patch(`/users/me/notifications/${n.id}/read`)));
+        } catch (err) {
+            console.error("Failed to mark all notifications read:", err);
+        }
     };
+
 
     // Theme classes mapped to Owner theme
     const headerBg = isDark

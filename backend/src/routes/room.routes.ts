@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import * as ctrl from "../controllers/room.controller.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import { authenticate, authorize } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
 
 const router: Router = express.Router();
@@ -9,10 +9,10 @@ const router: Router = express.Router();
 router.get("/", ctrl.getRooms);
 router.get("/:id", ctrl.getRoomById);
 
-// OWNER
-router.post("/", authenticate, upload.array("images", 10), ctrl.createRoom);
-router.patch("/:id", authenticate, ctrl.updateRoom);
-router.delete("/:id", authenticate, ctrl.deleteRoom);
+// OWNER ONLY — must be authenticated AND have role "owner"
+router.post("/", authenticate, authorize("owner"), upload.array("images", 10), ctrl.createRoom);
+router.patch("/:id", authenticate, authorize("owner"), ctrl.updateRoom);
+router.delete("/:id", authenticate, authorize("owner"), ctrl.deleteRoom);
 
 // SAVE
 router.post("/:id/save", authenticate, ctrl.saveRoom);

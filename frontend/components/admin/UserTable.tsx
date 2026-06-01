@@ -10,6 +10,10 @@ import { fetchAdminUsers, updateUserStatus, verifyUser } from "@/store/slices/ad
 
 interface UserTableProps {
     searchQuery: string;
+    roleFilter: UserRole | "All";
+    setRoleFilter: (val: UserRole | "All") => void;
+    statusFilter: AccountStatus | "Any";
+    setStatusFilter: (val: AccountStatus | "Any") => void;
 }
 
 interface TableAdminUser {
@@ -33,11 +37,15 @@ interface TableAdminUser {
 
 const ITEMS_PER_PAGE = 5;
 
-export default function UserTable({ searchQuery }: UserTableProps) {
+export default function UserTable({
+    searchQuery,
+    roleFilter,
+    setRoleFilter,
+    statusFilter,
+    setStatusFilter
+}: UserTableProps) {
     const dispatch = useAppDispatch();
     const { users: reduxUsers, isLoading } = useAppSelector((state) => state.admin);
-    const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
-    const [statusFilter, setStatusFilter] = useState<AccountStatus | "Any">("Any");
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedUser, setSelectedUser] = useState<TableAdminUser | null>(null);
     const [actionModal, setActionModal] = useState<{ user: TableAdminUser; action: "warn" | "ban" } | null>(null);

@@ -32,6 +32,7 @@ export interface AdminRoom {
     gender_preference?: string;
     sqft?: number;
     size_value?: number;
+    reviews?: any;
 }
 
 export interface UserDocument {

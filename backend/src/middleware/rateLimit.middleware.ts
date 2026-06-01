@@ -35,7 +35,7 @@ const createLimiter = (
  */
 export const globalRateLimiter = createLimiter(
     15 * 60 * 1000, // 15 min
-    100,
+    process.env.NODE_ENV === "production" ? 150 : 2000,
     "Too many requests from this IP, please try again after 15 minutes.",
     "GLOBAL"
 );

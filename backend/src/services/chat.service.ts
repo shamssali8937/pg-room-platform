@@ -461,6 +461,21 @@ export const sendMessageService = async (
         }
     });
 
+    // Create a database notification for the receiver
+    try {
+        await prisma.notification.create({
+            data: {
+                user_id: receiverId,
+                notification_type: "chat_message",
+                title: `New Message from ${message.sender?.full_name || "User"}`,
+                body: content.length > 60 ? `${content.substring(0, 57)}...` : content,
+                action_url: message.sender?.role === "owner" ? `/tenant/chat` : `/owner/inquiries`
+            }
+        });
+    } catch (err) {
+        console.error("Failed to create chat notification:", err);
+    }
+
     return message;
 };
 

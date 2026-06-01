@@ -227,7 +227,7 @@ function AdminInboxContent() {
                 onMenuToggle={() => setSidebarOpen(true)}
             />
 
-            <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col h-[calc(100vh-0.5rem)] lg:h-[calc(100vh-2rem)] overflow-hidden max-w-[1400px] mx-auto w-full">
+            <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col overflow-hidden max-w-[1400px] mx-auto w-full">
                 {/* Header */}
                 <div className="mb-4 px-4 sm:px-0">
                     <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2" style={{ fontFamily: "Outfit, sans-serif" }}>
@@ -239,7 +239,7 @@ function AdminInboxContent() {
                 </div>
 
                 {/* Main Bento split */}
-                <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-6 h-[calc(100vh-210px)] sm:h-[calc(100vh-230px)] lg:h-[calc(100vh-250px)] overflow-hidden">
+                <div className="w-full h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
                     {/* Left Panel: Conversations List */}
                     <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
                         {/* Search & Actions */}
@@ -348,7 +348,7 @@ function AdminInboxContent() {
                     </div>
 
                     {/* Right Panel: Chat view */}
-                    <div className={`flex-1 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
+                    <div className={`flex-1 min-h-0 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
                         {activeConversation ? (
                             <>
                                 {/* Conversation Header */}
@@ -462,7 +462,7 @@ function AdminInboxContent() {
                                 })()}
 
                                 {/* Messages scrolling window */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                                <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
                                     {messages[activeConversation.id]?.map((msg) => {
                                         const isSelf = msg.sender_id === user?.id;
 
