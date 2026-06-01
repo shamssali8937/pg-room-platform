@@ -125,6 +125,25 @@ export default function TenantBrowse() {
                 console.error(e);
             }
         }
+
+        // Parse search query parameters from landing page
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const cityParam = params.get("city");
+            const budgetParam = params.get("budget");
+            if (cityParam) {
+                const formattedCity = cityParam.charAt(0).toUpperCase() + cityParam.slice(1).toLowerCase();
+                if (CITIES.includes(formattedCity)) {
+                    setSelectedCity(formattedCity);
+                }
+            }
+            if (budgetParam) {
+                const budgetNum = Number(budgetParam);
+                if (!isNaN(budgetNum) && budgetNum > 0) {
+                    setMaxPrice(budgetNum);
+                }
+            }
+        }
     }, []);
 
 

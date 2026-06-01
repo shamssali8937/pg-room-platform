@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import LandpageFooter from "@/components/LandpageFooter";
 import ParticleBg from "@/components/ParticleBg";
 import Link from "next/link";
+import api from "@/lib/api";
 
 // React Icons
 import { HiOutlineLocationMarker, HiOutlineSearch } from "react-icons/hi";
@@ -64,24 +65,27 @@ export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState({ city: "", budget: "", type: "" });
 
-  // P2-E: Fetch real listings from the backend
+  // Fetch real listings from the backend
   const [listings, setListings] = useState<any[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
 
   useEffect(() => {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-    fetch(`${apiBase}/rooms?status=active&limit=5`)
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success && Array.isArray(json.data)) {
-          setListings(json.data);
+    api.get("/rooms?status=active&limit=5")
+      .then((res) => {
+        const json = res.data;
+        if (json.success) {
+          if (json.data && Array.isArray(json.data.rooms)) {
+            setListings(json.data.rooms);
+          } else if (Array.isArray(json.data)) {
+            setListings(json.data);
+          }
         }
       })
       .catch(() => { /* silently fall back to empty — no crash */ })
       .finally(() => setLoadingListings(false));
   }, []);
 
-  // P2-E: Search redirects to /tenant/browse with query params so real filtering happens there
+  // Search redirects to /tenant/browse with query params so real filtering happens there
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (searchQuery.city)   params.set("city",   searchQuery.city);
@@ -90,9 +94,9 @@ export default function Home() {
     router.push(`/auth/signin`);
   };
 
-  const featuredListing  = listings[0] ?? null;
-  const verticalListing  = listings[1] ?? null;
-  const gridListings     = listings.slice(2);
+  const featuredListing  = listings[0] ?? defaultListings[0] ?? null;
+  const verticalListing  = listings[1] ?? defaultListings[1] ?? null;
+  const gridListings     = listings.length > 2 ? listings.slice(2) : defaultListings.slice(2);
 
   return (
     <main className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
@@ -135,10 +139,10 @@ export default function Home() {
               <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
 
               <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
-                <RiMoneyDollarCircleLine className="text-[#ba9eff] text-xl shrink-0" />
+                <span className="text-[#ba9eff] font-bold text-sm shrink-0">Rs.</span>
                 <input
                   className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium"
-                  placeholder="Budget"
+                  placeholder="Budget (Rs.)"
                   type="number"
                   value={searchQuery.budget}
                   onChange={(e) => setSearchQuery({ ...searchQuery, budget: e.target.value })}
@@ -197,7 +201,7 @@ export default function Home() {
               <div className="md:col-span-2 group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
                    onClick={() => router.push("/auth/signin")}>
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                     src={featuredListing.images?.[0]?.url ?? PLACEHOLDER_IMAGE} alt={featuredListing.title} />
+                     src={featuredListing.images?.[0]?.url ?? featuredListing.image ?? PLACEHOLDER_IMAGE} alt={featuredListing.title} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
                   ₨ {(featuredListing.price ?? featuredListing.rent_amount ?? 0).toLocaleString()} / mo
@@ -211,7 +215,7 @@ export default function Home() {
                   </div>
                   <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">{featuredListing.title}</h3>
                   <p className="text-gray-300 flex items-center gap-2">
-                    <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.locality ?? featuredListing.city}
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.location ?? `${featuredListing.locality ?? ""}, ${featuredListing.city ?? ""}`}
                   </p>
                 </div>
               </div>
@@ -221,7 +225,7 @@ export default function Home() {
               <div className="group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
                    onClick={() => router.push("/auth/signin")}>
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                     src={verticalListing.images?.[0]?.url ?? PLACEHOLDER_IMAGE} alt={verticalListing.title} />
+                     src={verticalListing.images?.[0]?.url ?? verticalListing.image ?? PLACEHOLDER_IMAGE} alt={verticalListing.title} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
                   ₨ {(verticalListing.price ?? verticalListing.rent_amount ?? 0).toLocaleString()}
@@ -229,7 +233,7 @@ export default function Home() {
                 <div className="absolute bottom-10 left-10">
                   <h3 className="text-2xl font-bold text-white mb-2">{verticalListing.title}</h3>
                   <p className="text-gray-300 flex items-center gap-2 text-sm">
-                    <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.locality ?? verticalListing.city}
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.location ?? `${verticalListing.locality ?? ""}, ${verticalListing.city ?? ""}`}
                   </p>
                 </div>
               </div>
@@ -240,14 +244,14 @@ export default function Home() {
                    className="backdrop-blur-sm bg-white/[0.02] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border border-white/5 hover:bg-white/[0.05] transition-all group cursor-pointer">
                 <div className="relative h-56 rounded-2xl overflow-hidden mb-6">
                   <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                       src={item.images?.[0]?.url ?? PLACEHOLDER_IMAGE} alt={item.title} />
+                       src={item.images?.[0]?.url ?? item.image ?? PLACEHOLDER_IMAGE} alt={item.title} />
                   <div className="absolute bottom-4 right-4 backdrop-blur-md bg-black/60 px-4 py-1.5 rounded-xl text-xs font-bold text-white border border-white/10">
                     ₨ {(item.price ?? item.rent_amount ?? 0).toLocaleString()}
                   </div>
                 </div>
                 <h4 className="text-xl font-bold text-white mb-2 group-hover:text-[#ba9eff] transition-colors">{item.title}</h4>
                 <p className="text-gray-400 text-sm flex items-center gap-2">
-                  <HiOutlineLocationMarker className="text-[#699cff]" /> {item.locality ?? item.city}
+                  <HiOutlineLocationMarker className="text-[#699cff]" /> {item.location ?? `${item.locality ?? ""}, ${item.city ?? ""}`}
                 </p>
               </div>
             ))}
