@@ -293,3 +293,45 @@ export const respondToBookingOffer = async (req: Request, res: Response, next: N
         res.json({ success: true, data: result.offer });
     } catch (error) { next(error); }
 };
+
+// Phase 5: Report a conversation
+export const reportConversation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const conversationId = req.params.id as string;
+        const { reason_code, description } = req.body;
+
+        if (!reason_code) {
+            res.status(400).json({ success: false, message: "reason_code is required" });
+            return;
+        }
+
+        // Verify conversation exists and reporter is a participant
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId }
+        });
+
+        if (!conversation) {
+            res.status(404).json({ success: false, message: "Conversation not found" });
+            return;
+        }
+
+        const userId = req.user!.id;
+        if (conversation.tenant_id !== userId && conversation.owner_id !== userId) {
+            res.status(403).json({ success: false, message: "You are not a participant in this conversation" });
+            return;
+        }
+
+        const report = await prisma.report.create({
+            data: {
+                reporter_id: userId,
+                target_type: "conversation",
+                target_id: conversationId,
+                reason_code,
+                description: description ?? null,
+                status: "pending",
+            }
+        });
+
+        res.status(201).json({ success: true, data: report, message: "Report submitted successfully" });
+    } catch (error) { next(error); }
+};

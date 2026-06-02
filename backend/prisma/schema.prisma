@@ -33,6 +33,8 @@ model User {
   updated_at          DateTime  @updatedAt
   reset_token         String?
   reset_token_expiry  DateTime?
+  failed_login_attempts Int     @default(0)   // Phase 1: lockout tracking
+  locked_until        DateTime?               // Phase 1: lockout expiry
 
   // Relationships
   rooms               Room[]

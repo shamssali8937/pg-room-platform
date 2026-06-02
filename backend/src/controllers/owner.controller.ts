@@ -50,3 +50,17 @@ export const buyPoints = async (req: Request, res: Response, next: NextFunction)
         res.json({ success: true, data });
     } catch (error) { next(error); }
 };
+
+export const certifyOwner = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await service.certifyOwnerService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const activateNewsletter = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await service.activateNewsletterService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};

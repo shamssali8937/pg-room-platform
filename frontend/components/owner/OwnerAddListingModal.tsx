@@ -33,6 +33,7 @@ const INITIAL_FORM = {
     furnished_status: "unfurnished",
     security_deposit_amount: "0",
     available_for: "any",
+    availability_date: "",
 };
 
 export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListingModalProps) {
@@ -77,7 +78,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
 
     const handleImageSelect = (files: FileList | null) => {
         if (!files) return;
-        const newFiles = Array.from(files).slice(0, 5 - images.length);
+        const newFiles = Array.from(files).slice(0, 10 - images.length);
         const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
         setImages((prev) => [...prev, ...newFiles]);
         setImagePreviews((prev) => [...prev, ...newPreviews]);
@@ -110,6 +111,16 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             return;
         }
 
+        if (images.length < 3) {
+            setSubmitError("You must upload at least 3 photos for your room listing.");
+            return;
+        }
+
+        if (images.length > 10) {
+            setSubmitError("You cannot upload more than 10 photos for your room listing.");
+            return;
+        }
+
         setIsSubmitting(true);
         setSubmitError("");
 
@@ -131,6 +142,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             formData.append("furnished_status", form.furnished_status);
             formData.append("security_deposit_amount", form.security_deposit_amount);
             formData.append("available_for", form.available_for);
+            formData.append("availability_date", form.availability_date || new Date().toISOString().split('T')[0]);
             form.amenities.forEach((a) => formData.append("amenities[]", a));
             images.forEach((img) => formData.append("images", img));
 
@@ -406,6 +418,16 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 <option value="families">Families Only</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Availability Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.availability_date}
+                                            onChange={(e) => setField("availability_date", e.target.value)}
+                                            className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                        />
                                     </div>
                                 </motion.div>
                             )}

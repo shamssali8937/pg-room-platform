@@ -13,6 +13,14 @@ const BOOKING_SELECT = {
             security_deposit_amount: true, furnished_status: true,
             images: { take: 1, select: { file_url: true } }
         }
+    },
+    reviews: {
+        select: {
+            id: true,
+            rating: true,
+            comment: true,
+            created_at: true
+        }
     }
 };
 
@@ -64,17 +72,22 @@ export const createBookingService = async (tenantId: string, roomId: string, dat
             request_type: data.request_type || "inquiry",
             message: data.message,
             status: "pending",
+            // Phase 2: Populate expires_at so the auto-expiry scheduler can process it
+            expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000), // 72 hours from now
         },
         include: BOOKING_SELECT
     });
 
-    // P2-A: Notify the owner about the new booking request
+    // Phase 2: Differentiate notification for visit_request vs inquiry
     const tenant = await prisma.user.findUnique({ where: { id: tenantId }, select: { full_name: true } });
+    const isVisit = (data.request_type || "inquiry") === "visit_request";
     await createNotification(
         room.owner_id,
-        "new_booking_request",
-        "New Booking Request",
-        `${tenant?.full_name ?? "A tenant"} has sent a booking request for "${room.title}".`,
+        isVisit ? "new_visit_request" : "new_booking_request",
+        isVisit ? "New Visit Request" : "New Booking Request",
+        isVisit
+            ? `${tenant?.full_name ?? "A tenant"} has requested a visit to "${room.title}".`
+            : `${tenant?.full_name ?? "A tenant"} has sent a booking inquiry for "${room.title}".`,
         `/owner/bookings`
     );
 

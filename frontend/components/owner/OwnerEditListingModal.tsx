@@ -39,6 +39,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
     const [availableFor, setAvailableFor] = useState(listing?.availableFor ?? "any");
     const [genderPreference, setGenderPreference] = useState(listing?.genderPreference ?? "any");
     const [sqft, setSqft] = useState(String(listing?.sqft ?? ""));
+    const [availabilityDate, setAvailabilityDate] = useState(listing?.availabilityDate ?? "");
     const [saved, setSaved] = useState(false);
 
     if (!listing) return null;
@@ -80,6 +81,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                 availableFor,
                 genderPreference,
                 sqft: Number(sqft),
+                availabilityDate,
             });
         }
         setSaved(true);
@@ -347,6 +349,16 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                                 <option value="families">Families Only</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Availability Date</label>
+                                        <input
+                                            type="date"
+                                            value={availabilityDate}
+                                            onChange={e => setAvailabilityDate(e.target.value)}
+                                            className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                        />
                                     </div>
                                 </motion.div>
                             )}

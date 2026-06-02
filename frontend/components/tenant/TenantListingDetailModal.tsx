@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     X, MapPin, Bed, Bath, Star, ShieldCheck, ChevronLeft, ChevronRight,
     Wifi, Wind, Car, Dumbbell, Video, Zap, Shield, MessageSquare, Heart,
-    Home, Maximize, Loader2
+    Home, Maximize, Loader2, BadgeCheck
 } from "lucide-react";
 import { type TenantListing } from "./mockData";
 import { useTenantTheme } from "@/context/TenantThemeContext";
@@ -337,7 +337,12 @@ export default function TenantListingDetailModal({
                         <div className={`flex items-center gap-3 p-4 rounded-xl border ${metaCardBg}`}>
                             <img src={listing.ownerAvatar} alt={listing.ownerName} className="w-10 h-10 rounded-xl object-cover" />
                             <div className="flex-1">
-                                <p className={`text-sm font-bold ${titleColor}`}>{listing.ownerName}</p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className={`text-sm font-bold ${titleColor}`}>{listing.ownerName}</p>
+                                    {listing.ownerVerificationStatus === "verified" && (
+                                        <BadgeCheck className="text-emerald-400 fill-emerald-950 shrink-0" size={16} />
+                                    )}
+                                </div>
                                 <p className={`text-xs ${locationColor}`}>Property Owner · Posted {listing.postedDaysAgo === 0 ? "today" : `${listing.postedDaysAgo} days ago`}</p>
                             </div>
                         </div>

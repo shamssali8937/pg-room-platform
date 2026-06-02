@@ -72,6 +72,10 @@ export const boostRoomService = async (ownerId: string, roomId: string) => {
     const room = await prisma.room.findUnique({ where: { id: roomId, owner_id: ownerId } });
     if (!room) throw new Error("Room not found or unauthorized");
 
+    if (room.is_boosted) {
+        throw new Error("This listing is already boosted.");
+    }
+
     // Check if owner has enough points
     const pointsResult = await prisma.pointsTransaction.aggregate({
         where: { owner_id: ownerId },
@@ -94,6 +98,20 @@ export const boostRoomService = async (ownerId: string, roomId: string) => {
         },
     });
 
+    try {
+        await prisma.notification.create({
+            data: {
+                user_id: ownerId,
+                notification_type: "points_deducted",
+                title: "Points Deducted 🪙",
+                body: `You spent 300 points to boost your room "${room.title}".`,
+                action_url: `/owner/wallet`
+            }
+        });
+    } catch (err) {
+        console.error("[Notification] Failed to create points deduction notification:", err);
+    }
+
     const updatedRoom = await prisma.room.update({
         where: { id: roomId },
         data: { is_boosted: true },
@@ -106,6 +124,10 @@ export const boostRoomService = async (ownerId: string, roomId: string) => {
 export const featureRoomService = async (ownerId: string, roomId: string) => {
     const room = await prisma.room.findUnique({ where: { id: roomId, owner_id: ownerId } });
     if (!room) throw new Error("Room not found or unauthorized");
+
+    if (room.is_featured) {
+        throw new Error("This listing is already featured.");
+    }
 
     const pointsResult = await prisma.pointsTransaction.aggregate({
         where: { owner_id: ownerId },
@@ -128,6 +150,20 @@ export const featureRoomService = async (ownerId: string, roomId: string) => {
         },
     });
 
+    try {
+        await prisma.notification.create({
+            data: {
+                user_id: ownerId,
+                notification_type: "points_deducted",
+                title: "Points Deducted 🪙",
+                body: `You spent 500 points to feature your room "${room.title}".`,
+                action_url: `/owner/wallet`
+            }
+        });
+    } catch (err) {
+        console.error("[Notification] Failed to create points deduction notification:", err);
+    }
+
     const updatedRoom = await prisma.room.update({
         where: { id: roomId },
         data: { is_featured: true },
@@ -135,6 +171,87 @@ export const featureRoomService = async (ownerId: string, roomId: string) => {
     });
 
     return { message: "Room featured successfully", points_spent: 500, balance_after: balanceAfter, room: transformRoom(updatedRoom) };
+};
+
+export const certifyOwnerService = async (ownerId: string) => {
+    const pointsResult = await prisma.pointsTransaction.aggregate({
+        where: { owner_id: ownerId },
+        _sum: { points: true },
+    });
+    const totalPoints = pointsResult._sum.points ?? 0;
+
+    if (totalPoints < 1250) {
+        throw new Error("Insufficient points. You need 1,250 points to activate Elite Profile Certification.");
+    }
+
+    const balanceAfter = totalPoints - 1250;
+
+    await prisma.$transaction(async (tx) => {
+        await tx.pointsTransaction.create({
+            data: {
+                owner_id: ownerId,
+                transaction_type: "SPENT",
+                points: -1250,
+                reason_code: "elite_certification",
+                balance_after: balanceAfter,
+            },
+        });
+
+        await tx.user.update({
+            where: { id: ownerId },
+            data: { verification_status: "verified" },
+        });
+
+        await tx.notification.create({
+            data: {
+                user_id: ownerId,
+                notification_type: "points_deducted",
+                title: "Elite Certification Activated! 🪙",
+                body: "You spent 1,250 points for Elite Profile Certification. Your profile is now verified.",
+                action_url: `/owner/wallet`,
+            },
+        });
+    });
+
+    return { message: "Elite Certification activated successfully", points_spent: 1250, balance_after: balanceAfter };
+};
+
+export const activateNewsletterService = async (ownerId: string) => {
+    const pointsResult = await prisma.pointsTransaction.aggregate({
+        where: { owner_id: ownerId },
+        _sum: { points: true },
+    });
+    const totalPoints = pointsResult._sum.points ?? 0;
+
+    if (totalPoints < 820) {
+        throw new Error("Insufficient points. You need 820 points to activate Newsletter Feature.");
+    }
+
+    const balanceAfter = totalPoints - 820;
+
+    await prisma.$transaction(async (tx) => {
+        await tx.pointsTransaction.create({
+            data: {
+                owner_id: ownerId,
+                transaction_type: "SPENT",
+                points: -820,
+                reason_code: "newsletter_feature",
+                balance_after: balanceAfter,
+            },
+        });
+
+        await tx.notification.create({
+            data: {
+                user_id: ownerId,
+                notification_type: "points_deducted",
+                title: "Newsletter Feature Activated! 🪙",
+                body: "You spent 820 points to feature your listings in the weekly Curator's Choice newsletter.",
+                action_url: `/owner/wallet`,
+            },
+        });
+    });
+
+    return { message: "Newsletter feature activated successfully", points_spent: 820, balance_after: balanceAfter };
 };
 
 export const getOwnerPointsService = async (ownerId: string) => {
@@ -226,6 +343,17 @@ export const buyPointsService = async (ownerId: string, packageId: string) => {
                 reason_code: reasonText,
                 balance_after: balanceAfter,
             },
+        });
+
+        // Create notification for credited points
+        await tx.notification.create({
+            data: {
+                user_id: ownerId,
+                notification_type: "points_credited",
+                title: "Points Purchased! 🪙",
+                body: `You purchased and were credited with ${pointsToAdd} points.`,
+                action_url: `/owner/wallet`
+            }
         });
 
         return {

@@ -66,13 +66,64 @@ export const loginService = async (email: string, password: string) => {
         throw new Error("Email not verified");
     }
 
+    // Phase 1: Check account lockout
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_MINUTES = 15;
+
+    if (user.locked_until && new Date() < user.locked_until) {
+        const minutesLeft = Math.ceil(
+            (user.locked_until.getTime() - Date.now()) / 60000
+        );
+        const err: any = new Error(
+            `Account is temporarily locked due to too many failed login attempts. Try again in ${minutesLeft} minute(s).`
+        );
+        err.code = "ACCOUNT_LOCKED";
+        err.minutesLeft = minutesLeft;
+        throw err;
+    }
+
     if (!user.password_hash) {
         throw new Error("This account is configured with Google Sign-In. Please sign in with Google.");
     }
 
     const isValid = await comparePassword(password, user.password_hash);
 
-    if (!isValid) throw new Error("Invalid password");
+    if (!isValid) {
+        // Phase 1: Increment failure counter
+        const newAttempts = (user.failed_login_attempts ?? 0) + 1;
+        const shouldLock = newAttempts >= MAX_ATTEMPTS;
+        const lockUntil = shouldLock
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+            : null;
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                failed_login_attempts: newAttempts,
+                ...(shouldLock && { locked_until: lockUntil }),
+            },
+        });
+
+        if (shouldLock) {
+            const err: any = new Error(
+                `Too many failed attempts. Account locked for ${LOCKOUT_MINUTES} minutes.`
+            );
+            err.code = "ACCOUNT_LOCKED";
+            err.minutesLeft = LOCKOUT_MINUTES;
+            throw err;
+        }
+
+        const remaining = MAX_ATTEMPTS - newAttempts;
+        throw new Error(
+            `Invalid password. ${remaining} attempt(s) remaining before account lockout.`
+        );
+    }
+
+    // Phase 1: Reset failure counter on successful login
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { failed_login_attempts: 0, locked_until: null },
+    });
 
     const accessToken = generateAccessToken({
         id: user.id,

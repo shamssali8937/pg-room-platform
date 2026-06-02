@@ -25,6 +25,7 @@ export interface Room {
         id: string;
         full_name: string;
         email: string;
+        verification_status?: string;
     };
     rating?: number;
     review_count?: number;
@@ -39,6 +40,7 @@ export interface Room {
     available_for?: string;
     gender_preference?: string;
     size_value?: number | null;
+    availability_date?: string | null;
 }
 
 export interface RoomFilters {
@@ -51,6 +53,11 @@ export interface RoomFilters {
     page?: number;
     limit?: number;
     status?: string;
+    room_type?: string;
+    furnished_status?: string;
+    gender_preference?: string;
+    availability_date?: string;
+    amenities?: string;
 }
 
 interface RoomState {

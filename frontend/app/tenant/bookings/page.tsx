@@ -192,13 +192,37 @@ function BookingCard({
                                     </button>
                                 )}
                                 {booking.status === "completed" && (
-                                    <button
-                                        onClick={() => onLeaveReview(booking)}
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs transition-colors shadow-lg shadow-violet-500/20"
-                                    >
-                                        <Star size={14} className="fill-white" />
-                                        Leave Stay Review
-                                    </button>
+                                    <div className="flex flex-col gap-2 w-full">
+                                        {booking.reviews && booking.reviews.length > 0 ? (
+                                            <div className={`p-4 rounded-xl border ${isDark ? "bg-[#1a1919] border-white/5" : "bg-slate-50 border-slate-100"}`}>
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-[10px] uppercase font-bold tracking-widest text-[#a27cff]">Your Review</span>
+                                                    <div className="flex items-center gap-1">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <Star
+                                                                key={star}
+                                                                size={12}
+                                                                className={star <= booking.reviews![0].rating ? "fill-amber-400 text-amber-400" : "text-zinc-600"}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                                {booking.reviews[0].comment && (
+                                                    <p className={`text-xs italic ${textVariant}`}>
+                                                        "{booking.reviews[0].comment}"
+                                                    </p>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => onLeaveReview(booking)}
+                                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs transition-colors shadow-lg shadow-violet-500/20 w-fit"
+                                            >
+                                                <Star size={14} className="fill-white" />
+                                                Leave Stay Review
+                                            </button>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         )}

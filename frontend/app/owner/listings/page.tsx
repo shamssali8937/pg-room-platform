@@ -77,6 +77,7 @@ function roomToOwnerListing(room: Room): any {
         availableFor: room.available_for ?? "any",
         genderPreference: room.gender_preference ?? "any",
         sqft: room.sqft ?? room.size_value ?? 0,
+        availabilityDate: room.availability_date ? new Date(room.availability_date).toISOString().split('T')[0] : "",
     };
 }
 
@@ -377,14 +378,24 @@ export default function OwnerListingsPage() {
 
                                             <div className="flex gap-2">
                                                 {room.status === "active" && (
-                                                    <button
-                                                        onClick={() => handleBoost(room.id)}
-                                                        disabled={boostingId === room.id}
-                                                        className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all ${isDark ? "bg-[#39008c]/20 text-[#ba9eff] hover:bg-[#39008c]/40 border border-[#ba9eff]/20" : "bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"}`}
-                                                    >
-                                                        {boostingId === room.id ? <Loader2 size={10} className="animate-spin" /> : <TrendingUp size={10} />}
-                                                        Boost
-                                                    </button>
+                                                    room.is_boosted ? (
+                                                        <button
+                                                            disabled
+                                                            className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 border ${isDark ? "bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed" : "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"}`}
+                                                        >
+                                                            <CheckCircle2 size={10} className="text-emerald-400" />
+                                                            Boosted
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleBoost(room.id)}
+                                                            disabled={boostingId === room.id}
+                                                            className={`px-2.5 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all ${isDark ? "bg-[#39008c]/20 text-[#ba9eff] hover:bg-[#39008c]/40 border border-[#ba9eff]/20" : "bg-violet-50 text-violet-700 border border-violet-200 hover:bg-violet-100"}`}
+                                                        >
+                                                            {boostingId === room.id ? <Loader2 size={10} className="animate-spin" /> : <TrendingUp size={10} />}
+                                                            Boost
+                                                        </button>
+                                                    )
                                                 )}
                                                 {isPending && (
                                                     <span className={`text-[10px] font-bold uppercase tracking-widest italic ${textVariant}`}>In Review</span>
@@ -467,6 +478,7 @@ export default function OwnerListingsPage() {
                                 available_for: updated.availableFor,
                                 gender_preference: updated.genderPreference,
                                 amenities: updated.amenities,
+                                availability_date: updated.availabilityDate,
                             }
                         }));
                         setEditRoom(null);

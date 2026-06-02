@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
@@ -10,10 +10,11 @@ import { fetchTenantDashboard } from "@/store/slices/dashboardSlice";
 import { fetchTenantBookings } from "@/store/slices/bookingSlice";
 import { fetchConversations } from "@/store/slices/chatSlice";
 import { fetchOwnerPoints } from "@/store/slices/ownerSlice";
+import api from "@/lib/api";
 import {
     CalendarCheck, MessageSquare, Search, Star, MapPin,
     ArrowRight, Heart, ShieldCheck, Gem, TrendingUp,
-    CheckCircle2, Clock, AlertCircle, Home, Loader2
+    CheckCircle2, Clock, AlertCircle, Home, Loader2, UserPlus
 } from "lucide-react";
 
 function StatSkeleton({ isDark }: { isDark: boolean }) {
@@ -40,10 +41,40 @@ export default function TenantDashboard() {
     const { tenantBookings, isLoading: bookingLoading } = useAppSelector((s) => s.booking);
     const { conversations, isLoading: chatLoading } = useAppSelector((s) => s.chat);
 
+    const [recentlyViewed, setRecentlyViewed] = useState<any[]>([]);
+    const [contactedOwners, setContactedOwners] = useState<any[]>([]);
+    const [ownersLoading, setOwnersLoading] = useState(false);
+
     useEffect(() => {
         dispatch(fetchTenantDashboard());
         dispatch(fetchTenantBookings());
         dispatch(fetchConversations());
+
+        // Load recently viewed rooms from localStorage
+        try {
+            const viewedRaw = localStorage.getItem("tenant_recently_viewed_rooms");
+            if (viewedRaw) {
+                setRecentlyViewed(JSON.parse(viewedRaw).filter(Boolean));
+            }
+        } catch (e) {
+            console.error("Failed to load recently viewed rooms", e);
+        }
+
+        // Fetch contacted owners
+        const loadContactedOwners = async () => {
+            setOwnersLoading(true);
+            try {
+                const res = await api.get("/users/me/contacted-owners");
+                if (res.data && res.data.success) {
+                    setContactedOwners(res.data.data ?? []);
+                }
+            } catch (e) {
+                console.error("Failed to load contacted owners", e);
+            } finally {
+                setOwnersLoading(false);
+            }
+        };
+        loadContactedOwners();
     }, [dispatch]);
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
@@ -271,6 +302,50 @@ export default function TenantDashboard() {
                             </div>
                         </section>
                     )}
+
+                    {/* Recently Viewed Rooms */}
+                    {recentlyViewed.length > 0 && (
+                        <section className={`rounded-2xl overflow-hidden ${surfaceLow}`}>
+                            <div className={`flex items-center px-6 py-4 border-b ${divider}`}>
+                                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isDark ? "bg-[#a27cff]/10" : "bg-violet-50"}`}>
+                                    <Clock size={14} className="text-[#a27cff]" />
+                                </div>
+                                <h4 className={`text-base font-headline font-bold ml-3 ${textPrimary}`}>Recently Viewed Rooms</h4>
+                            </div>
+                            <div className="p-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                    {recentlyViewed.map((room) => (
+                                        <div
+                                            key={room.id}
+                                            onClick={() => router.push(`/tenant/browse?room=${room.id}`)}
+                                            className={`rounded-xl overflow-hidden cursor-pointer border transition-all duration-300 hover:scale-[1.02] ${
+                                                isDark ? "bg-[#1a1919] border-white/5 hover:border-[#a27cff]/30" : "bg-slate-50 border-slate-100 hover:border-violet-200"
+                                            }`}
+                                        >
+                                            <div className="h-28 relative">
+                                                <img
+                                                    src={room.imageUrl}
+                                                    alt={room.title}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                                                <div className="absolute bottom-2 left-3">
+                                                    <p className="text-white text-xs font-bold font-headline">{room.city}</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-3">
+                                                <h5 className={`text-xs font-bold truncate ${textPrimary}`}>{room.title}</h5>
+                                                <div className="flex justify-between items-center mt-1.5">
+                                                    <span className="text-[10px] text-[#a27cff] font-bold">PKR {room.price.toLocaleString()}</span>
+                                                    <span className={`text-[9px] ${textVariant}`}>/mo</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </section>
+                    )}
                 </div>
 
                 {/* Right Column */}
@@ -384,6 +459,53 @@ export default function TenantDashboard() {
                                 Open Inbox <ArrowRight size={12} />
                             </button>
                         </div>
+                    </section>
+
+                    {/* Contacted Owners */}
+                    <section className={`rounded-2xl overflow-hidden ${surfaceLow}`}>
+                        <div className={`px-5 py-4 border-b flex justify-between items-center ${divider}`}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-lg bg-emerald-400/10 flex items-center justify-center">
+                                    <UserPlus size={14} className="text-emerald-400" />
+                                </div>
+                                <h4 className={`text-base font-headline font-bold ${textPrimary}`}>Contacted Owners</h4>
+                            </div>
+                        </div>
+
+                        {ownersLoading ? (
+                            <div className="p-5 flex justify-center">
+                                <Loader2 className="animate-spin text-[#a27cff]" size={20} />
+                            </div>
+                        ) : contactedOwners.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <UserPlus size={28} className={`mx-auto mb-2 ${textVariant}`} />
+                                <p className={`text-sm ${textVariant}`}>No owners contacted yet</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-white/[0.04]">
+                                {contactedOwners.map((conv) => (
+                                    <div
+                                        key={conv.id}
+                                        onClick={() => router.push("/tenant/inbox")}
+                                        className={`flex items-center gap-3 px-5 py-3.5 cursor-pointer transition-colors ${isDark ? "hover:bg-white/[0.03]" : "hover:bg-slate-50"}`}
+                                    >
+                                        <div className="w-8 h-8 rounded-lg bg-[#a27cff]/20 flex items-center justify-center shrink-0">
+                                            <span className="text-[#a27cff] text-xs font-bold">
+                                                {conv.owner?.full_name?.[0] ?? "?"}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h6 className={`text-sm font-bold truncate ${textPrimary}`}>{conv.owner?.full_name ?? "Owner"}</h6>
+                                            <p className={`text-[10px] truncate ${textVariant}`}>{conv.room?.title ?? "Room listing"}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[10px] text-[#a27cff] font-bold">{conv.room?.city}</p>
+                                            <p className={`text-[9px] ${textVariant}`}>PKR {(conv.room?.rent_amount ?? conv.room?.price ?? 0).toLocaleString()}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </section>
 
                     {/* Points Mini */}

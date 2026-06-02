@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as ctrl from "../controllers/chat.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
 import { upload } from "../middleware/upload.middleware.js";
+import { chatMessageRateLimiter } from "../middleware/rateLimit.middleware.js";
 
 const router: Router = Router();
 
@@ -23,10 +24,13 @@ router.delete("/conversations/:id/clear", ctrl.clearChat);
 router.post("/conversations/:id/block", ctrl.blockConversation);
 router.post("/conversations/:id/unblock", ctrl.unblockConversation);
 
-// Messages Management
-router.post("/messages", upload.array("files", 10), ctrl.sendMessage); // supports multiple files attachment
-router.put("/messages/:messageId", ctrl.editMessage); // edit text message
-router.delete("/messages/:messageId", ctrl.deleteMessage); // delete message
+// Report Conversation (Phase 5)
+router.post("/conversations/:id/report", ctrl.reportConversation);
+
+// Messages Management — chatMessageRateLimiter prevents spam (20 msg/min per user)
+router.post("/messages", chatMessageRateLimiter, upload.array("files", 10), ctrl.sendMessage);
+router.put("/messages/:messageId", ctrl.editMessage);
+router.delete("/messages/:messageId", ctrl.deleteMessage);
 
 // Message Reactions
 router.post("/messages/:messageId/reactions", ctrl.addReaction);

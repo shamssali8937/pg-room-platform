@@ -53,6 +53,7 @@ export interface OwnerListing {
     availableFor?: string;
     genderPreference?: string;
     sqft?: number;
+    availabilityDate?: string;
 }
 
 export interface WalletTransaction {
