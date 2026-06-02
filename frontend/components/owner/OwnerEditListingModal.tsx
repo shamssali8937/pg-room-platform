@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    X, UploadCloud, MapPin, Building, DollarSign, BedDouble, Bath,
+    X, UploadCloud, MapPin, Building, BedDouble, Bath,
     FileText, CheckCircle2, Info, ShieldCheck, Edit3, Save
 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
@@ -257,7 +257,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={price}
@@ -270,7 +270,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={securityDeposit}

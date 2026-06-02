@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, UploadCloud, MapPin, Building, DollarSign, Info, BedDouble, Bath, FileText, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { X, UploadCloud, MapPin, Building, Info, BedDouble, Bath, FileText, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAppDispatch } from "@/store/hooks";
 import { createRoom } from "@/store/slices/roomSlice";
@@ -316,7 +316,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent *</label>
                                             <div className="relative">
-                                                <DollarSign size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={form.price}
@@ -329,7 +329,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={form.security_deposit_amount}
