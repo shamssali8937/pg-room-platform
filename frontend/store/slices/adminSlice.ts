@@ -33,6 +33,8 @@ export interface AdminRoom {
     sqft?: number;
     size_value?: number;
     reviews?: any;
+    was_suspended?: boolean;
+    last_suspension_reason?: string | null;
 }
 
 export interface UserDocument {

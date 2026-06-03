@@ -245,6 +245,13 @@ const roomSlice = createSlice({
                 state.savedRooms.splice(savedIdx, 1);
             }
         },
+        updateRoomViews(state, action: { payload: { id: string; views: number } }) {
+            const { id, views } = action.payload;
+            const room = state.ownerRooms.find((r) => r.id === id);
+            if (room) {
+                room.views = views;
+            }
+        },
     },
     extraReducers: (builder) => {
         // Fetch Rooms
@@ -304,5 +311,5 @@ const roomSlice = createSlice({
     },
 });
 
-export const { clearRoomError, setSelectedRoom, toggleSavedLocal } = roomSlice.actions;
+export const { clearRoomError, setSelectedRoom, toggleSavedLocal, updateRoomViews } = roomSlice.actions;
 export default roomSlice.reducer;

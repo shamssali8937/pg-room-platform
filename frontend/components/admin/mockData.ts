@@ -359,6 +359,8 @@ export interface ModerationListing {
             profile_photo_url?: string;
         };
     }[];
+    wasSuspended?: boolean;
+    lastSuspensionReason?: string;
 }
 
 export const rejectionReasons = [

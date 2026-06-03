@@ -165,6 +165,18 @@ export default function ManualAuditModal({
                             </div>
                         )}
 
+                        {/* ── Previous Suspension Detail ── */}
+                        {listing.wasSuspended && listing.lastSuspensionReason && (
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                                <p className="text-[10px] uppercase tracking-widest text-amber-400 font-semibold mb-1.5 flex items-center gap-1.5">
+                                    <AlertTriangle size={12} /> Previously Suspended
+                                </p>
+                                <p className="text-sm text-amber-300/80 italic leading-relaxed">
+                                    &ldquo;{listing.lastSuspensionReason}&rdquo;
+                                </p>
+                            </div>
+                        )}
+
                         {/* ── Document Verification ── */}
                         {listing.documents && listing.documents.length > 0 && (
                             <div>
@@ -267,7 +279,7 @@ export default function ManualAuditModal({
                                     }`}
                                 >
                                     <CheckCircle2 size={14} />
-                                    Approve
+                                    {listing.wasSuspended ? "Restore" : "Approve"}
                                 </button>
                                 <button
                                     onClick={() => setVerdict("reject")}
@@ -364,7 +376,7 @@ export default function ManualAuditModal({
                             ) : (
                                 <>
                                     <ShieldCheck size={15} />
-                                    Submit Audit — {verdict.charAt(0).toUpperCase() + verdict.slice(1)}
+                                    Submit Audit — {verdict === "approve" && listing.wasSuspended ? "Restore" : verdict.charAt(0).toUpperCase() + verdict.slice(1)}
                                 </>
                             )}
                         </button>

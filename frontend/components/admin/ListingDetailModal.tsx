@@ -327,6 +327,17 @@ export default function ListingDetailModal({ listing, onClose, onApprove, onSusp
                         </div>
 
                         {/* Alerts */}
+                        {listing.wasSuspended && listing.lastSuspensionReason && (
+                            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                                <p className="text-amber-400 text-sm font-semibold flex items-start gap-2">
+                                    <ShieldAlert size={16} className="flex-shrink-0 mt-0.5" />
+                                    <span>
+                                        <span className="font-bold">Previously Suspended: </span>
+                                        {listing.lastSuspensionReason}
+                                    </span>
+                                </p>
+                            </div>
+                        )}
                         {listing.flagReason && (
                             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
                                 <p className="text-red-400 text-sm font-semibold flex items-center gap-2"><ShieldAlert size={16} className="flex-shrink-0" />{listing.flagReason}</p>
@@ -343,7 +354,7 @@ export default function ListingDetailModal({ listing, onClose, onApprove, onSusp
                             {listing.status === "pending" && (
                                 <>
                                     <button onClick={() => { onApprove?.(listing.id); onClose(); }} className="flex-1 py-3 bg-purple-500 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2">
-                                        <CheckCircle2 size={15} /> Approve
+                                        <CheckCircle2 size={15} /> {listing.wasSuspended ? "Restore Listing" : "Approve Listing"}
                                     </button>
                                     <button onClick={() => { onFlag?.(listing.id); onClose(); }} className={`flex-1 py-3 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${secActionBg}`}>
                                         <Flag size={15} /> Flag for Audit

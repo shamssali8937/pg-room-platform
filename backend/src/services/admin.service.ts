@@ -36,7 +36,22 @@ export const getPendingListingsService = async () => {
         },
         orderBy: { created_at: "asc" }
     });
-    return rooms.map((r) => ({ ...r, images: normalizeImages(r.images) }));
+    return Promise.all(rooms.map(async (r) => {
+        const lastSuspension = await prisma.adminAction.findFirst({
+            where: {
+                target_type: "room",
+                target_id: r.id,
+                action_type: "SUSPEND_LISTING"
+            },
+            orderBy: { created_at: "desc" }
+        });
+        return {
+            ...r,
+            images: normalizeImages(r.images),
+            was_suspended: !!lastSuspension,
+            last_suspension_reason: lastSuspension?.notes ?? null
+        };
+    }));
 };
 
 export const getAllListingsService = async (status?: string) => {
@@ -54,7 +69,22 @@ export const getAllListingsService = async (status?: string) => {
         },
         orderBy: { created_at: "desc" }
     });
-    return rooms.map((r) => ({ ...r, images: normalizeImages(r.images) }));
+    return Promise.all(rooms.map(async (r) => {
+        const lastSuspension = await prisma.adminAction.findFirst({
+            where: {
+                target_type: "room",
+                target_id: r.id,
+                action_type: "SUSPEND_LISTING"
+            },
+            orderBy: { created_at: "desc" }
+        });
+        return {
+            ...r,
+            images: normalizeImages(r.images),
+            was_suspended: !!lastSuspension,
+            last_suspension_reason: lastSuspension?.notes ?? null
+        };
+    }));
 };
 
 export const moderateListingService = async (adminId: string, roomId: string, status: string, reason?: string) => {

@@ -1,5 +1,6 @@
 import { prisma } from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/upload.js";
+import { getIO } from "../config/socket.js";
 
 // ─── Shared room transform to normalize field names for frontend ──────────────
 // Privacy: exposes only name + avatar for owner; exact address and phone are stripped.
@@ -268,7 +269,19 @@ export const getRoomByIdService = async (id: string) => {
     if (!room) throw new Error("Room not found");
 
     // Increment view count
-    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } }).catch(() => {});
+    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
+        .then(async (updatedRoom) => {
+            try {
+                const io = getIO();
+                io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
+                    roomId: updatedRoom.id,
+                    views: updatedRoom.views
+                });
+            } catch (err) {
+                // socket not initialized yet or other issues
+            }
+        })
+        .catch(() => {});
 
     return transformRoom(room);
 };

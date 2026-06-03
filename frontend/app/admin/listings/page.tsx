@@ -47,6 +47,8 @@ function ListingsContent() {
     // Modals
     const [detailListing, setDetailListing] = useState<ModerationListing | null>(null);
     const [auditListing, setAuditListing] = useState<ModerationListing | null>(null);
+    const [suspendingId, setSuspendingId] = useState<string | null>(null);
+    const [suspendReason, setSuspendReason] = useState("");
 
     const ITEMS_PER_PAGE = 4;
 
@@ -95,6 +97,8 @@ function ListingsContent() {
                 sqft: r.sqft ?? r.size_value ?? 0,
                 baths: r.baths ?? 1,
                 reviews: r.reviews,
+                wasSuspended: (r as any).was_suspended ?? false,
+                lastSuspensionReason: (r as any).last_suspension_reason ?? undefined,
             };
         });
     }, [reduxRooms]);
@@ -127,12 +131,21 @@ function ListingsContent() {
     };
 
     const handleSuspend = (id: string) => {
-        dispatch(moderateListing({ id, status: "suspended", reason: "Suspended by Administrator" })).then((res) => {
+        setSuspendingId(id);
+        setSuspendReason("");
+    };
+
+    const handleConfirmSuspend = () => {
+        if (!suspendingId) return;
+        const reason = suspendReason.trim() || "Policy Violation";
+        dispatch(moderateListing({ id: suspendingId, status: "suspended", reason })).then((res) => {
             if (res.meta.requestStatus === "fulfilled") {
-                showToast(`Listing #${id} has been suspended`, "error");
+                showToast(`Listing #${suspendingId} has been suspended`, "error");
             } else {
-                showToast(`Failed to suspend listing #${id}`, "error");
+                showToast(`Failed to suspend listing #${suspendingId}`, "error");
             }
+            setSuspendingId(null);
+            setSuspendReason("");
         });
     };
 
@@ -449,6 +462,52 @@ function ListingsContent() {
                     onSuspend={handleSuspend}
                 />
             )}
+
+            {/* ── Suspend Reason Modal ── */}
+            <AnimatePresence>
+                {suspendingId && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+                        onClick={() => setSuspendingId(null)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            className={`w-full max-w-md border rounded-2xl p-6 shadow-2xl ${isDark ? "bg-[#131313] border-white/10 text-white" : "bg-white border-slate-200 text-slate-900"}`}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 className="text-lg font-bold mb-2">Suspend Listing</h3>
+                            <p className={`text-xs mb-4 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                Please provide a reason for suspending this listing. The owner will be notified of this reason.
+                            </p>
+                            <textarea
+                                value={suspendReason}
+                                onChange={(e) => setSuspendReason(e.target.value)}
+                                placeholder="Enter suspension reason (e.g. Inaccurate details, safety violation...)"
+                                className={`w-full h-32 rounded-xl p-3 text-sm border focus:outline-none focus:ring-1 focus:ring-purple-500 mb-4 resize-none ${isDark ? "bg-zinc-900 border-white/5 text-white placeholder:text-zinc-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setSuspendingId(null)}
+                                    className={`flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors ${isDark ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmSuspend}
+                                    className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-colors"
+                                >
+                                    Confirm Suspend
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* ── Toast Notification ── */}
             <AnimatePresence>

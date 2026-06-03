@@ -15,7 +15,9 @@ import api from "@/lib/api";
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; dot: string }> = {
     "Pending Review": { label: "Pending Review", bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30", dot: "bg-amber-400" },
-    "Live": { label: "Live & Active", bg: "bg-[#ba9eff]/15", text: "text-[#ba9eff]", border: "border-[#ba9eff]/30", dot: "bg-[#ae8dff]" }
+    "Live": { label: "Live & Active", bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30", dot: "bg-emerald-400" },
+    "Rejected": { label: "Rejected", bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30", dot: "bg-red-400" },
+    "Suspended": { label: "Suspended", bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30", dot: "bg-rose-400" }
 };
 
 const amenityIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -141,6 +143,23 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                                 <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />{status.label}
                             </span>
                         </div>
+
+                        {listing.status === "Suspended" && listing.rejectionReason && (
+                            <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl">
+                                <p className="text-rose-400 text-sm font-semibold flex items-start gap-2">
+                                    <span className="font-bold whitespace-nowrap">Suspension Reason:</span>
+                                    <span>{listing.rejectionReason}</span>
+                                </p>
+                            </div>
+                        )}
+                        {listing.status === "Rejected" && listing.rejectionReason && (
+                            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
+                                <p className="text-red-400 text-sm font-semibold flex items-start gap-2">
+                                    <span className="font-bold whitespace-nowrap">Rejection Reason:</span>
+                                    <span>{listing.rejectionReason}</span>
+                                </p>
+                            </div>
+                        )}
 
                         {/* Price + Meta Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
