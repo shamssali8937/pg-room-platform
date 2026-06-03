@@ -114,7 +114,10 @@ export const boostRoomService = async (ownerId: string, roomId: string) => {
 
     const updatedRoom = await prisma.room.update({
         where: { id: roomId },
-        data: { is_boosted: true },
+        data: { 
+            is_boosted: true,
+            boost_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
         include: { images: true },
     });
 
@@ -166,7 +169,10 @@ export const featureRoomService = async (ownerId: string, roomId: string) => {
 
     const updatedRoom = await prisma.room.update({
         where: { id: roomId },
-        data: { is_featured: true },
+        data: { 
+            is_featured: true,
+            featured_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
         include: { images: true },
     });
 
@@ -199,7 +205,10 @@ export const certifyOwnerService = async (ownerId: string) => {
 
         await tx.user.update({
             where: { id: ownerId },
-            data: { verification_status: "verified" },
+            data: { 
+                verification_status: "verified",
+                certification_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            },
         });
 
         await tx.notification.create({

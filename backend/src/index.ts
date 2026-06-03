@@ -6,6 +6,7 @@ import { initSocket } from "./config/socket.js";
 import { startExpireBookingsScheduler } from "./jobs/expireBookings.js";
 import { startBookingRemindersScheduler } from "./jobs/bookingReminders.js";
 import { startExpirePointsScheduler } from "./jobs/expirePoints.js";
+import { startExpirePromotionsScheduler } from "./jobs/expirePromotions.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -19,6 +20,7 @@ initSocket(server);
 startExpireBookingsScheduler();
 startBookingRemindersScheduler();
 startExpirePointsScheduler();
+startExpirePromotionsScheduler();
 
 // ─── Start Server ─────────────────────────────────────────────────
 server.listen(PORT, () => {

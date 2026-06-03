@@ -76,7 +76,14 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             originalRequest._retry = true;
             try {
-                await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+                if (!csrfToken) {
+                    await fetchCsrfToken();
+                }
+                const headers: Record<string, string> = {};
+                if (csrfToken) {
+                    headers["x-csrf-token"] = csrfToken;
+                }
+                await axios.post(`${API_BASE_URL}/auth/refresh`, {}, { withCredentials: true, headers });
                 return api(originalRequest);
             } catch (refreshError) {
                 if (typeof window !== "undefined") {
