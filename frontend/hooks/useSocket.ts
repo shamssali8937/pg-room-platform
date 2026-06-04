@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import { useAppDispatch } from "@/store/hooks";
 import { addLocalMessage, deleteLocalMessage } from "@/store/slices/chatSlice";
 import type { ChatMessage } from "@/store/slices/chatSlice";
+import { updateRoomViews } from "@/store/slices/roomSlice";
 
 const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ?? "http://localhost:5000";
 
@@ -49,8 +50,13 @@ export const useSocket = (conversationIds: string[] = []) => {
             dispatch(deleteLocalMessage({ messageId }));
         };
 
+        const handleRoomViewed = ({ roomId, views }: { roomId: string; views: number }) => {
+            dispatch(updateRoomViews({ id: roomId, views }));
+        };
+
         globalSocket.on("new_message", handleNewMessage);
         globalSocket.on("delete_message", handleDeleteMessage);
+        globalSocket.on("room_viewed", handleRoomViewed);
 
         // Join all active conversation rooms
         conversationIds.forEach((id) => {
@@ -60,6 +66,7 @@ export const useSocket = (conversationIds: string[] = []) => {
         return () => {
             globalSocket?.off("new_message", handleNewMessage);
             globalSocket?.off("delete_message", handleDeleteMessage);
+            globalSocket?.off("room_viewed", handleRoomViewed);
             // Leave rooms on unmount
             conversationIds.forEach((id) => {
                 globalSocket?.emit("leave_conversation", id);

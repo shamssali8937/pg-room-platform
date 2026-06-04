@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchRooms, saveRoom, unsaveRoom, fetchSavedRooms } from "@/store/slices/roomSlice";
+import { fetchRooms, saveRoom, unsaveRoom, fetchSavedRooms, fetchRoomById } from "@/store/slices/roomSlice";
 import { createConversation, sendMessage } from "@/store/slices/chatSlice";
 import type { Room } from "@/store/slices/roomSlice";
 import { useAuth } from "@/context/AuthContext";
@@ -16,7 +16,11 @@ import {
 } from "lucide-react";
 
 const CITIES = ["All", "Lahore", "Islamabad", "Rawalpindi", "Karachi"];
-const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Rating"];
+const SORT_OPTIONS = ["Newest", "Price: Low to High", "Price: High to Low", "Rating", "Recently Updated"];
+const ROOM_TYPES = ["All", "single", "shared"];
+const FURNISHED_STATUSES = ["All", "unfurnished", "semi-furnished", "fully-furnished"];
+const GENDER_PREFERENCES = ["All", "male", "female", "any"];
+const AMENITIES = ["WiFi", "AC", "Laundry", "Kitchen", "Parking", "Gym", "Security"];
 
 function roomToTenantListing(room: Room): any {
     const daysAgo = Math.max(0, Math.floor((Date.now() - new Date(room.created_at).getTime()) / (1000 * 60 * 60 * 24)));
@@ -46,6 +50,7 @@ function roomToTenantListing(room: Room): any {
         ownerName: room.owner?.full_name ?? "Unknown Owner",
         ownerAvatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(room.owner?.full_name ?? "U")}&background=8b5cf6&color=fff`,
         ownerId: room.owner?.id,
+        ownerVerificationStatus: room.owner?.verification_status,
         description: room.description ?? `${room.room_type || "PG"} Room with ${room.beds} Beds and ${room.baths} Baths.`,
         amenities: room.amenities && room.amenities.length > 0 ? room.amenities : ["WiFi", "AC", "Laundry"],
         furnishedStatus: room.furnished_status ?? "unfurnished",
@@ -96,17 +101,121 @@ export default function TenantBrowse() {
     const [maxPrice, setMaxPrice] = useState(200000);
     const [showFilters, setShowFilters] = useState(false);
     const [favorites, setFavorites] = useState<Set<string>>(new Set());
+    const [showSavedOnly, setShowSavedOnly] = useState(false);
     const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
     const [savingId, setSavingId] = useState<string | null>(null);
 
+    const [roomType, setRoomType] = useState("All");
+    const [furnishedStatus, setFurnishedStatus] = useState("All");
+    const [genderPreference, setGenderPreference] = useState("All");
+    const [availabilityDate, setAvailabilityDate] = useState("");
+    const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+
     useEffect(() => {
-        dispatch(fetchRooms({}));
+        const filters: any = {};
+        if (selectedCity !== "All") filters.city = selectedCity;
+        if (maxPrice) filters.max_price = maxPrice;
+        if (searchQuery) filters.search = searchQuery;
+        
+        if (sortBy === "Newest") filters.sort = "newest";
+        else if (sortBy === "Price: Low to High") filters.sort = "price_asc";
+        else if (sortBy === "Price: High to Low") filters.sort = "price_desc";
+        else if (sortBy === "Recently Updated") filters.sort = "recently_updated";
+        else filters.sort = "views";
+        
+        if (roomType !== "All") filters.room_type = roomType;
+        if (furnishedStatus !== "All") filters.furnished_status = furnishedStatus;
+        if (genderPreference !== "All") filters.gender_preference = genderPreference;
+        if (availabilityDate) filters.availability_date = availabilityDate;
+        if (selectedAmenities.length > 0) filters.amenities = selectedAmenities.join(",");
+
+        dispatch(fetchRooms(filters));
+    }, [
+        dispatch,
+        selectedCity,
+        maxPrice,
+        searchQuery,
+        sortBy,
+        roomType,
+        furnishedStatus,
+        genderPreference,
+        availabilityDate,
+        selectedAmenities
+    ]);
+
+    useEffect(() => {
         if (user) dispatch(fetchSavedRooms());
     }, [dispatch, user]);
 
     useEffect(() => {
         setFavorites(new Set(savedRooms.map((r) => r.id)));
     }, [savedRooms]);
+
+    useEffect(() => {
+        const savedMaxPrice = localStorage.getItem("tenant_preferences_budget_max");
+        if (savedMaxPrice) {
+            setMaxPrice(Number(savedMaxPrice));
+        }
+        const savedCities = localStorage.getItem("tenant_preferences_cities");
+        if (savedCities) {
+            try {
+                const parsed = JSON.parse(savedCities);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setSelectedCity(parsed[0]);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // Parse search query parameters from landing page
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const cityParam = params.get("city");
+            const budgetParam = params.get("budget");
+            const roomParam = params.get("room");
+            if (cityParam) {
+                const formattedCity = cityParam.charAt(0).toUpperCase() + cityParam.slice(1).toLowerCase();
+                if (CITIES.includes(formattedCity)) {
+                    setSelectedCity(formattedCity);
+                }
+            }
+            if (budgetParam) {
+                const budgetNum = Number(budgetParam);
+                if (!isNaN(budgetNum) && budgetNum > 0) {
+                    setMaxPrice(budgetNum);
+                }
+            }
+            if (roomParam) {
+                dispatch(fetchRoomById(roomParam)).unwrap().then((r) => {
+                    if (r) setSelectedRoom(r);
+                }).catch(e => console.error("Failed to load room param", e));
+            }
+        }
+    }, [dispatch]);
+
+    const handleViewRoom = (room: Room) => {
+        setSelectedRoom(room);
+        try {
+            const viewedRaw = localStorage.getItem("tenant_recently_viewed_rooms");
+            let viewedList: any[] = [];
+            if (viewedRaw) {
+                viewedList = JSON.parse(viewedRaw);
+            }
+            const simplifiedRoom = {
+                id: room.id,
+                title: room.title,
+                city: room.city,
+                price: room.price,
+                imageUrl: room.images?.[0]?.url ?? "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&q=80"
+            };
+            viewedList = [simplifiedRoom, ...viewedList.filter((r: any) => r && r.id !== room.id)].slice(0, 6);
+            localStorage.setItem("tenant_recently_viewed_rooms", JSON.stringify(viewedList));
+        } catch (e) {
+            console.error("Failed to update recently viewed rooms", e);
+        }
+    };
+
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
@@ -121,14 +230,10 @@ export default function TenantBrowse() {
         : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100";
 
     let filtered = rooms.filter((r) => {
-        if (selectedCity !== "All" && r.city !== selectedCity) return false;
-        if (r.price > maxPrice) return false;
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            if (!r.title.toLowerCase().includes(q) && !r.city.toLowerCase().includes(q) && !r.address.toLowerCase().includes(q)) return false;
-        }
+        if (showSavedOnly && !favorites.has(r.id)) return false;
         return true;
     });
+
 
     if (sortBy === "Price: Low to High") filtered = [...filtered].sort((a, b) => a.price - b.price);
     else if (sortBy === "Price: High to Low") filtered = [...filtered].sort((a, b) => b.price - a.price);
@@ -148,7 +253,16 @@ export default function TenantBrowse() {
     };
 
     const handleRetry = () => {
-        dispatch(fetchRooms({}));
+        const filters: any = {};
+        if (selectedCity !== "All") filters.city = selectedCity;
+        if (maxPrice) filters.max_price = maxPrice;
+        if (searchQuery) filters.search = searchQuery;
+        if (roomType !== "All") filters.room_type = roomType;
+        if (furnishedStatus !== "All") filters.furnished_status = furnishedStatus;
+        if (genderPreference !== "All") filters.gender_preference = genderPreference;
+        if (availabilityDate) filters.availability_date = availabilityDate;
+        if (selectedAmenities.length > 0) filters.amenities = selectedAmenities.join(",");
+        dispatch(fetchRooms(filters));
     };
 
     return (
@@ -186,53 +300,170 @@ export default function TenantBrowse() {
                         exit={{ opacity: 0, height: 0 }}
                         className={`rounded-2xl overflow-hidden ${surfaceLow}`}
                     >
-                        <div className="p-6 space-y-5">
-                            {/* City */}
-                            <div>
-                                <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>City</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {CITIES.map((city) => (
-                                        <button
-                                            key={city}
-                                            onClick={() => setSelectedCity(city)}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedCity === city ? chipActive : chipInactive}`}
-                                        >
-                                            {city}
-                                        </button>
-                                    ))}
+                        <div className="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            {/* Column 1 */}
+                            <div className="space-y-5">
+                                {/* City */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>City</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {CITIES.map((city) => (
+                                            <button
+                                                key={city}
+                                                onClick={() => setSelectedCity(city)}
+                                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${selectedCity === city ? chipActive : chipInactive}`}
+                                            >
+                                                {city}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Room Type */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Room Type</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {ROOM_TYPES.map((type) => (
+                                            <button
+                                                key={type}
+                                                onClick={() => setRoomType(type)}
+                                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${roomType === type ? chipActive : chipInactive}`}
+                                            >
+                                                {type === "All" ? "All Types" : type.charAt(0).toUpperCase() + type.slice(1)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Furnished Status */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Furnished Status</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {FURNISHED_STATUSES.map((status) => (
+                                            <button
+                                                key={status}
+                                                onClick={() => setFurnishedStatus(status)}
+                                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${furnishedStatus === status ? chipActive : chipInactive}`}
+                                            >
+                                                {status === "All" ? "Any Furnishing" : status.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Gender Preference */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Gender Preference</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {GENDER_PREFERENCES.map((pref) => (
+                                            <button
+                                                key={pref}
+                                                onClick={() => setGenderPreference(pref)}
+                                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${genderPreference === pref ? chipActive : chipInactive}`}
+                                            >
+                                                {pref === "All" ? "Any Gender" : pref.charAt(0).toUpperCase() + pref.slice(1)}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Price */}
-                            <div>
-                                <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>
-                                    Max Rent: <span className={textPrimary}>PKR {maxPrice.toLocaleString()}/mo</span>
-                                </p>
-                                <input
-                                    type="range"
-                                    min={10000}
-                                    max={500000}
-                                    step={5000}
-                                    value={maxPrice}
-                                    onChange={(e) => setMaxPrice(Number(e.target.value))}
-                                    className="w-full accent-[#a27cff] max-w-sm"
-                                />
-                            </div>
-
-                            {/* Sort */}
-                            <div>
-                                <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Sort By</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {SORT_OPTIONS.map((opt) => (
-                                        <button
-                                            key={opt}
-                                            onClick={() => setSortBy(opt)}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${sortBy === opt ? chipActive : chipInactive}`}
-                                        >
-                                            {opt}
-                                        </button>
-                                    ))}
+                            {/* Column 2 */}
+                            <div className="space-y-5">
+                                {/* Price */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-2 ${textVariant}`}>
+                                        Max Rent: <span className={textPrimary}>PKR {maxPrice.toLocaleString()}/mo</span>
+                                    </p>
+                                    <input
+                                        type="range"
+                                        min={10000}
+                                        max={500000}
+                                        step={5000}
+                                        value={maxPrice}
+                                        onChange={(e) => setMaxPrice(Number(e.target.value))}
+                                        className="w-full accent-[#a27cff] max-w-sm"
+                                    />
                                 </div>
+
+                                {/* Sort */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Sort By</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {SORT_OPTIONS.map((opt) => (
+                                            <button
+                                                key={opt}
+                                                onClick={() => setSortBy(opt)}
+                                                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${sortBy === opt ? chipActive : chipInactive}`}
+                                            >
+                                                {opt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Available From */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Available From</p>
+                                    <div className="flex items-center gap-3">
+                                        <input
+                                            type="date"
+                                            value={availabilityDate}
+                                            onChange={(e) => setAvailabilityDate(e.target.value)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold border outline-none transition-all ${
+                                                isDark
+                                                    ? "bg-[#1a1919] border-[#484847]/30 text-white focus:border-[#a27cff]/60"
+                                                    : "bg-white border-slate-200 text-slate-800 focus:border-violet-400"
+                                            }`}
+                                        />
+                                        {availabilityDate && (
+                                            <button
+                                                onClick={() => setAvailabilityDate("")}
+                                                className="text-xs font-bold text-[#a27cff] hover:underline"
+                                            >
+                                                Clear Date
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Amenities */}
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Amenities</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {AMENITIES.map((amenity) => {
+                                            const isSelected = selectedAmenities.includes(amenity);
+                                            return (
+                                                <button
+                                                    key={amenity}
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setSelectedAmenities(selectedAmenities.filter((a) => a !== amenity));
+                                                        } else {
+                                                            setSelectedAmenities([...selectedAmenities, amenity]);
+                                                        }
+                                                    }}
+                                                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${isSelected ? chipActive : chipInactive}`}
+                                                >
+                                                    {amenity}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Saved Only Filter */}
+                                {user && (
+                                    <div>
+                                        <p className={`text-xs font-bold uppercase tracking-widest mb-3 ${textVariant}`}>Bookmarks</p>
+                                        <button
+                                            onClick={() => setShowSavedOnly(!showSavedOnly)}
+                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all ${showSavedOnly ? chipActive : chipInactive}`}
+                                        >
+                                            Saved Rooms Only
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </motion.section>
@@ -305,7 +536,7 @@ export default function TenantBrowse() {
                                         <motion.button
                                             whileHover={{ scale: 1.1 }}
                                             whileTap={{ scale: 0.95 }}
-                                            onClick={() => setSelectedRoom(room)}
+                                            onClick={() => handleViewRoom(room)}
                                             className="w-11 h-11 rounded-full bg-white text-slate-900 flex items-center justify-center shadow-xl translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
                                             title="View Details"
                                         >

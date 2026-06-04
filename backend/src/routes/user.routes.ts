@@ -12,6 +12,7 @@ router.patch("/me", upload.single("image"), ctrl.updateMe);
 router.patch("/me/card", ctrl.saveCard);
 router.get("/me/notifications", ctrl.getMyNotifications);
 router.patch("/me/notifications/:id/read", ctrl.markNotificationRead);
+router.get("/me/contacted-owners", ctrl.getContactedOwners);
 
 // Identity documents
 router.get("/me/documents", ctrl.getMyDocuments);

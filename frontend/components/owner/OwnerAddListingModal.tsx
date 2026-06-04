@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, UploadCloud, MapPin, Building, DollarSign, Info, BedDouble, Bath, FileText, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
+import { X, UploadCloud, MapPin, Building, Info, BedDouble, Bath, FileText, CheckCircle2, ShieldCheck, Loader2 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAppDispatch } from "@/store/hooks";
 import { createRoom } from "@/store/slices/roomSlice";
@@ -33,6 +33,7 @@ const INITIAL_FORM = {
     furnished_status: "unfurnished",
     security_deposit_amount: "0",
     available_for: "any",
+    availability_date: "",
 };
 
 export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListingModalProps) {
@@ -77,7 +78,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
 
     const handleImageSelect = (files: FileList | null) => {
         if (!files) return;
-        const newFiles = Array.from(files).slice(0, 5 - images.length);
+        const newFiles = Array.from(files).slice(0, 10 - images.length);
         const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
         setImages((prev) => [...prev, ...newFiles]);
         setImagePreviews((prev) => [...prev, ...newPreviews]);
@@ -110,6 +111,16 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             return;
         }
 
+        if (images.length < 3) {
+            setSubmitError("You must upload at least 3 photos for your room listing.");
+            return;
+        }
+
+        if (images.length > 10) {
+            setSubmitError("You cannot upload more than 10 photos for your room listing.");
+            return;
+        }
+
         setIsSubmitting(true);
         setSubmitError("");
 
@@ -131,6 +142,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             formData.append("furnished_status", form.furnished_status);
             formData.append("security_deposit_amount", form.security_deposit_amount);
             formData.append("available_for", form.available_for);
+            formData.append("availability_date", form.availability_date || new Date().toISOString().split('T')[0]);
             form.amenities.forEach((a) => formData.append("amenities[]", a));
             images.forEach((img) => formData.append("images", img));
 
@@ -316,7 +328,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent *</label>
                                             <div className="relative">
-                                                <DollarSign size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={form.price}
@@ -329,7 +341,7 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={18} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={form.security_deposit_amount}
@@ -406,6 +418,16 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 <option value="families">Families Only</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Availability Date</label>
+                                        <input
+                                            type="date"
+                                            value={form.availability_date}
+                                            onChange={(e) => setField("availability_date", e.target.value)}
+                                            className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                        />
                                     </div>
                                 </motion.div>
                             )}

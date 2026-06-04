@@ -109,9 +109,6 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                 <p className={`${isDark ? "text-zinc-300" : "text-slate-600"}`}>
                     <strong className="text-[#ba9eff]">Tenant:</strong> {booking.tenant?.full_name}
                 </p>
-                <p className={`${isDark ? "text-zinc-300" : "text-slate-600"}`}>
-                    <strong className="text-[#ba9eff]">Contact:</strong> {booking.tenant?.mobile_number ?? "N/A"}
-                </p>
             </div>
 
             {isPending && (
@@ -421,13 +418,12 @@ export default function OwnerInquiriesPage() {
 
                         <div className="flex items-center gap-2">
                             {getOther(activeConversation)?.mobile_number && (
-                                <a
-                                    href={`tel:${getOther(activeConversation).mobile_number}`}
-                                    title={`Call ${getOther(activeConversation).full_name}`}
-                                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${isDark ? "bg-white/5 text-zinc-400 hover:text-emerald-400 hover:bg-emerald-400/10" : "bg-slate-100 text-slate-500 hover:bg-emerald-50 hover:text-emerald-400"}`}
+                                <span
+                                    title="Contact via platform chat only"
+                                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors cursor-default ${isDark ? "bg-white/5 text-zinc-600" : "bg-slate-100 text-slate-300"}`}
                                 >
                                     <Phone size={16} />
-                                </a>
+                                </span>
                             )}
                             <div className="relative">
                                 <button

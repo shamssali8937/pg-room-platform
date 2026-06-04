@@ -191,9 +191,11 @@ export default function OwnerSettingsPage() {
                             </div>
                         )}
                     </div>
-                    <div className={`absolute -bottom-2 -right-2 p-1.5 rounded-xl shadow-lg border-4 ${isDark ? "bg-[#ba9eff] border-[#0e0e0e]" : "bg-violet-500 border-slate-50"}`}>
-                        <BadgeCheck className={isDark ? "text-[#39008c]" : "text-white"} size={20} fill="currentColor" />
-                    </div>
+                    {user?.verification_status === "verified" && (
+                        <div className={`absolute -bottom-2 -right-2 p-1.5 rounded-xl shadow-lg border-4 ${isDark ? "bg-[#ba9eff] border-[#0e0e0e]" : "bg-violet-500 border-slate-50"}`}>
+                            <BadgeCheck className={isDark ? "text-[#39008c]" : "text-white"} size={20} fill="currentColor" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex-1">

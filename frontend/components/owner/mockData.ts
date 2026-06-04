@@ -27,7 +27,7 @@ export interface OwnerListing {
     title: string;
     price: number;
     priceUnit: string;
-    status: 'Live' | 'Pending Review' | 'Rejected';
+    status: 'Live' | 'Pending Review' | 'Rejected' | 'Suspended';
     featured?: boolean;
     boosted?: boolean;
     location: string;
@@ -53,6 +53,7 @@ export interface OwnerListing {
     availableFor?: string;
     genderPreference?: string;
     sqft?: number;
+    availabilityDate?: string;
 }
 
 export interface WalletTransaction {

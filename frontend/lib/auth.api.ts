@@ -36,6 +36,7 @@ export interface AuthUser {
     account_status?: string | null;
     created_at: string;
     updated_at?: string;
+    verification_status?: string | null;
 }
 
 export interface LoginResponse {

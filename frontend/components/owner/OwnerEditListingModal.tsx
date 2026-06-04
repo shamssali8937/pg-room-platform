@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    X, UploadCloud, MapPin, Building, DollarSign, BedDouble, Bath,
+    X, UploadCloud, MapPin, Building, BedDouble, Bath,
     FileText, CheckCircle2, Info, ShieldCheck, Edit3, Save
 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
@@ -39,6 +39,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
     const [availableFor, setAvailableFor] = useState(listing?.availableFor ?? "any");
     const [genderPreference, setGenderPreference] = useState(listing?.genderPreference ?? "any");
     const [sqft, setSqft] = useState(String(listing?.sqft ?? ""));
+    const [availabilityDate, setAvailabilityDate] = useState(listing?.availabilityDate ?? "");
     const [saved, setSaved] = useState(false);
 
     if (!listing) return null;
@@ -80,6 +81,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                 availableFor,
                 genderPreference,
                 sqft: Number(sqft),
+                availabilityDate,
             });
         }
         setSaved(true);
@@ -257,7 +259,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={price}
@@ -270,7 +272,7 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                         <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Security Deposit (PKR)</label>
                                             <div className="relative">
-                                                <DollarSign size={16} className={`absolute left-4 top-1/2 -translate-y-1/2 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
+                                                <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
                                                 <input
                                                     type="number"
                                                     value={securityDeposit}
@@ -347,6 +349,16 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                                                 <option value="families">Families Only</option>
                                             </select>
                                         </div>
+                                    </div>
+
+                                    <div>
+                                        <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Availability Date</label>
+                                        <input
+                                            type="date"
+                                            value={availabilityDate}
+                                            onChange={e => setAvailabilityDate(e.target.value)}
+                                            className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                        />
                                     </div>
                                 </motion.div>
                             )}

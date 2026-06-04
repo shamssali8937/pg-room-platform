@@ -25,6 +25,7 @@ export interface Room {
         id: string;
         full_name: string;
         email: string;
+        verification_status?: string;
     };
     rating?: number;
     review_count?: number;
@@ -39,6 +40,7 @@ export interface Room {
     available_for?: string;
     gender_preference?: string;
     size_value?: number | null;
+    availability_date?: string | null;
 }
 
 export interface RoomFilters {
@@ -51,6 +53,11 @@ export interface RoomFilters {
     page?: number;
     limit?: number;
     status?: string;
+    room_type?: string;
+    furnished_status?: string;
+    gender_preference?: string;
+    availability_date?: string;
+    amenities?: string;
 }
 
 interface RoomState {
@@ -238,6 +245,13 @@ const roomSlice = createSlice({
                 state.savedRooms.splice(savedIdx, 1);
             }
         },
+        updateRoomViews(state, action: { payload: { id: string; views: number } }) {
+            const { id, views } = action.payload;
+            const room = state.ownerRooms.find((r) => r.id === id);
+            if (room) {
+                room.views = views;
+            }
+        },
     },
     extraReducers: (builder) => {
         // Fetch Rooms
@@ -297,5 +311,5 @@ const roomSlice = createSlice({
     },
 });
 
-export const { clearRoomError, setSelectedRoom, toggleSavedLocal } = roomSlice.actions;
+export const { clearRoomError, setSelectedRoom, toggleSavedLocal, updateRoomViews } = roomSlice.actions;
 export default roomSlice.reducer;

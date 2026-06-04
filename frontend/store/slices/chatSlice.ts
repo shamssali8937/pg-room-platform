@@ -170,7 +170,7 @@ export const editMessage = createAsyncThunk(
         { rejectWithValue }
     ) => {
         try {
-            const { data } = await api.patch(`/chat/messages/${messageId}`, { content });
+            const { data } = await api.put(`/chat/messages/${messageId}`, { content });
             return data.data as ChatMessage;
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to edit message");
@@ -228,7 +228,7 @@ export const pinConversation = createAsyncThunk(
         { rejectWithValue }
     ) => {
         try {
-            const { data } = await api.patch(`/chat/conversations/${conversationId}/pin`, { isPinned });
+            const { data } = await api.post(`/chat/conversations/${conversationId}/pin`, { isPinned });
             return { conversationId, isPinned: data.data.is_pinned ?? isPinned };
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to pin conversation");
@@ -243,7 +243,7 @@ export const archiveConversation = createAsyncThunk(
         { rejectWithValue }
     ) => {
         try {
-            const { data } = await api.patch(`/chat/conversations/${conversationId}/archive`, { isArchived });
+            const { data } = await api.post(`/chat/conversations/${conversationId}/archive`, { isArchived });
             return { conversationId, isArchived: data.data.is_archived ?? isArchived };
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to archive conversation");
@@ -258,7 +258,7 @@ export const muteConversation = createAsyncThunk(
         { rejectWithValue }
     ) => {
         try {
-            const { data } = await api.patch(`/chat/conversations/${conversationId}/mute`, { isMuted });
+            const { data } = await api.post(`/chat/conversations/${conversationId}/mute`, { isMuted });
             return { conversationId, isMuted: data.data.is_muted ?? isMuted };
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to mute conversation");

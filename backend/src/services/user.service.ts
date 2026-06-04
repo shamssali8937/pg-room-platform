@@ -118,4 +118,34 @@ export const getMyDocumentsService = async (userId: string) => {
         where: { user_id: userId },
         orderBy: { created_at: "desc" },
     });
+};
+
+export const getContactedOwnersService = async (userId: string) => {
+    // A contacted owner is an owner with whom the tenant has a conversation.
+    const conversations = await prisma.conversation.findMany({
+        where: { tenant_id: userId },
+        include: {
+            owner: {
+                select: {
+                    id: true,
+                    full_name: true,
+                    profile_photo_url: true,
+                    created_at: true
+                }
+            },
+            room: {
+                select: {
+                    id: true,
+                    title: true,
+                    city: true,
+                    price: true,
+                    rent_amount: true
+                }
+            }
+        },
+        orderBy: { updated_at: "desc" }
+    });
+
+    // Map to simple distinct list of owners or conversations containing owner+room details
+    return conversations;
 };

@@ -44,7 +44,7 @@ export default function OwnerBookingsPage() {
 
     // Filters and Search
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled">("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled" | "completed" | "closed" | "expired">("all");
 
     const fetchBookings = async () => {
         try {
@@ -68,8 +68,9 @@ export default function OwnerBookingsPage() {
         fetchBookings();
     }, []);
 
-    const handleUpdateStatus = async (bookingId: string, newStatus: "approved" | "rejected") => {
-        if (!confirm(`Are you sure you want to ${newStatus === "approved" ? "confirm" : "reject"} this booking offer?`)) {
+    const handleUpdateStatus = async (bookingId: string, newStatus: "approved" | "rejected" | "completed" | "closed") => {
+        const actionText = newStatus === "approved" ? "confirm" : newStatus === "completed" ? "complete" : newStatus === "closed" ? "close" : "reject";
+        if (!confirm(`Are you sure you want to ${actionText} this booking offer?`)) {
             return;
         }
 
@@ -77,7 +78,7 @@ export default function OwnerBookingsPage() {
             setActionLoadingId(bookingId);
             const { data } = await api.patch(`/bookings/${bookingId}/status`, {
                 status: newStatus,
-                owner_note: newStatus === "approved" ? "Booking confirmed by Owner" : "Booking rejected by Owner"
+                owner_note: newStatus === "approved" ? "Booking confirmed by Owner" : newStatus === "completed" ? "Stay marked completed" : newStatus === "closed" ? "Booking request closed" : "Booking rejected by Owner"
             });
 
             if (data?.success) {
@@ -154,7 +155,7 @@ export default function OwnerBookingsPage() {
 
                 {/* Filter tags */}
                 <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto shrink-0 py-1">
-                    {(["all", "pending", "approved", "rejected", "cancelled"] as const).map((filter) => {
+                    {(["all", "pending", "approved", "rejected", "completed", "closed", "cancelled", "expired"] as const).map((filter) => {
                         const isActive = statusFilter === filter;
                         return (
                             <button
@@ -211,6 +212,9 @@ export default function OwnerBookingsPage() {
                             const isApproved = booking.status === "approved";
                             const isRejected = booking.status === "rejected";
                             const isCancelled = booking.status === "cancelled";
+                            const isCompleted = booking.status === "completed";
+                            const isClosed = booking.status === "closed";
+                            const isExpired = booking.status === "expired";
 
                             // Color codes for badges
                             let statusColor = "bg-yellow-500/10 text-yellow-500 border-yellow-500/20";
@@ -219,10 +223,13 @@ export default function OwnerBookingsPage() {
                             if (isApproved) {
                                 statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
                                 StatusIcon = CheckCircle;
+                            } else if (isCompleted) {
+                                statusColor = "bg-purple-500/10 text-[#ba9eff] border-purple-500/20";
+                                StatusIcon = CheckCircle;
                             } else if (isRejected) {
                                 statusColor = "bg-red-500/10 text-red-400 border-red-500/20";
                                 StatusIcon = XCircle;
-                            } else if (isCancelled) {
+                            } else if (isCancelled || isClosed || isExpired) {
                                 statusColor = "bg-zinc-500/10 text-zinc-400 border-zinc-500/20";
                                 StatusIcon = XCircle;
                             }
@@ -283,7 +290,7 @@ export default function OwnerBookingsPage() {
 
                                         <hr className={dividerColor} />
 
-                                        {/* Tenant Details */}
+                                        {/* Tenant Details (No Mobile Number to respect P1-A) */}
                                         <div className="space-y-2">
                                             <p className={`text-[10px] uppercase font-bold tracking-widest ${textSecondary}`}>Prospective Tenant</p>
                                             <div className="flex items-center justify-between gap-4">
@@ -303,16 +310,6 @@ export default function OwnerBookingsPage() {
                                                     </div>
                                                     <div>
                                                         <h4 className={`text-sm font-bold ${textPrimary}`}>{booking.tenant?.full_name ?? "Unknown"}</h4>
-                                                        <div className="flex items-center gap-1.5 text-xs">
-                                                            <Phone size={11} className={textSecondary} />
-                                                            {booking.tenant?.mobile_number ? (
-                                                                <a href={`tel:${booking.tenant.mobile_number}`} className="hover:text-[#ba9eff] transition-colors">
-                                                                    {booking.tenant.mobile_number}
-                                                                </a>
-                                                            ) : (
-                                                                <span className={textSecondary}>N/A</span>
-                                                            )}
-                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -349,6 +346,25 @@ export default function OwnerBookingsPage() {
                                                 className={`py-2.5 px-4 rounded-xl border border-red-500/20 hover:bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50`}
                                             >
                                                 Reject
+                                            </button>
+                                        </div>
+                                    )}
+
+                                    {isApproved && (
+                                        <div className="flex items-center gap-3 mt-5">
+                                            <button
+                                                disabled={actionLoadingId === booking.id}
+                                                onClick={() => handleUpdateStatus(booking.id, "completed")}
+                                                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                            >
+                                                Mark Completed
+                                            </button>
+                                            <button
+                                                disabled={actionLoadingId === booking.id}
+                                                onClick={() => handleUpdateStatus(booking.id, "closed")}
+                                                className={`py-2.5 px-4 rounded-xl border border-zinc-500/20 hover:bg-zinc-500/10 text-zinc-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50`}
+                                            >
+                                                Close Request
                                             </button>
                                         </div>
                                     )}

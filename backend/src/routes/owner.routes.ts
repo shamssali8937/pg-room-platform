@@ -13,5 +13,7 @@ router.post("/rooms/:id/feature", ctrl.featureRoom);
 router.get("/points", ctrl.getOwnerPoints);
 router.get("/points/transactions", ctrl.getOwnerPointTransactions);
 router.post("/points/buy", ctrl.buyPoints);
+router.post("/points/certify", ctrl.certifyOwner);
+router.post("/points/newsletter", ctrl.activateNewsletter);
 
 export default router;

@@ -199,6 +199,19 @@ export default function ListingModerationCard({
                         </div>
                     )}
 
+                    {/* Previous Suspension Detail */}
+                    {!isSuspended && listing.wasSuspended && listing.lastSuspensionReason && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl mb-4">
+                            <p className="text-amber-400 text-xs font-semibold flex items-start gap-2">
+                                <Info size={13} className="flex-shrink-0 mt-0.5" />
+                                <span className="line-clamp-2">
+                                    <span className="font-bold">Previously Suspended: </span>
+                                    {listing.lastSuspensionReason}
+                                </span>
+                            </p>
+                        </div>
+                    )}
+
                     {/* Host Info */}
                     <div className="flex items-center gap-3 mb-5">
                         <img src={listing.host.avatar} alt={listing.host.name} className={`w-7 h-7 rounded-full border flex-shrink-0 ${hostAvatarBorder}`} />
@@ -214,7 +227,7 @@ export default function ListingModerationCard({
                     <div className="grid grid-cols-3 gap-2">
                         <motion.button whileTap={{ scale: 0.95 }} onClick={() => onApprove(listing.id)}
                             className="bg-purple-500 py-2.5 rounded-xl text-white text-[10px] font-bold uppercase tracking-wider hover:brightness-110 transition-all flex items-center justify-center gap-1">
-                            <CheckCircle2 size={13} /><span className="hidden sm:inline">Approve</span>
+                            <CheckCircle2 size={13} /><span className="hidden sm:inline">{listing.wasSuspended ? "Restore" : "Approve"}</span>
                         </motion.button>
 
                         <div className="relative" ref={rejectRef}>

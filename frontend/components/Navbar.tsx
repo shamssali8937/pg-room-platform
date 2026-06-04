@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, X } from "lucide-react"; // Install lucide-react or use SVG
+import { Menu, X, LayoutDashboard } from "lucide-react"; // Install lucide-react or use SVG
 import Link from "next/link";
 
 export default function Navbar() {
@@ -19,9 +19,14 @@ export default function Navbar() {
             <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
 
                 {/* LOGO */}
-                <div className="text-2xl cursor-pointer font-bold bg-gradient-to-r from-purple-400 to-blue-400 text-transparent bg-clip-text">
-                    <Link href="/">PG Nexus</Link>
-                </div>
+                <Link href="/" className="flex items-center gap-3 cursor-pointer group">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                        <LayoutDashboard size={20} className="text-white" />
+                    </div>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 text-transparent bg-clip-text">
+                        PG Nexus
+                    </span>
+                </Link>
 
                 {/* DESKTOP NAV */}
                 <div className="hidden md:flex gap-8 items-center text-sm font-medium">

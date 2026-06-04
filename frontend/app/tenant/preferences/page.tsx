@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { mockTenantProfile } from "@/components/tenant/mockData";
@@ -25,6 +25,34 @@ export default function TenantPreferences() {
     const [amenityPrefs, setAmenityPrefs] = useState({ ...mockTenantProfile.preferences });
     const [notifications, setNotifications] = useState({ email: true, push: true, sms: false, weeklyDigest: true });
 
+    useEffect(() => {
+        const savedMin = localStorage.getItem("tenant_preferences_budget_min");
+        const savedMax = localStorage.getItem("tenant_preferences_budget_max");
+        if (savedMin && savedMax) {
+            setBudget({ min: Number(savedMin), max: Number(savedMax) });
+        }
+        const savedRoomType = localStorage.getItem("tenant_preferences_room_type");
+        if (savedRoomType) {
+            setRoomType(savedRoomType);
+        }
+        const savedCities = localStorage.getItem("tenant_preferences_cities");
+        if (savedCities) {
+            try {
+                setPreferredCities(JSON.parse(savedCities));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        const savedAmenities = localStorage.getItem("tenant_preferences_amenities");
+        if (savedAmenities) {
+            try {
+                setAmenityPrefs(JSON.parse(savedAmenities));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }, []);
+
     const textPrimary = isDark ? "text-white" : "text-slate-900";
     const textVariant = isDark ? "text-[#adaaaa]" : "text-slate-500";
     const surfaceLow = isDark ? "bg-[#131313] border border-[#484847]/15" : "bg-white border border-slate-200 shadow-sm";
@@ -41,6 +69,12 @@ export default function TenantPreferences() {
     };
 
     const handleSave = () => {
+        localStorage.setItem("tenant_preferences_budget_min", budget.min.toString());
+        localStorage.setItem("tenant_preferences_budget_max", budget.max.toString());
+        localStorage.setItem("tenant_preferences_room_type", roomType);
+        localStorage.setItem("tenant_preferences_cities", JSON.stringify(preferredCities));
+        localStorage.setItem("tenant_preferences_amenities", JSON.stringify(amenityPrefs));
+
         setEditMode(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -223,7 +257,8 @@ export default function TenantPreferences() {
                                 </div>
                                 <Toggle
                                     value={notifications[item.key]}
-                                    onChange={v => setNotifications(prev => ({ ...prev, [item.key]: v }))}
+                                    onChange={v => editMode && setNotifications(prev => ({ ...prev, [item.key]: v }))}
+                                    disabled={!editMode}
                                 />
                             </div>
                         ))}

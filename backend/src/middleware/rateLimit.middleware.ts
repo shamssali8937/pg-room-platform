@@ -35,7 +35,7 @@ const createLimiter = (
  */
 export const globalRateLimiter = createLimiter(
     15 * 60 * 1000, // 15 min
-    100,
+    process.env.NODE_ENV === "production" ? 150 : 2000,
     "Too many requests from this IP, please try again after 15 minutes.",
     "GLOBAL"
 );
@@ -61,3 +61,33 @@ export const otpRateLimiter = createLimiter(
     "Too many OTP requests. Please wait 10 minutes.",
     "OTP"
 );
+
+/**
+ * Chat message rate limiter — applied to POST /api/chat/messages.
+ * 20 messages per minute per authenticated user (keyed by user ID, not IP).
+ * Prevents spam flooding even on shared IPs.
+ */
+export const chatMessageRateLimiter = rateLimit({
+    windowMs: 60 * 1000, // 1 minute
+    max: process.env.NODE_ENV === "production" ? 20 : 200,
+    standardHeaders: true,
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+        // Use authenticated user ID if available, else fall back to IP
+        const userId = (req as any).user?.id;
+        return userId ?? req.ip ?? "anonymous";
+    },
+    handler: (req, res) => {
+        logger.warn("Chat rate limit exceeded [CHAT_MESSAGE]", {
+            userId: (req as any).user?.id,
+            ip: req.ip,
+            requestId: req.requestId,
+        });
+        res.status(429).json({
+            success: false,
+            code: "RATE_LIMITED",
+            message: "You are sending messages too quickly. Please slow down.",
+            requestId: req.requestId,
+        });
+    },
+});

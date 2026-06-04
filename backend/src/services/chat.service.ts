@@ -81,8 +81,9 @@ export const getConversationsService = async (userId: string, role: string, sear
             ]
         },
         include: {
-            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+            // Privacy: mobile_number intentionally omitted from participant select (SRS §6.4, §10.1)
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
             room: { select: { id: true, title: true, price: true, rent_amount: true, city: true, images: { take: 1, select: { file_url: true } } } },
             messages: {
                 orderBy: { created_at: "desc" },
@@ -149,7 +150,7 @@ export const getConversationsService = async (userId: string, role: string, sear
                 id: otherParticipant.id,
                 full_name: otherParticipant.full_name,
                 profile_photo_url: otherParticipant.profile_photo_url,
-                mobile_number: otherParticipant.mobile_number,
+                // Privacy: mobile_number intentionally omitted (SRS §6.4, §10.1)
                 role: otherParticipant.role,
                 is_online: isOnline
             } : null,
@@ -159,14 +160,12 @@ export const getConversationsService = async (userId: string, role: string, sear
                     full_name: conv.tenant.full_name,
                     role: conv.tenant.role,
                     profile_photo_url: conv.tenant.profile_photo_url,
-                    mobile_number: conv.tenant.mobile_number
                 },
                 {
                     id: conv.owner.id,
                     full_name: conv.owner.full_name,
                     role: conv.owner.role,
                     profile_photo_url: conv.owner.profile_photo_url,
-                    mobile_number: conv.owner.mobile_number
                 }
             ],
             last_message: lastMsg ? lastMsg.message_body : null,
@@ -294,8 +293,9 @@ export const createConversationService = async (tenantId: string, roomId?: strin
                     deleted_at_owner: null
                 },
                 include: {
-                    tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-                    owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+                    // Privacy: no mobile_number in conversation participant select
+                    tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+                    owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
                     room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
                 }
             });
@@ -311,8 +311,9 @@ export const createConversationService = async (tenantId: string, roomId?: strin
             owner_id: finalOwnerId,
         },
         include: {
-            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+            // Privacy: no mobile_number in conversation participant select
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
             room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
         }
     });
@@ -345,8 +346,9 @@ export const createConversationByEmailService = async (initiatorId: string, reci
             owner_id: ownerId
         },
         include: {
-            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+            // Privacy: no mobile_number in participant select
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
             room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
         }
     });
@@ -359,8 +361,9 @@ export const createConversationByEmailService = async (initiatorId: string, reci
                 deleted_at_owner: null
             },
             include: {
-                tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-                owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+                // Privacy: no mobile_number in participant select
+                tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+                owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
                 room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
             }
         });
@@ -374,8 +377,9 @@ export const createConversationByEmailService = async (initiatorId: string, reci
             room_id: null,
         },
         include: {
-            tenant: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, mobile_number: true, role: true } },
+            // Privacy: no mobile_number in participant select
+            tenant: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, role: true } },
             room: { select: { id: true, title: true, images: { take: 1, select: { file_url: true } } } },
         }
     });
@@ -460,6 +464,21 @@ export const sendMessageService = async (
             deleted_at_owner: null
         }
     });
+
+    // Create a database notification for the receiver
+    try {
+        await prisma.notification.create({
+            data: {
+                user_id: receiverId,
+                notification_type: "chat_message",
+                title: `New Message from ${message.sender?.full_name || "User"}`,
+                body: content.length > 60 ? `${content.substring(0, 57)}...` : content,
+                action_url: message.sender?.role === "owner" ? `/tenant/chat` : `/owner/inquiries`
+            }
+        });
+    } catch (err) {
+        console.error("Failed to create chat notification:", err);
+    }
 
     return message;
 };

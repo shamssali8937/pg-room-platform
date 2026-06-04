@@ -42,6 +42,12 @@ export interface Booking {
         furnished_status?: string;
         images?: Array<{ file_url: string }>;
     };
+    reviews?: Array<{
+        id: string;
+        rating: number;
+        comment: string | null;
+        created_at: string;
+    }>;
 }
 
 interface BookingState {

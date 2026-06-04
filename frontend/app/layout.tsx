@@ -24,6 +24,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PG Nexus — Find Your Perfect PG Room",
   description: "PG Nexus — Discover, list, and book verified PG rooms across Pakistan.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

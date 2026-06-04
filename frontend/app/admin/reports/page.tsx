@@ -37,6 +37,7 @@ import {
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminReports, resolveReport } from "@/store/slices/adminSlice";
+import api from "@/lib/api";
 
 // ── Priority config ──
 const priorityConfig: Record<ReportPriority, { dot: string; label: string }> = {
@@ -67,12 +68,31 @@ function ReportsContent() {
     const [searchQuery, setSearchQuery] = useState("");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<ReportTab>("active");
-    const [selectedReport, setSelectedReport] = useState<AdminReport | null>(null);
+    const [selectedReport, setSelectedReport] = useState<any | null>(null);
     const [moderatorNote, setModeratorNote] = useState("");
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [filterPriority, setFilterPriority] = useState<ReportPriority | "all">("all");
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+    // Chat Log Inspection state (Phase 5)
+    const [inspectedChat, setInspectedChat] = useState<any>(null);
+    const [showChatModal, setShowChatModal] = useState(false);
+    const [isLoadingChat, setIsLoadingChat] = useState(false);
+
+    const openChatInspectionModal = async (conversationId: string) => {
+        setIsLoadingChat(true);
+        setShowChatModal(true);
+        try {
+            const { data } = await api.get(`/admin/chat/conversations/${conversationId}/messages`);
+            setInspectedChat(data.data);
+        } catch (err: any) {
+            showToast("Failed to fetch chat log", "error");
+            setShowChatModal(false);
+        } finally {
+            setIsLoadingChat(false);
+        }
+    };
 
     const ITEMS_PER_PAGE = 5;
 
@@ -80,7 +100,7 @@ function ReportsContent() {
         dispatch(fetchAdminReports());
     }, [dispatch]);
 
-    const mappedReports = useMemo((): AdminReport[] => {
+    const mappedReports = useMemo((): any[] => {
         return reduxReports.map((r) => {
             let cat: ReportCategory = "other";
             const code = r.reason_code.toLowerCase();
@@ -98,9 +118,16 @@ function ReportsContent() {
 
             return {
                 id: r.id,
+                targetId: r.target_id,
                 target: {
-                    name: r.target_type === "room" ? "Room Listing" : "Platform User",
-                    type: r.target_type === "room" ? "listing" : "user",
+                    name: r.target_type === "room" ? "Room Listing"
+                        : r.target_type === "conversation" ? "Chat Conversation"
+                        : r.target_type === "review" ? "User Review"
+                        : "Platform User",
+                    type: r.target_type === "room" ? "listing"
+                        : r.target_type === "conversation" ? "conversation"
+                        : r.target_type === "review" ? "review"
+                        : "user",
                     avatar: r.target_type === "room"
                         ? "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=100&h=100&fit=crop"
                         : r.reporter?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reporter?.full_name ?? "U")}&background=ec4899&color=fff`,
@@ -294,8 +321,8 @@ function ReportsContent() {
                                     ) : (
                                         <AnimatePresence mode="popLayout">
                                             {paginated.length > 0 ? paginated.map((report) => {
-                                                const rc = reasonColors[report.reason];
-                                                const pc = priorityConfig[report.priority];
+                                                const rc = reasonColors[report.reason as ReportCategory] || reasonColors.other;
+                                                const pc = priorityConfig[report.priority as ReportPriority] || priorityConfig.medium;
                                                 return (
                                                     <motion.tr
                                                         key={report.id}
@@ -325,7 +352,7 @@ function ReportsContent() {
                                                         </td>
                                                         <td className="px-4 sm:px-6 py-4">
                                                             <span className={`px-2.5 py-1 rounded-full ${rc.bg} ${rc.text} text-[10px] font-bold uppercase tracking-tight`}>
-                                                                {reportCategoryLabels[report.reason]}
+                                                                {reportCategoryLabels[report.reason as ReportCategory] || String(report.reason)}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 sm:px-6 py-4">
@@ -410,7 +437,7 @@ function ReportsContent() {
                                     <div>
                                         <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-semibold mb-2">Evidence ({selectedReport.evidence.length})</p>
                                         <div className="grid grid-cols-3 gap-2">
-                                            {selectedReport.evidence.map((url, i) => (
+                                            {selectedReport.evidence.map((url: string, i: number) => (
                                                 <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/[0.04]">
                                                     <img src={url} alt="" className="w-full h-full object-cover hover:scale-110 transition-transform duration-300" />
                                                 </div>
@@ -438,6 +465,16 @@ function ReportsContent() {
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Warn</span>
                                     </button>
                                 </div>
+
+                                {selectedReport.target.type === "conversation" && (
+                                    <button
+                                        onClick={() => openChatInspectionModal(selectedReport.targetId)}
+                                        className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-purple-500/10"
+                                    >
+                                        <MessageSquare size={14} />
+                                        Inspect Chat Log
+                                    </button>
+                                )}
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
@@ -481,6 +518,114 @@ function ReportsContent() {
                     >
                         {toast.message}
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Chat Inspection Modal */}
+            <AnimatePresence>
+                {showChatModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className={`w-full max-w-2xl rounded-2xl border flex flex-col h-[80vh] overflow-hidden ${
+                                isDark ? "bg-[#141414] border-white/10" : "bg-white border-slate-200 text-slate-900"
+                            }`}
+                        >
+                            {/* Modal Header */}
+                            <div className={`p-4 border-b flex justify-between items-center ${isDark ? "border-white/5 bg-zinc-900/55" : "border-slate-100 bg-slate-50"}`}>
+                                <div>
+                                    <h3 className="text-base font-bold">Chat Log Inspection</h3>
+                                    <p className="text-xs text-zinc-500">Auditing conversations for reports and disputes.</p>
+                                </div>
+                                <button
+                                    onClick={() => { setShowChatModal(false); setInspectedChat(null); }}
+                                    className={`p-2 rounded-lg transition-colors ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-950"}`}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            {/* Modal Content */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                {isLoadingChat ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-center">
+                                        <Loader2 className="animate-spin text-purple-500 mb-3" size={32} />
+                                        <p className="text-sm text-zinc-500">Loading conversation history...</p>
+                                    </div>
+                                ) : inspectedChat ? (
+                                    <>
+                                        {/* Info Card */}
+                                        <div className={`p-4 rounded-xl border flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center ${isDark ? "bg-zinc-900/40 border-white/5" : "bg-slate-50 border-slate-200"}`}>
+                                            <div>
+                                                <p className="text-xs font-semibold text-purple-400">PARTICIPANTS</p>
+                                                <p className="text-sm font-bold mt-1">
+                                                    Tenant: {inspectedChat.tenant?.full_name} • Owner: {inspectedChat.owner?.full_name}
+                                                </p>
+                                            </div>
+                                            {inspectedChat.room && (
+                                                <div className="text-xs text-right">
+                                                    <p className="font-semibold text-zinc-500">ROOM CONTEXT</p>
+                                                    <p className="font-bold">{inspectedChat.room.title}</p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Message Log */}
+                                        <div className="space-y-3.5 pt-2">
+                                            {inspectedChat.messages && inspectedChat.messages.length > 0 ? (
+                                                inspectedChat.messages.map((msg: any) => {
+                                                    const isTenant = msg.sender_id === inspectedChat.tenant_id;
+                                                    return (
+                                                        <div key={msg.id} className={`flex flex-col gap-1 ${isTenant ? "items-start" : "items-end"}`}>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-bold text-purple-400">
+                                                                    {msg.sender?.full_name} ({isTenant ? "Tenant" : "Owner"})
+                                                                </span>
+                                                                <span className="text-[8px] text-zinc-500">
+                                                                    {new Date(msg.created_at).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed max-w-[85%] ${
+                                                                isTenant
+                                                                    ? isDark
+                                                                        ? "bg-zinc-800 text-zinc-200 border border-white/5 rounded-tl-none"
+                                                                        : "bg-slate-100 text-slate-800 rounded-tl-none"
+                                                                    : isDark
+                                                                        ? "bg-purple-900/30 text-purple-300 border border-purple-800/40 rounded-tr-none"
+                                                                        : "bg-purple-50 text-purple-900 border border-purple-100 rounded-tr-none"
+                                                            }`}>
+                                                                <p className="whitespace-pre-wrap">{msg.message_body || msg.content}</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div className="text-center py-12 text-sm text-zinc-500">
+                                                    No messages in this thread.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-12 text-sm text-zinc-500">
+                                        Failed to load chat details.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className={`p-4 border-t flex justify-end ${isDark ? "border-white/5 bg-zinc-900/55" : "border-slate-100 bg-slate-50"}`}>
+                                <button
+                                    onClick={() => { setShowChatModal(false); setInspectedChat(null); }}
+                                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-all"
+                                >
+                                    Close Audit
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

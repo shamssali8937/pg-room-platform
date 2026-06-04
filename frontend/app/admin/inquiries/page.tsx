@@ -104,6 +104,36 @@ function InquiriesContent() {
         setTimeout(() => setToast(null), 3000);
     };
 
+    const handleExportCSV = () => {
+        const headers = ["Inquiry ID", "Room Title", "Room Price", "Tenant Name", "Tenant Email", "Owner Name", "Owner Email", "Request Type", "Status", "Message", "Owner Note", "Created At"];
+        const rows = filtered.map(i => [
+            i.id,
+            `"${(i.room?.title || "").replace(/"/g, '""')}"`,
+            i.room?.price || i.room?.rent_amount || 0,
+            `"${(i.tenant?.full_name || "").replace(/"/g, '""')}"`,
+            i.tenant?.email || "",
+            `"${(i.owner?.full_name || "").replace(/"/g, '""')}"`,
+            i.owner?.email || "",
+            i.request_type,
+            i.status,
+            `"${(i.message || "").replace(/"/g, '""')}"`,
+            `"${(i.owner_note || "").replace(/"/g, '""')}"`,
+            new Date(i.created_at).toLocaleDateString()
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," 
+            + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `inquiries_export_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("CSV exported successfully", "success");
+    };
+
     // Moderate Inquiry
     const handleModerate = async (id: string, newStatus: string) => {
         try {
@@ -262,6 +292,16 @@ function InquiriesContent() {
                                 )}
                             </AnimatePresence>
                         </div>
+                        <button
+                            onClick={handleExportCSV}
+                            className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark
+                                    ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60"
+                                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                            }`}
+                        >
+                            <Download size={14} />
+                            <span className="hidden sm:inline">Export</span> CSV
+                        </button>
                     </div>
                 </section>
 

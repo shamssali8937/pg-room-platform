@@ -349,6 +349,18 @@ export interface ModerationListing {
     genderPreference?: string;
     sqft?: number;
     baths?: number;
+    reviews?: {
+        id: string;
+        rating: number;
+        comment?: string;
+        created_at: string;
+        reviewer: {
+            full_name: string;
+            profile_photo_url?: string;
+        };
+    }[];
+    wasSuspended?: boolean;
+    lastSuspensionReason?: string;
 }
 
 export const rejectionReasons = [

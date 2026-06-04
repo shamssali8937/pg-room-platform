@@ -18,7 +18,8 @@ import {
     Sun,
     Moon,
     MessageSquare,
-    MessageCircle
+    MessageCircle,
+    Coins
 } from "lucide-react";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 
@@ -27,7 +28,8 @@ const navItems = [
     { icon: Users, label: "Users", id: "users", href: "/admin/users" },
     { icon: Building2, label: "Listings", id: "listings", href: "/admin/listings" },
     { icon: BarChart3, label: "Reports", id: "reports", href: "/admin/reports" },
-    { icon: Star, label: "Points", id: "points", href: "/admin/points" },
+    { icon: Coins, label: "Points", id: "points", href: "/admin/points" },
+    { icon: Star, label: "Reviews", id: "reviews", href: "/admin/reviews" },
     { icon: MessageSquare, label: "Inquiries", id: "inquiries", href: "/admin/inquiries" },
     { icon: MessageCircle, label: "Inbox", id: "inbox", href: "/admin/inbox" },
 ];

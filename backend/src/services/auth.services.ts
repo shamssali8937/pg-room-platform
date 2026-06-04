@@ -9,6 +9,9 @@ import { generateOTP, getOTPExpiry } from "../utils/otp.js";
 export const signupService = async (data: any) => {
     const { email, password, full_name, mobile_number, role } = data;
 
+    // P1-C: Only tenant or owner can be self-registered
+    const safeRole = role === "owner" ? "owner" : "tenant";
+
     const existingUser = await prisma.user.findUnique({
         where: { email },
     });
@@ -27,7 +30,7 @@ export const signupService = async (data: any) => {
             password_hash: hashedPassword,
             full_name,
             mobile_number,
-            role,
+            role: safeRole,
             email_verify_token: emailToken,
         },
     });
@@ -63,13 +66,64 @@ export const loginService = async (email: string, password: string) => {
         throw new Error("Email not verified");
     }
 
+    // Phase 1: Check account lockout
+    const MAX_ATTEMPTS = 5;
+    const LOCKOUT_MINUTES = 15;
+
+    if (user.locked_until && new Date() < user.locked_until) {
+        const minutesLeft = Math.ceil(
+            (user.locked_until.getTime() - Date.now()) / 60000
+        );
+        const err: any = new Error(
+            `Account is temporarily locked due to too many failed login attempts. Try again in ${minutesLeft} minute(s).`
+        );
+        err.code = "ACCOUNT_LOCKED";
+        err.minutesLeft = minutesLeft;
+        throw err;
+    }
+
     if (!user.password_hash) {
         throw new Error("This account is configured with Google Sign-In. Please sign in with Google.");
     }
 
     const isValid = await comparePassword(password, user.password_hash);
 
-    if (!isValid) throw new Error("Invalid password");
+    if (!isValid) {
+        // Phase 1: Increment failure counter
+        const newAttempts = (user.failed_login_attempts ?? 0) + 1;
+        const shouldLock = newAttempts >= MAX_ATTEMPTS;
+        const lockUntil = shouldLock
+            ? new Date(Date.now() + LOCKOUT_MINUTES * 60 * 1000)
+            : null;
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                failed_login_attempts: newAttempts,
+                ...(shouldLock && { locked_until: lockUntil }),
+            },
+        });
+
+        if (shouldLock) {
+            const err: any = new Error(
+                `Too many failed attempts. Account locked for ${LOCKOUT_MINUTES} minutes.`
+            );
+            err.code = "ACCOUNT_LOCKED";
+            err.minutesLeft = LOCKOUT_MINUTES;
+            throw err;
+        }
+
+        const remaining = MAX_ATTEMPTS - newAttempts;
+        throw new Error(
+            `Invalid password. ${remaining} attempt(s) remaining before account lockout.`
+        );
+    }
+
+    // Phase 1: Reset failure counter on successful login
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { failed_login_attempts: 0, locked_until: null },
+    });
 
     const accessToken = generateAccessToken({
         id: user.id,
@@ -230,26 +284,61 @@ export const forgotPasswordService = async (email: string) => {
     if (!user) throw new Error("User not found");
 
     const token = crypto.randomBytes(32).toString("hex");
-    
-    // We should ideally store this in DB, but for now we'll simulate it
-    // In a real app you'd add a reset_token and reset_token_expiry to the User model.
-    // For this demonstration to keep Prisma schema unchanged, we will just send it.
-    await sendEmail(
-        email,
-        "Password Reset",
-        `<h3>Use this token to reset your password:</h3><p>${token}</p>`
-    );
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+    // P1-B: Persist token and expiry so it can be verified on reset
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            reset_token: token,
+            reset_token_expiry: expiry,
+        },
+    });
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetLink = `${frontendUrl}/auth/reset-password?token=${token}`;
+
+    console.log("\n==========================================");
+    console.log("🔑 PASSWORD RESET LINK:", resetLink);
+    console.log("==========================================\n");
+
+    try {
+        await sendEmail(
+            email,
+            "Reset your password",
+            `<h3>Password Reset</h3><p>Click the link below to reset your password (valid for 1 hour):</p><a href="${resetLink}">${resetLink}</a><p>If you did not request this, ignore this email.</p>`
+        );
+    } catch (err: any) {
+        console.warn("Password reset email failed:", err.message || err);
+    }
 
     return { message: "Password reset link sent to your email" };
 };
 
 export const resetPasswordService = async (token: string, newPassword: string) => {
-    // Simulated token verification
-    if (!token) throw new Error("Invalid token");
-    
-    // Simulate updating password since we didn't store the token in DB
+    if (!token) throw new Error("Invalid or missing token");
+
+    // P1-B: Verify the token exists in the database and has not expired
+    const user = await prisma.user.findFirst({
+        where: {
+            reset_token: token,
+            reset_token_expiry: { gt: new Date() },
+        },
+    });
+
+    if (!user) throw new Error("Invalid or expired password reset token");
+
     const hashedPassword = await hashPassword(newPassword);
-    
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            password_hash: hashedPassword,
+            reset_token: null,
+            reset_token_expiry: null,
+        },
+    });
+
     return { message: "Password reset successfully" };
 };
 

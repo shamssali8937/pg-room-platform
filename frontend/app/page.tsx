@@ -1,10 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import LandpageFooter from "@/components/LandpageFooter";
 import ParticleBg from "@/components/ParticleBg";
 import Link from "next/link";
+import api from "@/lib/api";
 
 // React Icons
 import { HiOutlineLocationMarker, HiOutlineSearch } from "react-icons/hi";
@@ -57,32 +58,45 @@ const defaultListings = [
   },
 ];
 
+// Placeholder shown while the real API loads
+const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=1980";
+
 export default function Home() {
-  const [listings, setListings] = useState(defaultListings);
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState({ city: "", budget: "", type: "" });
 
+  // Fetch real listings from the backend
+  const [listings, setListings] = useState<any[]>([]);
+  const [loadingListings, setLoadingListings] = useState(true);
+
+  useEffect(() => {
+    api.get("/rooms?status=active&limit=5")
+      .then((res) => {
+        const json = res.data;
+        if (json.success) {
+          if (json.data && Array.isArray(json.data.rooms)) {
+            setListings(json.data.rooms);
+          } else if (Array.isArray(json.data)) {
+            setListings(json.data);
+          }
+        }
+      })
+      .catch(() => { /* silently fall back to empty — no crash */ })
+      .finally(() => setLoadingListings(false));
+  }, []);
+
+  // Search redirects to /tenant/browse with query params so real filtering happens there
   const handleSearch = () => {
-    let filtered = defaultListings;
-
-    if (searchQuery.city) {
-      filtered = filtered.filter(l => l.location.toLowerCase().includes(searchQuery.city.toLowerCase()));
-    }
-
-    if (searchQuery.budget) {
-      filtered = filtered.filter(l => l.price <= Number(searchQuery.budget));
-    }
-
-    if (searchQuery.type && searchQuery.type !== "Room Type") {
-      filtered = filtered.filter(l => l.title.toLowerCase().includes(searchQuery.type.toLowerCase()));
-    }
-
-    setListings(filtered);
+    const params = new URLSearchParams();
+    if (searchQuery.city)   params.set("city",   searchQuery.city);
+    if (searchQuery.budget) params.set("budget", searchQuery.budget);
+    if (searchQuery.type && searchQuery.type !== "Room Type") params.set("type", searchQuery.type);
+    router.push(`/auth/signin`);
   };
 
-  const featuredListing = listings.find((l) => l.type === "featured") || (listings.length > 0 ? listings[0] : null);
-  const verticalListing = listings.find((l) => l.type === "vertical") || (listings.length > 1 && listings[1] !== featuredListing ? listings[1] : null);
-  const gridListings = listings.filter((l) => l !== featuredListing && l !== verticalListing);
+  const featuredListing  = listings[0] ?? defaultListings[0] ?? null;
+  const verticalListing  = listings[1] ?? defaultListings[1] ?? null;
+  const gridListings     = listings.length > 2 ? listings.slice(2) : defaultListings.slice(2);
 
   return (
     <main className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
@@ -125,10 +139,10 @@ export default function Home() {
               <div className="hidden md:block w-px h-6 bg-white/10 mx-2"></div>
 
               <div className="w-full md:w-1/4 flex items-center px-5 py-3 gap-3">
-                <RiMoneyDollarCircleLine className="text-[#ba9eff] text-xl shrink-0" />
+                <span className="text-[#ba9eff] font-bold text-sm shrink-0">Rs.</span>
                 <input
                   className="bg-transparent border-none focus:ring-0 text-white placeholder-gray-500 w-full text-sm font-medium"
-                  placeholder="Budget"
+                  placeholder="Budget (Rs.)"
                   type="number"
                   value={searchQuery.budget}
                   onChange={(e) => setSearchQuery({ ...searchQuery, budget: e.target.value })}
@@ -174,58 +188,76 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+          {/* Elite Collections — real data from API */}
+          {loadingListings ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className={`rounded-[2rem] h-[300px] md:h-[520px] animate-pulse bg-white/5 ${i === 1 ? "md:col-span-2" : ""}`} />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {featuredListing && (
-              <div className="md:col-span-2 group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
-                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={featuredListing.image} alt="" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+              <div className="md:col-span-2 group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
+                   onClick={() => router.push("/auth/signin")}>
+                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                     src={featuredListing.images?.[0]?.url ?? featuredListing.image ?? PLACEHOLDER_IMAGE} alt={featuredListing.title} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
-                  ₨ {featuredListing.price.toLocaleString()} / mo
+                  ₨ {(featuredListing.price ?? featuredListing.rent_amount ?? 0).toLocaleString()} / mo
                 </div>
                 <div className="absolute bottom-10 left-10">
                   <div className="flex items-center gap-2 text-[#ba9eff] mb-3">
                     <MdVerified className="text-lg" />
-                    <span className="text-xs font-bold uppercase tracking-[0.2em]">{featuredListing.featuredLabel}</span>
+                    <span className="text-xs font-bold uppercase tracking-[0.2em]">
+                      {featuredListing.is_featured ? "Premium Luxury" : featuredListing.is_verified ? "Verified" : "Featured"}
+                    </span>
                   </div>
                   <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-3">{featuredListing.title}</h3>
                   <p className="text-gray-300 flex items-center gap-2">
-                    <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.location}
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.location ?? `${featuredListing.locality ?? ""}, ${featuredListing.city ?? ""}`}
                   </p>
                 </div>
               </div>
             )}
 
             {verticalListing && (
-              <div className="group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5">
-                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src={verticalListing.image} alt="" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
+              <div className="group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
+                   onClick={() => router.push("/auth/signin")}>
+                <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                     src={verticalListing.images?.[0]?.url ?? verticalListing.image ?? PLACEHOLDER_IMAGE} alt={verticalListing.title} />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 <div className="absolute top-8 left-8 backdrop-blur-md bg-white/10 border border-white/10 px-5 py-2 rounded-full text-white font-bold text-sm">
-                  ₨ {verticalListing.price.toLocaleString()}
+                  ₨ {(verticalListing.price ?? verticalListing.rent_amount ?? 0).toLocaleString()}
                 </div>
                 <div className="absolute bottom-10 left-10">
                   <h3 className="text-2xl font-bold text-white mb-2">{verticalListing.title}</h3>
                   <p className="text-gray-300 flex items-center gap-2 text-sm">
-                    <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.location}
+                    <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.location ?? `${verticalListing.locality ?? ""}, ${verticalListing.city ?? ""}`}
                   </p>
                 </div>
               </div>
             )}
 
-            {gridListings.map((item) => (
-              <div key={item.id} className="backdrop-blur-sm bg-white/[0.02] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border border-white/5 hover:bg-white/[0.05] transition-all group cursor-pointer">
+            {gridListings.map((item: any) => (
+              <div key={item.id} onClick={() => router.push("/auth/signin")}
+                   className="backdrop-blur-sm bg-white/[0.02] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border border-white/5 hover:bg-white/[0.05] transition-all group cursor-pointer">
                 <div className="relative h-56 rounded-2xl overflow-hidden mb-6">
-                  <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" src={item.image} alt="" />
+                  <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                       src={item.images?.[0]?.url ?? item.image ?? PLACEHOLDER_IMAGE} alt={item.title} />
                   <div className="absolute bottom-4 right-4 backdrop-blur-md bg-black/60 px-4 py-1.5 rounded-xl text-xs font-bold text-white border border-white/10">
-                    ₨ {item.price.toLocaleString()}
+                    ₨ {(item.price ?? item.rent_amount ?? 0).toLocaleString()}
                   </div>
                 </div>
                 <h4 className="text-xl font-bold text-white mb-2 group-hover:text-[#ba9eff] transition-colors">{item.title}</h4>
                 <p className="text-gray-400 text-sm flex items-center gap-2">
-                  <HiOutlineLocationMarker className="text-[#699cff]" /> {item.location}
+                  <HiOutlineLocationMarker className="text-[#699cff]" /> {item.location ?? `${item.locality ?? ""}, ${item.city ?? ""}`}
                 </p>
               </div>
             ))}
           </div>
+          )}
+
         </section>
 
         {/* The Promise Section */}

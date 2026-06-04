@@ -122,3 +122,37 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
     } catch (error) { next(error); }
 };
 
+export const getReviews = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await adminService.getReviewsService();
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const moderateReview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const { moderationStatus } = req.body;
+        const data = await adminService.moderateReviewService(req.user!.id, id, moderationStatus);
+        logger.info("Review moderated", { reviewId: id, status: moderationStatus, adminId: req.user!.id, requestId: req.requestId });
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const deleteReview = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const data = await adminService.deleteReviewService(req.user!.id, id);
+        logger.info("Review deleted by admin", { reviewId: id, adminId: req.user!.id, requestId: req.requestId });
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+
+export const getReportedConversationMessages = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const data = await adminService.getReportedConversationMessagesService(id);
+        res.json({ success: true, data });
+    } catch (error) { next(error); }
+};
+

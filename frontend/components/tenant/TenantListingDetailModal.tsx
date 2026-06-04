@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, MapPin, Bed, Bath, Star, ShieldCheck, ChevronLeft, ChevronRight,
     Wifi, Wind, Car, Dumbbell, Video, Zap, Shield, MessageSquare, Heart,
-    Home, Maximize
+    Home, Maximize, Loader2, BadgeCheck
 } from "lucide-react";
 import { type TenantListing } from "./mockData";
 import { useTenantTheme } from "@/context/TenantThemeContext";
+import api from "@/lib/api";
+
 
 const amenityIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
     WiFi: Wifi,
@@ -46,8 +48,30 @@ export default function TenantListingDetailModal({
 }: Props) {
     const { isDark } = useTenantTheme();
     const [galleryIdx, setGalleryIdx] = useState(0);
+    const [reviewsList, setReviewsList] = useState<any[]>([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+
+    useEffect(() => {
+        if (listing?.id) {
+            const fetchReviews = async () => {
+                try {
+                    setLoadingReviews(true);
+                    const { data } = await api.get(`/rooms/${listing.id}/reviews`);
+                    if (data?.success && Array.isArray(data?.data)) {
+                        setReviewsList(data.data);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch room reviews:", err);
+                } finally {
+                    setLoadingReviews(false);
+                }
+            };
+            fetchReviews();
+        }
+    }, [listing?.id]);
 
     if (!listing) return null;
+
 
     // Build a simple gallery from the single image (extend later with real gallery array)
     const gallery = listing.gallery && listing.gallery.length > 0 ? listing.gallery : [listing.imageUrl];
@@ -262,11 +286,63 @@ export default function TenantListingDetailModal({
                             </div>
                         )}
 
+                        {/* Reviews Section */}
+                        <div className={`pt-4 border-t ${isDark ? "border-white/5" : "border-slate-200"} space-y-4`}>
+                            <div className="flex items-center justify-between">
+                                <h4 className={`text-xs uppercase tracking-widest font-semibold ${metaLabel}`}>Stay Reviews</h4>
+                                <div className="flex items-center gap-1">
+                                    <Star size={14} className="text-amber-400 fill-amber-400" />
+                                    <span className={`text-sm font-bold ${titleColor}`}>{listing.rating}</span>
+                                    <span className={`text-xs ${locationColor}`}>({reviewsList.length} reviews)</span>
+                                </div>
+                            </div>
+
+                            {loadingReviews ? (
+                                <div className="flex items-center gap-2 text-xs py-4 text-zinc-500">
+                                    <Loader2 size={14} className="animate-spin text-[#a27cff]" />
+                                    <span>Loading stay reviews...</span>
+                                </div>
+                            ) : reviewsList.length === 0 ? (
+                                <p className={`text-xs italic py-2 ${locationColor}`}>No reviews yet for this room.</p>
+                            ) : (
+                                <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
+                                    {reviewsList.map((rev: any) => (
+                                        <div key={rev.id} className={`p-3.5 rounded-xl border space-y-1.5 ${isDark ? "bg-[#201f1f] border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDark ? "bg-[#a27cff]/20 text-[#a27cff]" : "bg-violet-100 text-violet-700"}`}>
+                                                        {rev.reviewer?.full_name?.[0] ?? "T"}
+                                                    </div>
+                                                    <span className={`text-xs font-bold ${titleColor}`}>{rev.reviewer?.full_name ?? "Verified Tenant"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                        <Star
+                                                            key={s}
+                                                            size={10}
+                                                            className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-zinc-500"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {rev.comment && <p className={`text-xs leading-relaxed ${descText}`}>"{rev.comment}"</p>}
+                                            <p className={`text-[9px] ${locationColor}`}>{new Date(rev.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         {/* Owner */}
                         <div className={`flex items-center gap-3 p-4 rounded-xl border ${metaCardBg}`}>
                             <img src={listing.ownerAvatar} alt={listing.ownerName} className="w-10 h-10 rounded-xl object-cover" />
                             <div className="flex-1">
-                                <p className={`text-sm font-bold ${titleColor}`}>{listing.ownerName}</p>
+                                <div className="flex items-center gap-1.5">
+                                    <p className={`text-sm font-bold ${titleColor}`}>{listing.ownerName}</p>
+                                    {listing.ownerVerificationStatus === "verified" && (
+                                        <BadgeCheck className="text-emerald-400 fill-emerald-950 shrink-0" size={16} />
+                                    )}
+                                </div>
                                 <p className={`text-xs ${locationColor}`}>Property Owner · Posted {listing.postedDaysAgo === 0 ? "today" : `${listing.postedDaysAgo} days ago`}</p>
                             </div>
                         </div>

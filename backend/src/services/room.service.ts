@@ -1,26 +1,36 @@
 import { prisma } from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/upload.js";
+import { getIO } from "../config/socket.js";
 
 // ─── Shared room transform to normalize field names for frontend ──────────────
+// Privacy: exposes only name + avatar for owner; exact address and phone are stripped.
 const transformRoom = (room: any) => ({
     id: room.id,
     title: room.title,
     description: room.description,
     city: room.city,
-    address: room.address ?? room.locality ?? "",
+    // Privacy: do NOT expose raw `address` (may contain exact house/street number).
+    // Expose only locality + landmark for approximate location.
     locality: room.locality,
+    landmark: room.landmark ?? null,
+    approximate_latitude: room.approximate_latitude ?? null,
+    approximate_longitude: room.approximate_longitude ?? null,
     room_type: room.room_type,
     furnished_status: room.furnished_status,
     beds: room.beds,
     baths: room.baths,
+    sqft: room.size_value,
     size_value: room.size_value,
     price: room.price ?? room.rent_amount ?? 0,
     rent_amount: room.rent_amount ?? room.price ?? 0,
     price_unit: room.price_unit ?? "month",
     security_deposit_amount: room.security_deposit_amount,
     available_for: room.available_for,
+    availability_date: room.availability_date ?? null,
     gender_preference: room.gender_preference ?? "any",
     amenities: room.amenities_list ?? [],
+    amenities_list: room.amenities_list ?? [],
+    rules_json: room.rules_json ?? null,
     status: room.status,
     is_verified: room.is_verified,
     is_featured: room.is_featured,
@@ -29,17 +39,21 @@ const transformRoom = (room: any) => ({
     rating: room.rating,
     review_count: room.review_count,
     rejection_reason: room.rejected_reason ?? null,
+    rejected_reason: room.rejected_reason ?? null,
     images: (room.images ?? []).map((img: any) => ({
         url: img.file_url,
         public_id: img.file_hash ?? "",
     })),
+    // Privacy: owner object intentionally omits mobile_number and email (SRS §6.4, §10.1)
     owner: room.owner ? {
         id: room.owner.id,
         full_name: room.owner.full_name,
-        email: room.owner.email,
+        profile_photo_url: room.owner.profile_photo_url ?? null,
+        verification_status: room.owner.verification_status,
     } : undefined,
     owner_id: room.owner_id,
     created_at: room.created_at,
+    updated_at: room.updated_at ?? null,
     inquiries: room._count?.bookings ?? 0,
 });
 
@@ -63,9 +77,35 @@ export const createRoomService = async (userId: string, data: any, files: any) =
         gender_preference = "any",
         sqft,
         size_value,
+        availability_date,
     } = data;
 
     const finalPrice = Number(price ?? rent_amount ?? 0);
+
+    // 1. Min 3 / max 10 photo enforcement (Phase 8)
+    const imageCount = files ? files.length : 0;
+    if (imageCount < 3) {
+        throw new Error("You must upload at least 3 photos for your room listing.");
+    }
+    if (imageCount > 10) {
+        throw new Error("You cannot upload more than 10 photos for your room listing.");
+    }
+
+    // 2. Duplicate listing detection (Phase 8)
+    const duplicate = await prisma.room.findFirst({
+        where: {
+            owner_id: userId,
+            city: { equals: city, mode: "insensitive" },
+            locality: { equals: locality ?? "", mode: "insensitive" },
+            address: { equals: address ?? "", mode: "insensitive" },
+            price: finalPrice,
+            room_type,
+        }
+    });
+
+    if (duplicate) {
+        throw new Error("Duplicate listing detected. You have already listed this room with the same address, room type, and price.");
+    }
 
     const room = await prisma.room.create({
         data: {
@@ -86,7 +126,7 @@ export const createRoomService = async (userId: string, data: any, files: any) =
             security_deposit_amount: Number(security_deposit_amount),
             available_for,
             gender_preference,
-            availability_date: new Date(),
+            availability_date: availability_date ? new Date(availability_date) : new Date(),
             status: "pending",
         },
         include: { images: true },
@@ -128,14 +168,29 @@ export const createRoomService = async (userId: string, data: any, files: any) =
     // Fetch full room with images
     const fullRoom = await prisma.room.findUnique({
         where: { id: room.id },
-        include: { images: true, owner: { select: { id: true, full_name: true, email: true } } },
+        include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
     });
 
     return transformRoom(fullRoom);
 };
 
 export const getRoomsService = async (query: any) => {
-    const { city, min_price, max_price, beds, sort, search, page = 1, limit = 12, status } = query;
+    const {
+        city,
+        min_price,
+        max_price,
+        beds,
+        room_type,
+        furnished_status,
+        gender_preference,
+        availability_date,
+        amenities,
+        sort,
+        search,
+        page = 1,
+        limit = 12,
+        status
+    } = query;
 
     const where: any = {};
     if (status) {
@@ -151,6 +206,23 @@ export const getRoomsService = async (query: any) => {
         if (max_price) where.price.lte = Number(max_price);
     }
     if (beds) where.beds = { gte: Number(beds) };
+    
+    // Advanced search filters (Phase 6)
+    if (room_type) where.room_type = room_type;
+    if (furnished_status) where.furnished_status = furnished_status;
+    if (gender_preference) where.gender_preference = gender_preference;
+    if (availability_date) {
+        where.availability_date = { lte: new Date(availability_date) };
+    }
+    if (amenities) {
+        const amenitiesArr = Array.isArray(amenities)
+            ? amenities
+            : String(amenities).split(",").map((a) => a.trim()).filter(Boolean);
+        if (amenitiesArr.length > 0) {
+            where.amenities_list = { hasEvery: amenitiesArr };
+        }
+    }
+
     if (search) {
         where.OR = [
             { title: { contains: String(search), mode: "insensitive" } },
@@ -162,6 +234,7 @@ export const getRoomsService = async (query: any) => {
     const orderBy: any = sort === "price_asc" ? { price: "asc" }
         : sort === "price_desc" ? { price: "desc" }
         : sort === "newest" ? { created_at: "desc" }
+        : sort === "recently_updated" ? { updated_at: "desc" }
         : { views: "desc" };
 
     const [rooms, total] = await Promise.all([
@@ -169,7 +242,8 @@ export const getRoomsService = async (query: any) => {
             where,
             include: {
                 images: { take: 2 },
-                owner: { select: { id: true, full_name: true, email: true } },
+                // Privacy: no email/phone in list view owner object
+                owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
             },
             orderBy,
             skip: (Number(page) - 1) * Number(limit),
@@ -187,14 +261,27 @@ export const getRoomByIdService = async (id: string) => {
         include: {
             images: true,
             amenities: { include: { amenity: true } },
-            owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true, mobile_number: true } },
+            // Privacy: intentionally omit mobile_number and email (SRS §6.4, §10.1)
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
         },
     });
 
     if (!room) throw new Error("Room not found");
 
     // Increment view count
-    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } }).catch(() => {});
+    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
+        .then(async (updatedRoom) => {
+            try {
+                const io = getIO();
+                io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
+                    roomId: updatedRoom.id,
+                    views: updatedRoom.views
+                });
+            } catch (err) {
+                // socket not initialized yet or other issues
+            }
+        })
+        .catch(() => {});
 
     return transformRoom(room);
 };
@@ -218,6 +305,9 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
     if (updateData.security_deposit_amount !== undefined) {
         updateData.security_deposit_amount = Number(updateData.security_deposit_amount);
     }
+    if (updateData.availability_date !== undefined) {
+        updateData.availability_date = new Date(updateData.availability_date);
+    }
 
     const finalAmenities = amenities ?? data["amenities[]"] ?? data["amenities"];
 
@@ -228,7 +318,7 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
             ...(finalPrice !== undefined && { price: Number(finalPrice), rent_amount: Number(finalPrice) }),
             ...(finalAmenities && { amenities_list: Array.isArray(finalAmenities) ? finalAmenities : [finalAmenities] }),
         },
-        include: { images: true, owner: { select: { id: true, full_name: true, email: true } } },
+        include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
     });
 
     return transformRoom(updated);
@@ -260,7 +350,7 @@ export const getSavedRoomsService = async (userId: string) => {
             room: {
                 include: {
                     images: { take: 1 },
-                    owner: { select: { id: true, full_name: true, email: true } },
+                    owner: { select: { id: true, full_name: true, email: true, profile_photo_url: true, verification_status: true } },
                 },
             },
         },
@@ -290,7 +380,7 @@ export const submitRoomService = async (userId: string, roomId: string) => {
     const updated = await prisma.room.update({
         where: { id: roomId },
         data: { status: "pending", rejected_reason: null },
-        include: { images: true, owner: { select: { id: true, full_name: true, email: true } } },
+        include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
     });
 
     return transformRoom(updated);

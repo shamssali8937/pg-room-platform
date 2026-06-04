@@ -25,4 +25,12 @@ router.get("/audit-actions", ctrl.getAuditActions);
 router.get("/inquiries", ctrl.getInquiries);
 router.patch("/inquiries/:id/status", ctrl.updateInquiryStatus);
 
+// Review Moderation Routes
+router.get("/reviews", ctrl.getReviews);
+router.patch("/reviews/:id", ctrl.moderateReview);
+router.delete("/reviews/:id", ctrl.deleteReview);
+
+// Chat Moderation Routes
+router.get("/chat/conversations/:id/messages", ctrl.getReportedConversationMessages);
+
 export default router;

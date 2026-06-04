@@ -38,6 +38,7 @@ export interface TenantListing {
     ownerName: string;
     ownerAvatar: string;
     ownerId?: string;
+    ownerVerificationStatus?: string;
     description: string;
     amenities: string[];
     locality?: string;

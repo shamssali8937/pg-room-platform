@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService, uploadDocumentService, getMyDocumentsService, saveCardService } from "../services/user.service.js";
+import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService, uploadDocumentService, getMyDocumentsService, saveCardService, getContactedOwnersService } from "../services/user.service.js";
 
 export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -64,6 +64,15 @@ export const getMyDocuments = async (req: Request, res: Response, next: NextFunc
 export const saveCard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const data = await saveCardService(req.user!.id, req.body);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getContactedOwners = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await getContactedOwnersService(req.user!.id);
         res.json({ success: true, data });
     } catch (error) {
         next(error);

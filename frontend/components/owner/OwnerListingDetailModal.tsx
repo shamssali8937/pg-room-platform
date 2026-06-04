@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, MapPin, Users, BedDouble, Shield, ShieldCheck, ShieldAlert,
     Clock, ChevronLeft, ChevronRight,
     Wifi, Wind, Car, Utensils, Waves, Dumbbell, Tv, Zap, Video, BookOpen, Coffee, Sparkles,
-    Edit, Trash2
+    Edit, Trash2, Star, Loader2
 } from "lucide-react";
 import { type OwnerListing } from "./mockData";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
+import api from "@/lib/api";
+
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; dot: string }> = {
     "Pending Review": { label: "Pending Review", bg: "bg-amber-500/15", text: "text-amber-400", border: "border-amber-500/30", dot: "bg-amber-400" },
-    "Live": { label: "Live & Active", bg: "bg-[#ba9eff]/15", text: "text-[#ba9eff]", border: "border-[#ba9eff]/30", dot: "bg-[#ae8dff]" }
+    "Live": { label: "Live & Active", bg: "bg-emerald-500/15", text: "text-emerald-400", border: "border-emerald-500/30", dot: "bg-emerald-400" },
+    "Rejected": { label: "Rejected", bg: "bg-red-500/15", text: "text-red-400", border: "border-red-500/30", dot: "bg-red-400" },
+    "Suspended": { label: "Suspended", bg: "bg-rose-500/15", text: "text-rose-400", border: "border-rose-500/30", dot: "bg-rose-400" }
 };
 
 const amenityIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -38,8 +42,30 @@ interface OwnerListingDetailModalProps {
 export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDelete }: OwnerListingDetailModalProps) {
     const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
     const { isDark } = useOwnerTheme();
+    const [reviewsList, setReviewsList] = useState<any[]>([]);
+    const [loadingReviews, setLoadingReviews] = useState(false);
+
+    useEffect(() => {
+        if (listing?.id) {
+            const fetchReviews = async () => {
+                try {
+                    setLoadingReviews(true);
+                    const { data } = await api.get(`/rooms/${listing.id}/reviews`);
+                    if (data?.success && Array.isArray(data?.data)) {
+                        setReviewsList(data.data);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch room reviews for owner:", err);
+                } finally {
+                    setLoadingReviews(false);
+                }
+            };
+            fetchReviews();
+        }
+    }, [listing?.id]);
 
     if (!listing) return null;
+
 
     const status = statusConfig[listing.status] || statusConfig["Pending Review"];
     const gallery = listing.gallery || [listing.imageUrl];
@@ -117,6 +143,23 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                                 <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />{status.label}
                             </span>
                         </div>
+
+                        {listing.status === "Suspended" && listing.rejectionReason && (
+                            <div className="bg-rose-500/10 border border-rose-500/20 p-4 rounded-2xl">
+                                <p className="text-rose-400 text-sm font-semibold flex items-start gap-2">
+                                    <span className="font-bold whitespace-nowrap">Suspension Reason:</span>
+                                    <span>{listing.rejectionReason}</span>
+                                </p>
+                            </div>
+                        )}
+                        {listing.status === "Rejected" && listing.rejectionReason && (
+                            <div className="bg-red-500/10 border border-red-500/20 p-4 rounded-2xl">
+                                <p className="text-red-400 text-sm font-semibold flex items-start gap-2">
+                                    <span className="font-bold whitespace-nowrap">Rejection Reason:</span>
+                                    <span>{listing.rejectionReason}</span>
+                                </p>
+                            </div>
+                        )}
 
                         {/* Price + Meta Grid */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -211,6 +254,52 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                                 </div>
                             </div>
                         )}
+
+                        {/* Reviews Section */}
+                        <div className={`pt-4 border-t ${isDark ? "border-white/5" : "border-slate-200"} space-y-4`}>
+                            <div className="flex items-center justify-between">
+                                <h4 className={`text-xs uppercase tracking-widest font-semibold ${descLabel}`}>Stay Reviews</h4>
+                                <div className="flex items-center gap-1">
+                                    <Star size={14} className="text-amber-400 fill-amber-400" />
+                                    <span className={`text-xs ${locationColor}`}>({reviewsList.length} reviews)</span>
+                                </div>
+                            </div>
+
+                            {loadingReviews ? (
+                                <div className="flex items-center gap-2 text-xs py-4 text-zinc-500">
+                                    <Loader2 size={14} className="animate-spin text-[#ba9eff]" />
+                                    <span>Loading stay reviews...</span>
+                                </div>
+                            ) : reviewsList.length === 0 ? (
+                                <p className={`text-xs italic py-2 ${locationColor}`}>No reviews yet for this property.</p>
+                            ) : (
+                                <div className="space-y-3.5 max-h-60 overflow-y-auto pr-1">
+                                    {reviewsList.map((rev: any) => (
+                                        <div key={rev.id} className={`p-3.5 rounded-xl border space-y-1.5 ${isDark ? "bg-[#201f1f] border-white/[0.04]" : "bg-slate-50 border-slate-200"}`}>
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${isDark ? "bg-[#ba9eff]/20 text-[#ba9eff]" : "bg-violet-100 text-violet-700"}`}>
+                                                        {rev.reviewer?.full_name?.[0] ?? "T"}
+                                                    </div>
+                                                    <span className={`text-xs font-bold ${titleColor}`}>{rev.reviewer?.full_name ?? "Verified Tenant"}</span>
+                                                </div>
+                                                <div className="flex items-center gap-0.5">
+                                                    {[1, 2, 3, 4, 5].map((s) => (
+                                                        <Star
+                                                            key={s}
+                                                            size={10}
+                                                            className={s <= rev.rating ? "fill-amber-400 text-amber-400" : "text-zinc-500"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {rev.comment && <p className={`text-xs leading-relaxed ${descText}`}>"{rev.comment}"</p>}
+                                            <p className={`text-[9px] ${locationColor}`}>{new Date(rev.created_at).toLocaleDateString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Documents */}
                         {listing.documents && listing.documents.length > 0 && (
