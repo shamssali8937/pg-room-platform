@@ -1,4 +1,5 @@
 import { prisma } from "../config/prisma.js";
+import { invalidateRoomsCache } from "./room.service.js";
 
 // Phase 3: Notification helper — mirrors pattern from booking.service.ts
 const createNotification = async (
@@ -36,21 +37,31 @@ export const getPendingListingsService = async () => {
         },
         orderBy: { created_at: "asc" }
     });
-    return Promise.all(rooms.map(async (r) => {
-        const lastSuspension = await prisma.adminAction.findFirst({
+
+    // Bulk-fetch all suspension actions in ONE query instead of N queries
+    const roomIds = rooms.map(r => r.id);
+    const suspensions = roomIds.length > 0
+        ? await prisma.adminAction.findMany({
             where: {
                 target_type: "room",
-                target_id: r.id,
+                target_id: { in: roomIds },
                 action_type: "SUSPEND_LISTING"
             },
             orderBy: { created_at: "desc" }
-        });
-        return {
-            ...r,
-            images: normalizeImages(r.images),
-            was_suspended: !!lastSuspension,
-            last_suspension_reason: lastSuspension?.notes ?? null
-        };
+        })
+        : [];
+
+    // Build Map for O(1) lookup (first entry per room = most recent suspension)
+    const suspensionMap = new Map<string, typeof suspensions[number]>();
+    for (const s of suspensions) {
+        if (!suspensionMap.has(s.target_id)) suspensionMap.set(s.target_id, s);
+    }
+
+    return rooms.map(r => ({
+        ...r,
+        images: normalizeImages(r.images),
+        was_suspended: suspensionMap.has(r.id),
+        last_suspension_reason: suspensionMap.get(r.id)?.notes ?? null
     }));
 };
 
@@ -69,21 +80,31 @@ export const getAllListingsService = async (status?: string) => {
         },
         orderBy: { created_at: "desc" }
     });
-    return Promise.all(rooms.map(async (r) => {
-        const lastSuspension = await prisma.adminAction.findFirst({
+
+    // Bulk-fetch all suspension actions in ONE query instead of N queries
+    const roomIds = rooms.map(r => r.id);
+    const suspensions = roomIds.length > 0
+        ? await prisma.adminAction.findMany({
             where: {
                 target_type: "room",
-                target_id: r.id,
+                target_id: { in: roomIds },
                 action_type: "SUSPEND_LISTING"
             },
             orderBy: { created_at: "desc" }
-        });
-        return {
-            ...r,
-            images: normalizeImages(r.images),
-            was_suspended: !!lastSuspension,
-            last_suspension_reason: lastSuspension?.notes ?? null
-        };
+        })
+        : [];
+
+    // Build Map for O(1) lookup (first entry per room = most recent suspension)
+    const suspensionMap = new Map<string, typeof suspensions[number]>();
+    for (const s of suspensions) {
+        if (!suspensionMap.has(s.target_id)) suspensionMap.set(s.target_id, s);
+    }
+
+    return rooms.map(r => ({
+        ...r,
+        images: normalizeImages(r.images),
+        was_suspended: suspensionMap.has(r.id),
+        last_suspension_reason: suspensionMap.get(r.id)?.notes ?? null
     }));
 };
 
@@ -206,6 +227,7 @@ export const moderateListingService = async (adminId: string, roomId: string, st
         await createNotification(room.owner.id, notif.type, notif.title, notif.body, `/owner/listings`);
     }
 
+    invalidateRoomsCache(); // admin changed listing status — bust the public feed cache
     return room;
 };
 

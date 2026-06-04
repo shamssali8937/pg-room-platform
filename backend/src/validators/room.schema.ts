@@ -3,22 +3,39 @@
  */
 import { z } from "zod";
 
+const coerceNumber = (fallback: number, schema: z.ZodNumber, minVal?: number) =>
+    z.preprocess((val) => {
+        if (val === "" || val === null || val === undefined) return fallback;
+        let num = Number(val);
+        if (isNaN(num)) return fallback;
+        if (minVal !== undefined && num < minVal) return minVal;
+        return num;
+    }, schema);
+
 export const createRoomSchema = z.object({
     body: z.object({
         title: z.string().min(5, "Title must be at least 5 characters").max(150),
         description: z.string().min(20, "Description must be at least 20 characters").max(2000).optional(),
         city: z.string().min(2, "City is required"),
         locality: z.string().min(2, "Locality is required").optional(),
+        address: z.string().optional(),
+        landmark: z.string().optional(),
         room_type: z.string().min(1, "Room type is required"),
         furnished_status: z.enum(["furnished", "semi-furnished", "unfurnished"]).optional(),
-        beds: z.coerce.number().int().min(1).max(20).optional(),
-        baths: z.coerce.number().int().min(1).max(10).optional(),
-        price: z.coerce.number().min(1000, "Rent must be at least 1000").optional(),
-        rent_amount: z.coerce.number().min(1000).optional(),
-        security_deposit_amount: z.coerce.number().min(0).optional(),
-        available_for: z.enum(["male", "female", "family", "any"]).optional(),
+        beds: coerceNumber(1, z.number().int().min(1).max(20)).optional(),
+        baths: coerceNumber(1, z.number().int().min(1).max(10)).optional(),
+        price: coerceNumber(1000, z.number().min(1000, "Rent must be at least 1000")).optional(),
+        rent_amount: coerceNumber(1000, z.number().min(1000)).optional(),
+        price_unit: z.string().optional(),
+        security_deposit_amount: coerceNumber(0, z.number().min(0), 0).optional(),
+        available_for: z.enum(["students", "professionals", "families", "any"]).optional(),
         gender_preference: z.enum(["male", "female", "any"]).optional(),
-    }),
+        sqft: coerceNumber(0, z.number().min(0), 0).optional(),
+        size_value: coerceNumber(0, z.number().min(0), 0).optional(),
+        availability_date: z.string().optional(),
+        amenities: z.union([z.string(), z.array(z.string())]).optional(),
+        "amenities[]": z.union([z.string(), z.array(z.string())]).optional(),
+    }).passthrough(),
 });
 
 export const updateRoomSchema = z.object({
@@ -27,16 +44,24 @@ export const updateRoomSchema = z.object({
         description: z.string().min(20).max(2000).optional(),
         city: z.string().min(2).optional(),
         locality: z.string().optional(),
+        address: z.string().optional(),
+        landmark: z.string().optional(),
         room_type: z.string().optional(),
         furnished_status: z.enum(["furnished", "semi-furnished", "unfurnished"]).optional(),
-        beds: z.coerce.number().int().min(1).max(20).optional(),
-        baths: z.coerce.number().int().min(1).max(10).optional(),
-        price: z.coerce.number().min(0).optional(),
-        rent_amount: z.coerce.number().min(0).optional(),
-        security_deposit_amount: z.coerce.number().min(0).optional(),
-        available_for: z.enum(["male", "female", "family", "any"]).optional(),
+        beds: coerceNumber(1, z.number().int().min(1).max(20)).optional(),
+        baths: coerceNumber(1, z.number().int().min(1).max(10)).optional(),
+        price: coerceNumber(0, z.number().min(0), 0).optional(),
+        rent_amount: coerceNumber(0, z.number().min(0), 0).optional(),
+        price_unit: z.string().optional(),
+        security_deposit_amount: coerceNumber(0, z.number().min(0), 0).optional(),
+        available_for: z.enum(["students", "professionals", "families", "any"]).optional(),
         gender_preference: z.enum(["male", "female", "any"]).optional(),
-    }),
+        sqft: coerceNumber(0, z.number().min(0), 0).optional(),
+        size_value: coerceNumber(0, z.number().min(0), 0).optional(),
+        availability_date: z.string().optional(),
+        amenities: z.union([z.string(), z.array(z.string())]).optional(),
+        "amenities[]": z.union([z.string(), z.array(z.string())]).optional(),
+    }).passthrough(),
 });
 
 export const reportRoomSchema = z.object({

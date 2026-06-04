@@ -18,6 +18,7 @@ const transformRoom = (room: any) => ({
     price_unit: room.price_unit ?? "month",
     security_deposit_amount: room.security_deposit_amount,
     available_for: room.available_for,
+    availability_date: room.availability_date ?? null,
     gender_preference: room.gender_preference ?? "any",
     status: room.status,
     is_verified: room.is_verified,
@@ -44,7 +45,7 @@ export const getOwnerRoomsService = async (ownerId: string) => {
     const rooms = await prisma.room.findMany({
         where: { owner_id: ownerId },
         include: {
-            images: { take: 2 },
+            images: true,
             owner: { select: { id: true, full_name: true, email: true } },
             _count: { select: { bookings: true } },
         },

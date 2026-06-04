@@ -57,7 +57,8 @@ function roomToTenantListing(room: Room): any {
         securityDeposit: room.security_deposit_amount ?? 0,
         availableFor: room.available_for ?? "any",
         genderPreference: room.gender_preference ?? "any",
-        status: room.status
+        status: room.status,
+        availabilityDate: room.availability_date ? new Date(room.availability_date).toISOString().split('T')[0] : ""
     };
 }
 
@@ -196,6 +197,12 @@ export default function TenantBrowse() {
 
     const handleViewRoom = (room: Room) => {
         setSelectedRoom(room);
+        dispatch(fetchRoomById(room.id)).unwrap().then((fullRoom) => {
+            if (fullRoom) {
+                setSelectedRoom((prev) => (prev && prev.id === room.id ? fullRoom : prev));
+            }
+        }).catch(e => console.error("Failed to fetch room details for view increment:", e));
+
         try {
             const viewedRaw = localStorage.getItem("tenant_recently_viewed_rooms");
             let viewedList: any[] = [];

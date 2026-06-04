@@ -48,6 +48,7 @@ export interface TenantListing {
     availableFor?: string;
     genderPreference?: string;
     gallery?: string[];
+    availabilityDate?: string;
 }
 
 export interface TenantMessage {

@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { logger } from "../config/logger.js";
 
 const createLimiter = (
@@ -73,9 +73,11 @@ export const chatMessageRateLimiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     keyGenerator: (req) => {
-        // Use authenticated user ID if available, else fall back to IP
+        // Use authenticated user ID if available — immune to IP spoofing on shared IPs.
+        // Fall back to ipKeyGenerator(req.ip) to normalize IPv6 addresses correctly
+        // and satisfy express-rate-limit v8's ERR_ERL_KEY_GEN_IPV6 validation.
         const userId = (req as any).user?.id;
-        return userId ?? req.ip ?? "anonymous";
+        return userId ?? ipKeyGenerator(req.ip ?? "");
     },
     handler: (req, res) => {
         logger.warn("Chat rate limit exceeded [CHAT_MESSAGE]", {

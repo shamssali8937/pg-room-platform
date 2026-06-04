@@ -107,9 +107,13 @@ export const getAdminDashboardStats = async () => {
 };
 
 export const getTenantDashboardStats = async (userId: string) => {
-    const [savedCount, bookingCount] = await Promise.all([
+    const [savedCount, bookingCount, pointsResult] = await Promise.all([
         prisma.savedRoom.count({ where: { user_id: userId } }),
         prisma.booking.count({ where: { tenant_id: userId } }),
+        prisma.pointsTransaction.aggregate({
+            where: { owner_id: userId },
+            _sum: { points: true },
+        }),
     ]);
 
     const activeBookings = await prisma.booking.findMany({
@@ -126,11 +130,19 @@ export const getTenantDashboardStats = async (userId: string) => {
         take: 3,
     });
 
+    const points = pointsResult._sum.points ?? 0;
+    let tier = "Bronze";
+    if (points >= 5000) {
+        tier = "Gold";
+    } else if (points >= 1500) {
+        tier = "Silver";
+    }
+
     return {
-        stats: {
-            savedCount,
-            bookingCount,
-        },
-        activeBookings,
+        active_booking: activeBookings.find(b => b.status === "approved" || b.status === "active") ?? null,
+        recent_bookings: activeBookings,
+        saved_count: savedCount,
+        points: points,
+        tier: tier,
     };
 };

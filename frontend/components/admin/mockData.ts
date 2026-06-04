@@ -361,6 +361,7 @@ export interface ModerationListing {
     }[];
     wasSuspended?: boolean;
     lastSuspensionReason?: string;
+    availabilityDate?: string;
 }
 
 export const rejectionReasons = [
