@@ -35,6 +35,7 @@ export interface AdminRoom {
     reviews?: any;
     was_suspended?: boolean;
     last_suspension_reason?: string | null;
+    availability_date?: string | null;
 }
 
 export interface UserDocument {

@@ -29,6 +29,14 @@ const amenityIcons: Record<string, React.ComponentType<{ size?: number; classNam
     Garden: Home,
 };
 
+const formatAvailabilityDate = (dateStr?: string) => {
+    if (!dateStr) return "Immediate";
+    if (dateStr.toLowerCase() === "immediate") return "Immediate";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
 interface Props {
     listing: TenantListing | null;
     onClose: () => void;
@@ -236,6 +244,10 @@ export default function TenantListingDetailModal({
                                 <div>
                                     <p className={metaLabel}>Baths</p>
                                     <p className={`font-bold mt-1 ${metaVal}`}>{listing.baths || 1} baths</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Availability Date</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{formatAvailabilityDate(listing.availabilityDate)}</p>
                                 </div>
                             </div>
 

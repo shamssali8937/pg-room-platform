@@ -96,7 +96,12 @@ app.use("/health", healthRoutes);
 app.use("/api", globalRateLimiter);
 
 // ─── Global CSRF Protection ────────────────────────────────
-app.use("/api", csrfSynchronisedProtection);
+// /api/auth/refresh is exempt: it's protected by the httpOnly refresh-token cookie,
+// and adding CSRF creates a deadlock (expired access token → can't refresh → can't get CSRF → loop).
+app.use("/api", (req, res, next) => {
+    if (req.path === "/auth/refresh") return next();
+    return csrfSynchronisedProtection(req, res, next);
+});
 
 // ─── API Routes ───────────────────────────────────────────
 app.use("/api/auth", authRoutes);

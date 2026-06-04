@@ -1,6 +1,34 @@
 import { prisma } from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/upload.js";
 import { getIO } from "../config/socket.js";
+import { logger } from "../config/logger.js";
+
+// ─── Lightweight in-memory cache for the public rooms listing ──────────────────
+// The rooms list is the most-hit public endpoint; the same filters are often
+// requested multiple times within a short window (SSR + hydration, repeated scrolls).
+// A 30-second TTL prevents hammering Supabase (ap-northeast-1) on every hit.
+const roomsCache = new Map<string, { data: any; expiresAt: number }>();
+const ROOMS_CACHE_TTL_MS = 30_000; // 30 seconds
+
+const getRoomsCacheKey = (query: any): string =>
+    JSON.stringify({
+        city: query.city,
+        min_price: query.min_price,
+        max_price: query.max_price,
+        beds: query.beds,
+        room_type: query.room_type,
+        furnished_status: query.furnished_status,
+        gender_preference: query.gender_preference,
+        availability_date: query.availability_date,
+        amenities: query.amenities,
+        sort: query.sort,
+        search: query.search,
+        page: query.page ?? 1,
+        limit: query.limit ?? 12,
+        status: query.status,
+    });
+
+export const invalidateRoomsCache = () => roomsCache.clear();
 
 // ─── Shared room transform to normalize field names for frontend ──────────────
 // Privacy: exposes only name + avatar for owner; exact address and phone are stripped.
@@ -65,6 +93,7 @@ export const createRoomService = async (userId: string, data: any, files: any) =
         city,
         address,
         locality,
+        landmark,
         room_type,
         furnished_status = "unfurnished",
         beds,
@@ -91,7 +120,21 @@ export const createRoomService = async (userId: string, data: any, files: any) =
         throw new Error("You cannot upload more than 10 photos for your room listing.");
     }
 
-    // 2. Duplicate listing detection (Phase 8)
+    // 2. Resolve amenities early so we can write them in the initial room.create (no extra UPDATE round trip)
+    const rawAmenities = amenities ?? data["amenities[]"] ?? data["amenities"];
+    const amenityList: string[] = rawAmenities
+        ? (Array.isArray(rawAmenities) ? rawAmenities : [rawAmenities])
+        : [];
+
+    // 3. Start ALL Cloudinary uploads immediately in parallel — they'll run while the
+    //    duplicate-check DB query is in flight, overlapping ~500ms of network latency.
+    const uploadPromises = (files ?? []).map((file: any, idx: number) =>
+        uploadToCloudinary(file.buffer)
+            .then((result: any) => ({ secure_url: result.secure_url, public_id: result.public_id, idx }))
+            .catch((e) => { console.error("Image upload failed:", e); return null; })
+    );
+
+    // 4. Duplicate listing detection (runs in parallel with uploads above)
     const duplicate = await prisma.room.findFirst({
         where: {
             owner_id: userId,
@@ -100,13 +143,15 @@ export const createRoomService = async (userId: string, data: any, files: any) =
             address: { equals: address ?? "", mode: "insensitive" },
             price: finalPrice,
             room_type,
-        }
+        },
+        select: { id: true }, // only need to know if a duplicate exists
     });
 
     if (duplicate) {
         throw new Error("Duplicate listing detected. You have already listed this room with the same address, room type, and price.");
     }
 
+    // 5. Create the room — amenities written here, no separate UPDATE needed
     const room = await prisma.room.create({
         data: {
             owner_id: userId,
@@ -115,6 +160,7 @@ export const createRoomService = async (userId: string, data: any, files: any) =
             city,
             address: address ?? locality ?? "",
             locality: locality ?? address ?? "",
+            landmark: landmark ?? null,
             room_type,
             furnished_status,
             beds: Number(beds ?? 1),
@@ -128,53 +174,48 @@ export const createRoomService = async (userId: string, data: any, files: any) =
             gender_preference,
             availability_date: availability_date ? new Date(availability_date) : new Date(),
             status: "pending",
+            amenities_list: amenityList, // ← folded in, no extra UPDATE round trip
         },
-        include: { images: true },
+        include: {
+            owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
+        },
     });
 
-    // Handle image uploads
+    // 6. Await all uploads (started in step 3, should be mostly done by now)
+    //    then batch-insert all images with ONE createMany — N uploads → 1 DB round trip
+    let uploadedImages: Array<{ file_url: string; file_hash: string }> = [];
     if (files && files.length > 0) {
-        await Promise.all(
-            files.map(async (file: any, idx: number) => {
-                try {
-                    const result: any = await uploadToCloudinary(file.buffer);
-                    return prisma.roomImage.create({
-                        data: {
-                            room_id: room.id,
-                            file_url: result.secure_url,
-                            file_hash: result.public_id,
-                            sort_order: idx,
-                            moderation_status: "approved",
-                        },
-                    });
-                } catch (e) {
-                    console.error("Image upload failed:", e);
-                }
-            })
-        );
+        const results = (await Promise.all(uploadPromises))
+            .filter(Boolean)
+            .sort((a, b) => a!.idx - b!.idx);
+
+        if (results.length > 0) {
+            await prisma.roomImage.createMany({
+                data: results.map(r => ({
+                    room_id: room.id,
+                    file_url: r!.secure_url,
+                    file_hash: r!.public_id,
+                    sort_order: r!.idx,
+                    moderation_status: "approved",
+                })),
+            });
+            uploadedImages = results.map(r => ({ file_url: r!.secure_url, file_hash: r!.public_id }));
+        }
     }
 
-    // Handle amenities (either array of names or ids)
-    const rawAmenities = amenities ?? data["amenities[]"] ?? data["amenities"];
-    if (rawAmenities) {
-        const amenityList = Array.isArray(rawAmenities) ? rawAmenities : [rawAmenities];
-        // Store as flat list in amenities_list
-        await prisma.room.update({
-            where: { id: room.id },
-            data: { amenities_list: amenityList },
-        });
-    }
-
-    // Fetch full room with images
-    const fullRoom = await prisma.room.findUnique({
-        where: { id: room.id },
-        include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
-    });
-
-    return transformRoom(fullRoom);
+    // 7. Build response from in-memory data — no extra findUnique round trip needed
+    invalidateRoomsCache();
+    return transformRoom({ ...room, images: uploadedImages });
 };
 
 export const getRoomsService = async (query: any) => {
+    // ── Cache lookup ──────────────────────────────────────────────────────────
+    const cacheKey = getRoomsCacheKey(query);
+    const cached = roomsCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.data;
+    }
+
     const {
         city,
         min_price,
@@ -241,7 +282,8 @@ export const getRoomsService = async (query: any) => {
         prisma.room.findMany({
             where,
             include: {
-                images: { take: 2 },
+                // Only select file_url — the only field transformRoom uses from images
+                images: { take: 2, select: { file_url: true, file_hash: true } },
                 // Privacy: no email/phone in list view owner object
                 owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
             },
@@ -252,7 +294,12 @@ export const getRoomsService = async (query: any) => {
         prisma.room.count({ where }),
     ]);
 
-    return { rooms: rooms.map(transformRoom), total, page: Number(page), limit: Number(limit) };
+    const result = { rooms: rooms.map(transformRoom), total, page: Number(page), limit: Number(limit) };
+
+    // ── Cache store ───────────────────────────────────────────────────────────
+    roomsCache.set(cacheKey, { data: result, expiresAt: Date.now() + ROOMS_CACHE_TTL_MS });
+
+    return result;
 };
 
 export const getRoomByIdService = async (id: string) => {
@@ -281,7 +328,9 @@ export const getRoomByIdService = async (id: string) => {
                 // socket not initialized yet or other issues
             }
         })
-        .catch(() => {});
+        .catch((err) => {
+            logger.error("Failed to increment room views", { roomId: id, error: err });
+        });
 
     return transformRoom(room);
 };
@@ -321,6 +370,7 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
         include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
     });
 
+    invalidateRoomsCache(); // listing updated — bust the public feed cache
     return transformRoom(updated);
 };
 
@@ -330,6 +380,7 @@ export const deleteRoomService = async (userId: string, roomId: string) => {
     if (room.owner_id !== userId) throw new Error("Unauthorized");
 
     await prisma.room.delete({ where: { id: roomId } });
+    invalidateRoomsCache(); // listing deleted — bust the public feed cache
     return { message: "Room deleted successfully" };
 };
 
@@ -383,5 +434,6 @@ export const submitRoomService = async (userId: string, roomId: string) => {
         include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
     });
 
+    invalidateRoomsCache(); // status changed to pending — bust the public feed cache
     return transformRoom(updated);
 };

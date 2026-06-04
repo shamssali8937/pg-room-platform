@@ -99,6 +99,7 @@ function ListingsContent() {
                 reviews: r.reviews,
                 wasSuspended: (r as any).was_suspended ?? false,
                 lastSuspensionReason: (r as any).last_suspension_reason ?? undefined,
+                availabilityDate: r.availability_date ? new Date(r.availability_date).toLocaleDateString() : "Immediate",
             };
         });
     }, [reduxRooms]);

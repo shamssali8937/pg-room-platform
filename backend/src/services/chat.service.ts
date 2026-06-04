@@ -107,8 +107,26 @@ export const getConversationsService = async (userId: string, role: string, sear
         userBlocks.map(b => b.blocker_id === userId ? b.blocked_id : b.blocker_id)
     );
 
+    // Bulk-fetch unread counts for ALL conversations in ONE query instead of N queries
+    const conversationIds = conversations.map(c => c.id);
+    const unreadGroups = conversationIds.length > 0
+        ? await prisma.message.groupBy({
+            by: ["conversation_id"],
+            where: {
+                conversation_id: { in: conversationIds },
+                sender_id: { not: userId },
+                read_at: null
+            },
+            _count: { id: true }
+        })
+        : [];
+
+    const unreadMap = new Map<string, number>(
+        unreadGroups.map(g => [g.conversation_id, g._count.id])
+    );
+
     // Map and enrich details (pinned, archived, online status, unread count)
-    const enrichedConversations = await Promise.all(conversations.map(async (conv) => {
+    const enrichedConversations = conversations.map((conv) => {
         const isTenant = conv.tenant_id === userId;
         const otherParticipant = isTenant ? conv.owner : conv.tenant;
 
@@ -117,14 +135,8 @@ export const getConversationsService = async (userId: string, role: string, sear
         const isArchived = isTenant ? conv.is_archived_tenant : conv.is_archived_owner;
         const isMuted = isTenant ? conv.is_muted_tenant : conv.is_muted_owner;
 
-        // Unread counts in this conversation
-        const unreadCount = await prisma.message.count({
-            where: {
-                conversation_id: conv.id,
-                sender_id: { not: userId },
-                read_at: null
-            }
-        });
+        // Unread count from the pre-fetched Map — no extra DB query
+        const unreadCount = unreadMap.get(conv.id) ?? 0;
 
         // Last active time
         const lastMsg = conv.messages[0] ?? null;
@@ -179,7 +191,7 @@ export const getConversationsService = async (userId: string, role: string, sear
             created_at: conv.created_at,
             updated_at: conv.updated_at
         };
-    }));
+    });
 
     // Sort by pinned first, then by last active time descending
     return enrichedConversations.sort((a, b) => {

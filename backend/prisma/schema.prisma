@@ -133,6 +133,15 @@ model Room {
   @@index([city])
   @@index([status])
   @@index([owner_id])
+  @@index([views])           // default sort column — was causing full table scan
+  @@index([price])           // price_asc / price_desc sort
+  @@index([created_at])      // newest sort
+  @@index([is_boosted])      // boosted listing filter
+  @@index([is_featured])     // featured listing filter
+  // Compound: filter by status then sort — avoids separate filter + sort passes
+  @@index([status, views])
+  @@index([status, price])
+  @@index([status, created_at])
 }
 
 // --- 13.3 RoomImages ---
@@ -175,6 +184,8 @@ model SavedRoom {
   created_at DateTime @default(now())
 
   @@unique([user_id, room_id])
+  @@index([user_id])
+  @@index([room_id])
 }
 
 // --- 13.7 Bookings ---
@@ -196,6 +207,9 @@ model Booking {
   reviews      Review[]
 
   @@index([status])
+  @@index([tenant_id])
+  @@index([owner_id])
+  @@index([room_id])
 }
 
 // --- 13.9 Conversations ---
@@ -223,6 +237,10 @@ model Conversation {
   updated_at          DateTime  @updatedAt
   messages            Message[]
   booking_offers      BookingOffer[]
+
+  @@index([tenant_id])
+  @@index([owner_id])
+  @@index([updated_at])
 }
 
 // --- 13.8 Messages ---
@@ -254,6 +272,9 @@ model Message {
   reactions       Reaction[]
   
   @@index([conversation_id])
+  @@index([sender_id])
+  @@index([receiver_id])
+  @@index([conversation_id, read_at]) // compound for unread count query
 }
 
 // --- Blocked Users ---
@@ -371,6 +392,9 @@ model PointsTransaction {
   balance_after    Int
   expires_at       DateTime?
   created_at       DateTime @default(now())
+
+  @@index([owner_id])
+  @@index([owner_id, reason_code]) // compound for duplicate-check queries
 }
 
 // --- 13.13 Notifications ---
@@ -398,6 +422,10 @@ model AdminAction {
   target_id   String
   notes       String?
   created_at  DateTime @default(now())
+
+  @@index([target_id])
+  @@index([action_type, target_type]) // compound for suspension lookup
+  @@index([admin_id])
 }
 
 // --- 13.15 RefreshTokens ---

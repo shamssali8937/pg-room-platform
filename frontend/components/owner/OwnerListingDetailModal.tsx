@@ -32,6 +32,14 @@ const docStatusConfig = {
     failed: { icon: ShieldAlert, text: "text-red-400", bg: "bg-red-500/10", label: "Failed" },
 };
 
+const formatAvailabilityDate = (dateStr?: string) => {
+    if (!dateStr) return "Immediate";
+    if (dateStr.toLowerCase() === "immediate") return "Immediate";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
 interface OwnerListingDetailModalProps {
     listing: OwnerListing | null;
     onClose: () => void;
@@ -203,6 +211,10 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                                 <div>
                                     <p className={metaLabel}>Baths</p>
                                     <p className={`font-bold mt-1 ${metaVal}`}>{listing.baths || 1} baths</p>
+                                </div>
+                                <div>
+                                    <p className={metaLabel}>Availability Date</p>
+                                    <p className={`font-bold mt-1 ${metaVal}`}>{formatAvailabilityDate(listing.availabilityDate)}</p>
                                 </div>
                             </div>
 
