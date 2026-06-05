@@ -462,3 +462,92 @@ export const googleAuthService = async (code: string, state: string) => {
     const { password_hash, ...safeUser } = user;
     return { accessToken, refreshToken, user: safeUser };
 };
+
+// ─── OTP-based Password Reset ─────────────────────────────────────────────────
+
+export const requestPasswordOTPService = async (email: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    // Always return success to prevent email enumeration
+    if (!user) return { message: "If this email exists, an OTP has been sent." };
+
+    const otp = generateOTP();
+    const expiry = getOTPExpiry(); // 5 minutes
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            reset_token: otp,
+            reset_token_expiry: expiry,
+        },
+    });
+
+    console.log("\n==========================================");
+    console.log("🔑 PASSWORD RESET OTP:", otp);
+    console.log("==========================================\n");
+
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; background: #0a0a0a; color: #fff; padding: 32px; border-radius: 16px; border: 1px solid #2d2d2d;">
+            <h2 style="color: #a78bfa; margin-bottom: 8px;">Password Reset OTP</h2>
+            <p style="color: #9ca3af; margin-bottom: 24px;">You requested a password reset for your PG Room account. Use the OTP below (valid for 5 minutes):</p>
+            <div style="background: #1a1a2e; border: 2px solid #7c3aed; border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+                <span style="font-size: 42px; font-weight: 900; letter-spacing: 12px; color: #a78bfa;">${otp}</span>
+            </div>
+            <p style="color: #6b7280; font-size: 13px;">If you did not request this, please ignore this email. Your password will not change.</p>
+        </div>
+    `;
+
+    try {
+        await sendEmail(email, "Your Password Reset OTP – PG Room", html);
+    } catch (err: any) {
+        console.warn("OTP email failed:", err.message || err);
+    }
+
+    return { message: "If this email exists, an OTP has been sent." };
+};
+
+export const verifyPasswordOTPService = async (email: string, otp: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new Error("Invalid OTP or email");
+
+    if (
+        user.reset_token !== otp ||
+        !user.reset_token_expiry ||
+        new Date() > user.reset_token_expiry
+    ) {
+        throw new Error("Invalid or expired OTP");
+    }
+
+    return { message: "OTP verified successfully" };
+};
+
+export const resetPasswordWithOTPService = async (
+    email: string,
+    otp: string,
+    newPassword: string
+) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new Error("Invalid OTP or email");
+
+    if (
+        user.reset_token !== otp ||
+        !user.reset_token_expiry ||
+        new Date() > user.reset_token_expiry
+    ) {
+        throw new Error("Invalid or expired OTP");
+    }
+
+    const hashedPassword = await hashPassword(newPassword);
+
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+            password_hash: hashedPassword,
+            reset_token: null,
+            reset_token_expiry: null,
+            failed_login_attempts: 0,
+            locked_until: null,
+        },
+    });
+
+    return { message: "Password reset successfully. You can now sign in." };
+};

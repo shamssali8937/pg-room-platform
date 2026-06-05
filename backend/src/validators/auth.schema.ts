@@ -46,3 +46,25 @@ export const sendPhoneOTPSchema = z.object({
         mobile_number: z.string().min(10, "Mobile number required"),
     }),
 });
+
+export const requestPasswordOTPSchema = z.object({
+    body: z.object({
+        email: z.email("Invalid email address"),
+    }),
+});
+
+export const verifyPasswordOTPSchema = z.object({
+    body: z.object({
+        email: z.email("Invalid email address"),
+        otp: z.string().length(6, "OTP must be 6 digits"),
+    }),
+});
+
+export const resetPasswordWithOTPSchema = z.object({
+    body: z.object({
+        email: z.email("Invalid email address"),
+        otp: z.string().length(6, "OTP must be 6 digits"),
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
+    }),
+});
+

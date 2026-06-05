@@ -22,6 +22,9 @@ import {
     resetPasswordSchema,
     sendPhoneOTPSchema,
     verifyPhoneOTPSchema,
+    requestPasswordOTPSchema,
+    verifyPasswordOTPSchema,
+    resetPasswordWithOTPSchema,
 } from "../validators/auth.schema.js";
 
 const router: Router = Router();
@@ -43,4 +46,9 @@ router.post("/verify-phone-otp", validate(verifyPhoneOTPSchema), verifyPhoneOTP)
 router.post("/forgot-password", authRateLimiter, validate(forgotPasswordSchema), authController.forgotPassword);
 router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), authController.resetPassword);
 
-export default router;
+// OTP-based password reset (new flow)
+router.post("/forgot-password-otp", otpRateLimiter, validate(requestPasswordOTPSchema), authController.requestPasswordOTP);
+router.post("/verify-reset-otp", validate(verifyPasswordOTPSchema), authController.verifyPasswordOTP);
+router.post("/reset-password-otp", authRateLimiter, validate(resetPasswordWithOTPSchema), authController.resetPasswordWithOTP);
+
+export default router;

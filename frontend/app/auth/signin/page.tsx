@@ -249,13 +249,12 @@ function LoginContent() {
                                 </div>
 
                                 <div className="flex justify-start">
-                                    <button
-                                        type="button"
-                                        onClick={() => { setShowForgot(true); setError(""); }}
+                                    <a
+                                        href="/auth/forgot-password"
                                         className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
                                     >
                                         Forgot Password?
-                                    </button>
+                                    </a>
                                 </div>
 
                                 <motion.button
