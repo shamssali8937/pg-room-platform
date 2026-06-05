@@ -1,22 +1,19 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import UserTable from "@/components/admin/UserTable";
 import { Filter, Download } from "lucide-react";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppSelector } from "@/store/hooks";
 
-function UsersContent() {
+export default function UsersPage() {
     const { isDark } = useAdminTheme();
     const { users, isLoading } = useAppSelector((state) => state.admin);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("All");
     const [statusFilter, setStatusFilter] = useState<string>("Any");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Compute real stats from Redux data
     const total = users.length;
@@ -98,16 +95,7 @@ function UsersContent() {
         : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm";
 
     return (
-        <div className={`${pageBg} min-h-screen transition-colors duration-300`}>
-            <Sidebar activeId="users" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Search accounts, UID, or names..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
-            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+        <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header Section */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
@@ -150,14 +138,5 @@ function UsersContent() {
                     setStatusFilter={setStatusFilter}
                 />
             </main>
-        </div>
-    );
-}
-
-export default function UsersPage() {
-    return (
-        <AdminThemeProvider>
-            <UsersContent />
-        </AdminThemeProvider>
     );
 }

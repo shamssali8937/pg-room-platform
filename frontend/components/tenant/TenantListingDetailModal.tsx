@@ -110,7 +110,7 @@ export default function TenantListingDetailModal({
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-start justify-center overflow-y-auto py-6 px-4"
+                className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-center justify-center p-4 sm:p-6"
                 onClick={onClose}
             >
                 <motion.div
@@ -119,8 +119,9 @@ export default function TenantListingDetailModal({
                     exit={{ scale: 0.92, y: 30, opacity: 0 }}
                     transition={{ type: "spring", damping: 28, stiffness: 300 }}
                     onClick={(e) => e.stopPropagation()}
-                    className={`w-full max-w-3xl border rounded-3xl overflow-hidden shadow-2xl shadow-black/60 my-auto ${modalBg}`}
+                    className={`w-full max-w-3xl border rounded-3xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col max-h-[90dvh] ${modalBg}`}
                 >
+                    <div className="overflow-y-auto flex-1">
                     {/* Gallery */}
                     <div className={`relative h-56 sm:h-72 md:h-80 overflow-hidden ${isDark ? "bg-zinc-800" : "bg-slate-200"}`}>
                         <AnimatePresence mode="wait">
@@ -384,6 +385,7 @@ export default function TenantListingDetailModal({
                                 <X size={15} /> Close
                             </button>
                         </div>
+                    </div>
                     </div>
                 </motion.div>
             </motion.div>

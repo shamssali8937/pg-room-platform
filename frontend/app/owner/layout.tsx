@@ -7,6 +7,7 @@ import OwnerTopbar from "@/components/owner/OwnerTopbar";
 import { OwnerThemeProvider, useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { Home, MessageSquare, Wallet, Settings, Loader2 } from "lucide-react";
+import { useAppSelector } from "@/store/hooks";
 
 function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -14,6 +15,7 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, isLoading, isAuthenticated } = useAuth();
+    const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
 
     // ── Auth Guard ────────────────────────────────────────────────────────
     useEffect(() => {
@@ -82,22 +84,24 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Floating Dock (Navigation Fallback for Small Screens) */}
-            <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-4 rounded-full border z-[45] flex items-center gap-8 shadow-2xl backdrop-blur-[20px] transition-colors ${
-                isDark ? 'bg-[#262626]/60 border-white/10' : 'bg-white/80 border-slate-200 shadow-[0_10px_40px_-10px_rgba(138,92,246,0.15)]'
-            }`}>
-                <button onClick={() => router.push('/owner/dashboard')}>
-                    <Home size={24} className={activeId === 'dashboard' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
-                </button>
-                <button onClick={() => router.push('/owner/inquiries')}>
-                    <MessageSquare size={24} className={activeId === 'inquiries' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
-                </button>
-                <button onClick={() => router.push('/owner/wallet')}>
-                    <Wallet size={24} className={activeId === 'wallet' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
-                </button>
-                <button onClick={() => router.push('/owner/settings')}>
-                    <Settings size={24} className={activeId === 'settings' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
-                </button>
-            </div>
+            {!(pathname?.includes("/inquiries") && activeConversationId) && (
+                <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-4 rounded-full border z-[45] flex items-center gap-8 shadow-2xl backdrop-blur-[20px] transition-colors ${
+                    isDark ? 'bg-[#262626]/60 border-white/10' : 'bg-white/80 border-slate-200 shadow-[0_10px_40px_-10px_rgba(138,92,246,0.15)]'
+                }`}>
+                    <button onClick={() => router.push('/owner/dashboard')}>
+                        <Home size={24} className={activeId === 'dashboard' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
+                    </button>
+                    <button onClick={() => router.push('/owner/inquiries')}>
+                        <MessageSquare size={24} className={activeId === 'inquiries' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
+                    </button>
+                    <button onClick={() => router.push('/owner/wallet')}>
+                        <Wallet size={24} className={activeId === 'wallet' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
+                    </button>
+                    <button onClick={() => router.push('/owner/settings')}>
+                        <Settings size={24} className={activeId === 'settings' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

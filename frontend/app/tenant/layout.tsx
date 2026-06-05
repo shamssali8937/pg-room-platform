@@ -7,6 +7,7 @@ import TenantTopbar from "@/components/tenant/TenantTopbar";
 import { TenantThemeProvider, useTenantTheme } from "@/context/TenantThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { LayoutDashboard, Search, CalendarCheck, MessageSquare, ShieldCheck, Loader2 } from "lucide-react";
+import { useAppSelector } from "@/store/hooks";
 
 function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     const { user, isLoading, isAuthenticated } = useAuth();
@@ -14,6 +15,7 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     const { isDark } = useTenantTheme();
     const pathname = usePathname();
     const router = useRouter();
+    const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
 
     useEffect(() => {
         if (!isLoading && (!isAuthenticated || (user?.role !== "tenant" && user?.role !== "admin"))) {
@@ -89,14 +91,16 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
             </div>
 
             {/* Floating Dock (Mobile) */}
-            <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3.5 rounded-full border z-[45] flex items-center gap-6 shadow-2xl backdrop-blur-[20px] transition-colors ${isDark ? "bg-[#262626]/60 border-white/10" : "bg-white/80 border-slate-200 shadow-[0_10px_40px_-10px_rgba(138,92,246,0.15)]"
-                }`}>
-                {dockItems.map(({ id, icon: Icon, href }) => (
-                    <button key={id} onClick={() => router.push(href)}>
-                        <Icon size={22} className={activeId === id ? "text-[#a27cff]" : isDark ? "text-zinc-400" : "text-slate-400"} />
-                    </button>
-                ))}
-            </div>
+            {!(pathname?.includes("/inbox") && activeConversationId) && (
+                <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3.5 rounded-full border z-[45] flex items-center gap-6 shadow-2xl backdrop-blur-[20px] transition-colors ${isDark ? "bg-[#262626]/60 border-white/10" : "bg-white/80 border-slate-200 shadow-[0_10px_40px_-10px_rgba(138,92,246,0.15)]"
+                    }`}>
+                    {dockItems.map(({ id, icon: Icon, href }) => (
+                        <button key={id} onClick={() => router.push(href)}>
+                            <Icon size={22} className={activeId === id ? "text-[#a27cff]" : isDark ? "text-zinc-400" : "text-slate-400"} />
+                        </button>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }

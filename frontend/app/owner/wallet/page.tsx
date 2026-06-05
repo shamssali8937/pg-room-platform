@@ -173,7 +173,7 @@ export default function OwnerWalletPage() {
     const totalSpent = Math.abs(pointTransactions.filter((t) => t.type === "SPENT").reduce((a, t) => a + t.amount, 0));
 
     return (
-        <div className="max-w-[1400px] mx-auto space-y-12 relative pb-24 lg:pb-10 pl-14 xl:pl-0">
+        <div className="max-w-[1400px] mx-auto space-y-12 relative pb-24 lg:pb-10">
 
             {/* Balance Hero */}
             <section className="relative">

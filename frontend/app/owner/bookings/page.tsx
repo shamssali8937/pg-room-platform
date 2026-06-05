@@ -123,7 +123,7 @@ export default function OwnerBookingsPage() {
     const inputBg = isDark ? "bg-[#1c1c1c] text-white" : "bg-slate-100 text-slate-900";
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pl-14 xl:pl-0">
+        <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>

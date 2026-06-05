@@ -209,7 +209,7 @@ export default function TenantIdentity() {
     return (
         <div className="max-w-[1000px] mx-auto space-y-6 pb-24 lg:pb-4">
             {/* Header */}
-            <header className="pl-14 xl:pl-0">
+            <header>
                 <p className="text-[#a27cff] font-bold tracking-[0.25em] text-[10px] uppercase mb-1.5">Account Security</p>
                 <h2 className={`text-2xl md:text-3xl font-headline font-extrabold tracking-tight ${textPrimary}`}>Identity Verification</h2>
                 <p className={`text-sm mt-1 ${textVariant}`}>Complete verification to access all platform features and build trust with landlords.</p>

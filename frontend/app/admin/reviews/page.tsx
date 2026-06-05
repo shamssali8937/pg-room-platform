@@ -19,10 +19,8 @@ import {
     Check,
     AlertOctagon
 } from "lucide-react";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import api from "@/lib/api";
 
 interface Review {
@@ -40,12 +38,11 @@ interface Review {
     room: { id: string; title: string };
 }
 
-function ReviewsContent() {
+export default function ReviewsPage() {
     const { isDark } = useAdminTheme();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterRating, setFilterRating] = useState<string>("all");
@@ -144,19 +141,7 @@ function ReviewsContent() {
     }, [reviews]);
 
     return (
-        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
-            <Sidebar activeId="reviews" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery={searchQuery}
-                onSearchChange={(q) => {
-                    setSearchQuery(q);
-                    setCurrentPage(1);
-                }}
-                searchPlaceholder="Search reviews, rooms, reviewers..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
-            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+        <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
@@ -538,7 +523,6 @@ function ReviewsContent() {
                         )}
                     </div>
                 </div>
-            </main>
 
             {/* Toast */}
             <AnimatePresence>
@@ -559,14 +543,6 @@ function ReviewsContent() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
-    );
-}
-
-export default function ReviewsPage() {
-    return (
-        <AdminThemeProvider>
-            <ReviewsContent />
-        </AdminThemeProvider>
+        </main>
     );
 }

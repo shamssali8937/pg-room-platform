@@ -158,7 +158,7 @@ export default function OwnerListingsPage() {
         <div className="max-w-[1400px] mx-auto space-y-10 relative pb-24 lg:pb-10">
 
             {/* Header */}
-            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6 pl-14 xl:pl-0">
+            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
                 <div>
                     <p className="text-[#ba9eff] font-medium tracking-widest text-xs uppercase mb-2">Portfolio</p>
                     <h2 className={`text-3xl md:text-4xl font-headline font-extrabold tracking-tight ${textPrimary}`}>

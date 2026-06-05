@@ -1,38 +1,27 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import ListingsTable from "@/components/admin/ListingsTable";
 import ActivityPanel from "@/components/admin/ActivityPanel";
 import FloatingAction from "@/components/admin/FloatingAction";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminDashboard } from "@/store/slices/adminSlice";
 
-function DashboardContent() {
+export default function DashboardPage() {
     const { isDark } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { dashboardStats } = useAppSelector((state) => state.admin);
 
-    const [searchQuery, setSearchQuery] = useState("");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [searchQuery] = useState("");
 
     useEffect(() => {
         dispatch(fetchAdminDashboard());
     }, [dispatch]);
 
     return (
-        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
-            <Sidebar activeId="dashboard" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery={searchQuery}
-                onSearchChange={setSearchQuery}
-                searchPlaceholder="Search Listings..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
+        <>
             <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12">
@@ -56,16 +45,7 @@ function DashboardContent() {
                     <ActivityPanel />
                 </div>
             </main>
-
             <FloatingAction />
-        </div>
-    );
-}
-
-export default function DashboardPage() {
-    return (
-        <AdminThemeProvider>
-            <DashboardContent />
-        </AdminThemeProvider>
+        </>
     );
 }
