@@ -104,7 +104,7 @@ export default function TenantPreferences() {
     return (
         <div className="max-w-[1000px] mx-auto space-y-6 pb-24 lg:pb-4">
             {/* Header */}
-            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pl-14 xl:pl-0">
+            <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <p className="text-[#a27cff] font-bold tracking-[0.25em] text-[10px] uppercase mb-1.5">Personalization</p>
                     <h2 className={`text-2xl md:text-3xl font-headline font-extrabold tracking-tight ${textPrimary}`}>Preferences</h2>

@@ -127,7 +127,7 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
                 {/* Hamburger — always visible */}
                 <button
                     onClick={onMenuToggle}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${iconBtn}`}
+                    className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${iconBtn}`}
                 >
                     <Menu size={22} />
                 </button>
@@ -157,11 +157,11 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
                     <div className="relative" ref={notifRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-95 relative ${iconBtn}`}
+                            className={`w-11 h-11 flex items-center justify-center rounded-full transition-all active:scale-95 relative ${iconBtn}`}
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
-                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-1 right-1 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] font-bold flex items-center justify-center text-white">
+                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-red-500 rounded-full text-[8px] font-bold flex items-center justify-center text-white">
                                     {unreadCount}
                                 </motion.span>
                             )}

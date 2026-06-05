@@ -9,8 +9,6 @@ import {
     Download,
     Loader2,
 } from "lucide-react";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
 import StatsCard from "@/components/admin/StatsCard";
 import ListingModerationCard from "@/components/admin/ListingModerationCard";
 import ListingDetailModal from "@/components/admin/ListingDetailModal";
@@ -19,7 +17,7 @@ import {
     type ModerationListing,
     type ModerationStatus,
 } from "@/components/admin/mockData";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminListings, moderateListing } from "@/store/slices/adminSlice";
 
@@ -33,13 +31,12 @@ const filterTabs: { id: FilterTab; label: string }[] = [
     { id: "audit", label: "Audit" },
 ];
 
-function ListingsContent() {
+export default function ListingsPage() {
     const { isDark } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { rooms: reduxRooms, isLoading } = useAppSelector((state) => state.admin);
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<FilterTab>("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -243,18 +240,7 @@ function ListingsContent() {
     const pendingCountForTab = mappedListings.filter((l) => l.status === "pending").length;
 
     return (
-        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
-            <Sidebar activeId="listings" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery={searchQuery}
-                onSearchChange={(q) => {
-                    setSearchQuery(q);
-                    setCurrentPage(1);
-                }}
-                searchPlaceholder="Search listings, owners, or IDs..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
+        <>
             <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* ── Page Header ── */}
                 <section className="mb-8 lg:mb-12 flex flex-col lg:flex-row lg:justify-between lg:items-end gap-6">
@@ -528,14 +514,6 @@ function ListingsContent() {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
-    );
-}
-
-export default function ListingsPage() {
-    return (
-        <AdminThemeProvider>
-            <ListingsContent />
-        </AdminThemeProvider>
+        </>
     );
 }

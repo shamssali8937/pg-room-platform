@@ -112,7 +112,7 @@ function LoginContent() {
             <Navbar />
 
             {/* Main Content */}
-            <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-32 pb-20">
+            <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 pt-24 sm:pt-32 pb-16 sm:pb-20">
 
                 <AnimatePresence mode="wait">
                     {/* ── FORGOT PASSWORD PANEL ── */}
@@ -249,13 +249,12 @@ function LoginContent() {
                                 </div>
 
                                 <div className="flex justify-start">
-                                    <button
-                                        type="button"
-                                        onClick={() => { setShowForgot(true); setError(""); }}
+                                    <a
+                                        href="/auth/forgot-password"
                                         className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
                                     >
                                         Forgot Password?
-                                    </button>
+                                    </a>
                                 </div>
 
                                 <motion.button

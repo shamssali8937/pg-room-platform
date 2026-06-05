@@ -23,8 +23,7 @@ import {
     MessageCircle,
     Loader2,
 } from "lucide-react";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import StatsCard from "@/components/admin/StatsCard";
 import {
     mockReportStats,
@@ -34,7 +33,6 @@ import {
     type ReportPriority,
     type ReportTab,
 } from "@/components/admin/mockData";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminReports, resolveReport } from "@/store/slices/adminSlice";
 import api from "@/lib/api";
@@ -60,13 +58,12 @@ const tabs: { id: ReportTab; label: string }[] = [
     { id: "appeals", label: "Appeals" },
 ];
 
-function ReportsContent() {
+export default function ReportsPage() {
     const { isDark } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { reports: reduxReports, isLoading } = useAppSelector((state) => state.admin);
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<ReportTab>("active");
     const [selectedReport, setSelectedReport] = useState<any | null>(null);
     const [moderatorNote, setModeratorNote] = useState("");
@@ -199,16 +196,7 @@ function ReportsContent() {
     }, [mappedReports]);
 
     return (
-        <div className={`${isDark ? "bg-[#0e0e0e] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300`}>
-            <Sidebar activeId="reports" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery={searchQuery}
-                onSearchChange={(q) => { setSearchQuery(q); setCurrentPage(1); }}
-                searchPlaceholder="Search reports, user IDs..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
-            <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
+        <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
                 {/* Header */}
                 <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                     <div>
@@ -504,7 +492,6 @@ function ReportsContent() {
                         </div>
                     </div>
                 </div>
-            </main>
 
             {/* Toast */}
             <AnimatePresence>
@@ -628,14 +615,6 @@ function ReportsContent() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
-    );
-}
-
-export default function ReportsPage() {
-    return (
-        <AdminThemeProvider>
-            <ReportsContent />
-        </AdminThemeProvider>
+        </main>
     );
 }

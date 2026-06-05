@@ -2,9 +2,7 @@
 
 import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
-import Sidebar from "@/components/admin/Sidebar";
-import Topbar from "@/components/admin/Topbar";
+import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { useAuth } from "@/context/AuthContext";
 import { useSocket } from "@/hooks/useSocket";
@@ -91,7 +89,7 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
     );
 }
 
-function AdminInboxContent() {
+export default function AdminInbox() {
     const { isDark } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { user } = useAuth();
@@ -99,7 +97,6 @@ function AdminInboxContent() {
 
     const [inputText, setInputText] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [showHeaderDropdown, setShowHeaderDropdown] = useState(false);
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -218,16 +215,7 @@ function AdminInboxContent() {
     const headerBg = isDark ? "bg-[#1b1926]/90 border-white/5 backdrop-blur-xl" : "bg-slate-50/80 border-slate-200";
 
     return (
-        <div className={`${isDark ? "bg-[#0c0c0c] text-white" : "bg-slate-50 text-slate-900"} min-h-screen transition-colors duration-300 flex flex-col`}>
-            <Sidebar activeId="inbox" isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Topbar
-                searchQuery=""
-                onSearchChange={() => {}}
-                searchPlaceholder="Search support tickets..."
-                onMenuToggle={() => setSidebarOpen(true)}
-            />
-
-            <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col overflow-hidden max-w-[1400px] mx-auto w-full">
+        <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col overflow-hidden max-w-[1400px] mx-auto w-full">
                 {/* Header */}
                 <div className="mb-4 px-4 sm:px-0">
                     <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2" style={{ fontFamily: "Outfit, sans-serif" }}>
@@ -648,7 +636,6 @@ function AdminInboxContent() {
                         )}
                     </div>
                 </div>
-            </main>
 
             {/* Start Chat by Email Modal */}
             <AnimatePresence>
@@ -714,14 +701,6 @@ function AdminInboxContent() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
-    );
-}
-
-export default function AdminInbox() {
-    return (
-        <AdminThemeProvider>
-            <AdminInboxContent />
-        </AdminThemeProvider>
+        </main>
     );
 }

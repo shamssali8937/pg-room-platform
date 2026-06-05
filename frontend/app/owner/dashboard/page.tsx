@@ -72,7 +72,7 @@ export default function OwnerDashboard() {
         <div className="max-w-[1400px] mx-auto space-y-8 relative pb-24 lg:pb-4">
 
             {/* Header */}
-            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 pl-14 xl:pl-0">
+            <header className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                 <div>
                     <p className="text-[#ba9eff] font-bold tracking-[0.25em] text-[10px] uppercase mb-1.5">Owner Dashboard</p>
                     <h2 className={`text-2xl md:text-3xl font-headline font-extrabold tracking-tight ${textPrimary}`}>

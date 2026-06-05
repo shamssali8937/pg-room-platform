@@ -138,7 +138,7 @@ export default function OwnerTopbar({
                 {/* Hamburger — visible to toggle sidebar */}
                 <button
                     onClick={onMenuToggle}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${iconBtn}`}
+                    className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${iconBtn}`}
                 >
                     <Menu size={22} />
                 </button>
@@ -168,11 +168,11 @@ export default function OwnerTopbar({
                     <div className="relative" ref={notifRef}>
                         <button
                             onClick={() => setShowNotifications(!showNotifications)}
-                            className={`w-10 h-10 flex items-center justify-center rounded-full transition-all active:scale-95 relative ${iconBtn}`}
+                            className={`w-11 h-11 flex items-center justify-center rounded-full transition-all active:scale-95 relative ${iconBtn}`}
                         >
                             <Bell size={20} />
                             {unreadCount > 0 && (
-                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2 right-2 w-2.5 h-2.5 bg-[#ff97b5] rounded-full border-2 border-transparent" />
+                                <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#ff97b5] rounded-full border-2 border-transparent" />
                             )}
                         </button>
 
@@ -183,7 +183,7 @@ export default function OwnerTopbar({
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -8, scale: 0.96 }}
                                     transition={{ duration: 0.2 }}
-                                    className={`absolute right-[-60px] sm:right-0 mt-3 w-80 max-w-[calc(100vw-32px)] border rounded-xl shadow-2xl overflow-hidden z-50 origin-top-right ${notifBg}`}
+                                    className={`absolute right-0 mt-3 w-80 max-w-[calc(100vw-32px)] border rounded-xl shadow-2xl overflow-hidden z-50 origin-top-right ${notifBg}`}
                                 >
                                     <div className={`flex items-center justify-between px-4 py-3 border-b ${notifHeader}`}>
                                         <h4 className={`text-sm font-semibold ${notifTitle}`}>Notifications</h4>

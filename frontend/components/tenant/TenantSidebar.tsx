@@ -92,7 +92,7 @@ export default function TenantSidebar({ activeId = "dashboard", isOpen = false, 
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.2 }}
                         onClick={onClose}
-                        className={`fixed inset-0 z-[45] backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-slate-900/30"}`}
+                        className={`fixed inset-0 z-[45] backdrop-blur-sm xl:hidden ${isDark ? "bg-black/60" : "bg-slate-900/30"}`}
                     />
                 )}
             </AnimatePresence>

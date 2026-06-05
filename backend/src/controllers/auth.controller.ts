@@ -10,6 +10,9 @@ import {
     logoutService,
     refreshTokenService,
     googleAuthService,
+    requestPasswordOTPService,
+    verifyPasswordOTPService,
+    resetPasswordWithOTPService,
 } from "../services/auth.services.js";
 import { generateToken as generateCsrf } from "../config/csrf.js";
 import { logger } from "../config/logger.js";
@@ -203,6 +206,48 @@ export const resetPassword = async (
         next(error);
     }
 };
+
+export const requestPasswordOTP = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const result = await requestPasswordOTPService(req.body.email);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const verifyPasswordOTP = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { email, otp } = req.body;
+        const result = await verifyPasswordOTPService(email, otp);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resetPasswordWithOTP = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { email, otp, newPassword } = req.body;
+        const result = await resetPasswordWithOTPService(email, otp, newPassword);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
 
 export const googleLoginInitiate = (req: Request, res: Response): void => {
     const clientId = process.env.GOOGLE_CLIENT_ID;

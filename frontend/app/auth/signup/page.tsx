@@ -103,7 +103,7 @@ export default function SignupPage() {
 
             <Navbar />
 
-            <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-4 pt-32 pb-20">
+            <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-4 pt-24 sm:pt-32 pb-16 sm:pb-20">
                 <motion.div
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}

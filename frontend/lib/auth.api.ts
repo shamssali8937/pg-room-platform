@@ -73,3 +73,24 @@ export const getMeApi = async (): Promise<{ success: boolean; data: AuthUser }> 
     const { data } = await api.get("/users/me");
     return data;
 };
+
+// ─── OTP-based Password Reset ─────────────────────────────────────────────────
+
+export const requestPasswordOTPApi = async (email: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post("/auth/forgot-password-otp", { email });
+    return data;
+};
+
+export const verifyResetOTPApi = async (email: string, otp: string): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post("/auth/verify-reset-otp", { email, otp });
+    return data;
+};
+
+export const resetPasswordWithOTPApi = async (
+    email: string,
+    otp: string,
+    newPassword: string
+): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post("/auth/reset-password-otp", { email, otp, newPassword });
+    return data;
+};
