@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, X, Menu, CalendarCheck, MessageSquare, CreditCard } from "lucide-react";
 import { useTenantTheme } from "@/context/TenantThemeContext";
@@ -38,9 +39,12 @@ const formatTime = (dateStr: string) => {
 export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities..." }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<TenantNotification[]>([]);
+    const [isMounted, setIsMounted] = useState(false);
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
     const { user } = useAuth();
+
+    useEffect(() => { setIsMounted(true); }, []);
 
     const fetchNotifications = async () => {
         try {
@@ -130,6 +134,7 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
     const notifItemUnread = isDark ? "bg-[#a27cff]/[0.05]" : "bg-violet-50";
 
     return (
+        <>
         <header className={`fixed top-0 right-0 w-full z-40 h-16 lg:h-20 px-4 sm:px-6 lg:px-10 flex justify-between items-center transition-colors duration-300 ${headerBg}`}>
             {/* Left: Hamburger + Search */}
             <div className="flex items-center gap-3 flex-1 max-w-md">
@@ -175,14 +180,15 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                         )}
                     </button>
 
+                    {/* Desktop-only: right-anchored dropdown (inside relative container, fine for sm+) */}
                     <AnimatePresence>
                         {showNotifications && (
                             <motion.div
                                 initial={{ opacity: 0, y: -8, scale: 0.96 }}
                                 animate={{ opacity: 1, y: 0, scale: 1 }}
                                 exit={{ opacity: 0, y: -8, scale: 0.96 }}
-                                transition={{ duration: 0.2 }}
-                                className={`absolute right-0 mt-3 w-80 max-w-[calc(100vw-32px)] border rounded-xl shadow-2xl overflow-hidden z-50 origin-top-right ${notifBg}`}
+                                transition={{ duration: 0.18 }}
+                                className={`absolute right-0 mt-3 w-80 hidden sm:block border rounded-xl shadow-2xl overflow-hidden z-50 origin-top-right ${notifBg}`}
                             >
                                 <div className={`flex items-center justify-between px-4 py-3 border-b ${notifHeader}`}>
                                     <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>Notifications</h4>
@@ -193,7 +199,12 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                                     )}
                                 </div>
                                 <div className="max-h-72 overflow-y-auto">
-                                    {notifications.map((notif) => (
+                                    {notifications.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-8 gap-2">
+                                            <Bell size={24} className={isDark ? "text-zinc-600" : "text-slate-300"} />
+                                            <p className={`text-xs ${isDark ? "text-zinc-500" : "text-slate-400"}`}>No notifications yet</p>
+                                        </div>
+                                    ) : notifications.map((notif) => (
                                         <button
                                             key={notif.id}
                                             onClick={() => markAsRead(notif.id)}
@@ -236,5 +247,73 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                 </div>
             </div>
         </header>
+
+        {/* Mobile bottom sheet — rendered via portal to escape backdrop-filter containing block */}
+        {isMounted && createPortal(
+            <AnimatePresence>
+                {showNotifications && (
+                    <>
+                        <motion.div
+                            key="notif-backdrop"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-[998] bg-black/60 sm:hidden"
+                            onClick={() => setShowNotifications(false)}
+                        />
+                        <motion.div
+                            key="notif-sheet"
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 320 }}
+                            className={`fixed bottom-0 left-0 right-0 z-[999] rounded-t-2xl border-t overflow-hidden sm:hidden ${notifBg}`}
+                            style={{ maxHeight: "80dvh" }}
+                        >
+                            <div className="flex justify-center pt-3 pb-1">
+                                <div className={`w-10 h-1 rounded-full ${isDark ? "bg-white/20" : "bg-slate-300"}`} />
+                            </div>
+                            <div className={`flex items-center justify-between px-4 py-3 border-b ${notifHeader}`}>
+                                <h4 className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>Notifications</h4>
+                                <div className="flex items-center gap-3">
+                                    {unreadCount > 0 && (
+                                        <button onClick={markAllRead} className="text-[11px] text-[#a27cff] font-medium">
+                                            Mark all read
+                                        </button>
+                                    )}
+                                    <button onClick={() => setShowNotifications(false)} className={`text-sm font-bold px-1 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>✕</button>
+                                </div>
+                            </div>
+                            <div className="overflow-y-auto" style={{ maxHeight: "calc(80dvh - 90px)" }}>
+                                {notifications.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-12 gap-2">
+                                        <Bell size={32} className={isDark ? "text-zinc-600" : "text-slate-300"} />
+                                        <p className={`text-sm ${isDark ? "text-zinc-500" : "text-slate-400"}`}>No notifications yet</p>
+                                    </div>
+                                ) : notifications.map((notif) => (
+                                    <button
+                                        key={notif.id}
+                                        onClick={() => { markAsRead(notif.id); setShowNotifications(false); }}
+                                        className={`w-full text-left px-4 py-4 transition-colors border-b last:border-0 ${notifItemHover} ${!notif.read ? notifItemUnread : ""}`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <span className="mt-0.5 shrink-0">{notifIconMap[notif.type]}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-semibold ${isDark ? "text-white" : "text-slate-900"}`}>{notif.title}</p>
+                                                <p className={`text-xs mt-0.5 leading-relaxed ${isDark ? "text-[#adaaaa]" : "text-slate-500"}`}>{notif.description}</p>
+                                                <p className={`text-[10px] mt-1.5 ${isDark ? "text-zinc-500" : "text-slate-400"}`}>{notif.time}</p>
+                                            </div>
+                                            {!notif.read && <span className="w-2 h-2 rounded-full bg-[#a27cff] mt-1.5 shrink-0" />}
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </>
+                )}
+            </AnimatePresence>,
+            document.body
+        )}
+        </>
     );
 }
