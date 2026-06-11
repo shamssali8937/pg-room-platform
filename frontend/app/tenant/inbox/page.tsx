@@ -211,12 +211,11 @@ export default function TenantInboxPage() {
             if (!activeConversation?.room?.id) return;
             try {
                 const res = await api.post(`/bookings/room/${activeConversation.room.id}`, {
-                    request_type: "booking",
-                    message: `Automated booking offer from ${user?.full_name}`
+                    message: `Booking offer requested by ${user?.full_name} via chat`
                 });
                 if (res.data?.success && res.data?.data?.id) {
                     const bookingId = res.data.data.id;
-                    setInputText(`✨ Automated Booking Offer (Draft): Let's lock this! [BOOKING_OFFER] booking_id: ${bookingId}`);
+                    setInputText(`[BOOKING_OFFER] booking_id: ${bookingId}`);
                 }
             } catch (err) {
                 console.error("Failed to create booking offer:", err);
