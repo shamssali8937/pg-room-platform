@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import OwnerSidebar from "@/components/owner/OwnerSidebar";
 import OwnerTopbar from "@/components/owner/OwnerTopbar";
 import { OwnerThemeProvider, useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { Home, MessageSquare, Wallet, Settings, Loader2 } from "lucide-react";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchConversations } from "@/store/slices/chatSlice";
+import { useSocket } from "@/hooks/useSocket";
 
 function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,7 +17,19 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { user, isLoading, isAuthenticated } = useAuth();
+    const dispatch = useAppDispatch();
+    const conversations = useAppSelector((s) => s.chat.conversations);
     const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+    const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+    // Global socket listener for real-time messages on any page
+    useSocket(conversationIds);
+
+    // Fetch conversations globally so badges work on all pages
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            dispatch(fetchConversations());
+        }
+    }, [isAuthenticated, user, dispatch]);
 
     // ── Auth Guard ────────────────────────────────────────────────────────
     useEffect(() => {
@@ -91,8 +105,11 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
                     <button onClick={() => router.push('/owner/dashboard')}>
                         <Home size={24} className={activeId === 'dashboard' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
                     </button>
-                    <button onClick={() => router.push('/owner/inquiries')}>
+                    <button onClick={() => router.push('/owner/inquiries')} className="relative">
                         <MessageSquare size={24} className={activeId === 'inquiries' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />
+                        {conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0) > 0 && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                        )}
                     </button>
                     <button onClick={() => router.push('/owner/wallet')}>
                         <Wallet size={24} className={activeId === 'wallet' ? 'text-violet-500' : isDark ? 'text-zinc-400' : 'text-slate-400'} />

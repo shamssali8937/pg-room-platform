@@ -216,426 +216,420 @@ export default function AdminInbox() {
 
     return (
         <main className="flex-1 ml-0 pt-20 lg:pt-24 px-0 sm:px-6 lg:px-10 pb-0 sm:pb-6 flex flex-col overflow-hidden max-w-[1400px] mx-auto w-full">
-                {/* Header */}
-                <div className="mb-4 px-4 sm:px-0">
-                    <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2" style={{ fontFamily: "Outfit, sans-serif" }}>
-                        <MessageSquare size={22} className="text-purple-500" /> Admin Support Inbox
-                    </h2>
-                    <p className={`text-xs ${textVariant}`}>
-                        Manage active direct chat support tickets with tenants and owners in real-time.
-                    </p>
-                </div>
+            {/* Header */}
+            <div className="mb-4 px-4 sm:px-0">
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2" style={{ fontFamily: "Outfit, sans-serif" }}>
+                    <MessageSquare size={22} className="text-purple-500" /> Admin Support Inbox
+                </h2>
+                <p className={`text-xs ${textVariant}`}>
+                    Manage active direct chat support tickets with tenants and owners in real-time.
+                </p>
+            </div>
 
-                {/* Main Bento split */}
-                <div className="w-full h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
-                    {/* Left Panel: Conversations List */}
-                    <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
-                        {/* Search & Actions */}
-                        <div className={`p-5 border-b ${divider}`}>
-                            <div className="flex gap-2 mb-3 items-center justify-between">
-                                <h4 className={`text-sm font-bold uppercase tracking-wider ${textPrimary}`}>Inbox Threads</h4>
-                                <button
-                                    onClick={() => setShowStartChatModal(true)}
-                                    className="p-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-all flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25"
-                                    title="Start Chat by Email"
-                                >
-                                    <Plus size={16} />
-                                </button>
-                            </div>
-                            <div className="relative">
-                                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textVariant}`} />
-                                <input
-                                    type="text"
-                                    placeholder="Search messages..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-xs border-none outline-none focus:ring-1 focus:ring-purple-500/50 transition-all ${inputBg}`}
-                                />
-                            </div>
+            {/* Main Bento split */}
+            <div className="w-full h-[calc(110vh-12rem)] md:h-[calc(110vh-14rem)] lg:h-[calc(110vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
+                {/* Left Panel: Conversations List */}
+                <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
+                    {/* Search & Actions */}
+                    <div className={`p-5 border-b ${divider}`}>
+                        <div className="flex gap-2 mb-3 items-center justify-between">
+                            <h4 className={`text-sm font-bold uppercase tracking-wider ${textPrimary}`}>Inbox Threads</h4>
+                            <button
+                                onClick={() => setShowStartChatModal(true)}
+                                className="p-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white transition-all flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/25"
+                                title="Start Chat by Email"
+                            >
+                                <Plus size={16} />
+                            </button>
                         </div>
-
-                        {/* Conversations list container */}
-                        <div className="flex-1 overflow-y-auto space-y-1.5 p-3">
-                            {isLoading && conversations.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center">
-                                    <Loader2 className="animate-spin text-purple-500 mb-3" size={24} />
-                                    <p className="text-xs text-zinc-500">Retrieving support threads...</p>
-                                </div>
-                            ) : filteredConversations.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-500 p-4">
-                                    <MessageCircle size={28} className="text-zinc-600 mb-2" />
-                                    <p className="text-xs font-semibold">No support tickets found</p>
-                                    <p className="text-[10px] text-zinc-500 mt-1">Direct support chat threads will show here.</p>
-                                </div>
-                            ) : (
-                                <AnimatePresence>
-                                    {filteredConversations.map((conv) => {
-                                        const isActive = conv.id === activeConversationId;
-                                        const other = getOtherParticipant(conv);
-                                        return (
-                                            <motion.button
-                                                key={conv.id}
-                                                onClick={() => {
-                                                    dispatch(setActiveConversation(conv.id));
-                                                }}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                className={`w-full text-left p-4 rounded-xl transition-all relative flex gap-3 border ${
-                                                    isActive
-                                                        ? isDark
-                                                            ? "bg-purple-500/10 border-purple-500/30 shadow-[0_8px_30px_rgb(0,0,0,0.15)]"
-                                                            : "bg-violet-50 border-violet-200"
-                                                        : isDark
-                                                            ? "bg-transparent border-transparent hover:bg-white/5"
-                                                            : "bg-transparent border-transparent hover:bg-slate-50"
-                                                }`}
-                                            >
-                                                {conv.unread_count > 0 && (
-                                                    <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-purple-500 rounded-full" />
-                                                )}
-                                                <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-500/10 border border-purple-500/20 flex-shrink-0 flex items-center justify-center text-purple-500">
-                                                    {other?.profile_photo_url ? (
-                                                        <img src={other.profile_photo_url} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="text-xs font-bold uppercase">{other?.full_name?.[0] ?? "?"}</span>
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center justify-between gap-1 mb-1">
-                                                        <h4 className={`text-xs font-bold truncate ${textPrimary}`}>
-                                                            {other?.full_name ?? "User"}
-                                                        </h4>
-                                                        {conv.last_message_at && (
-                                                            <span className={`text-[9px] ${textVariant}`}>
-                                                                {new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex justify-between items-center gap-1.5 mt-0.5">
-                                                        <span className={`text-[8px] font-black px-1.5 py-0.2 rounded uppercase tracking-wider ${
-                                                            other?.role === "owner" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
-                                                        }`}>
-                                                            {other?.role ?? "User"}
-                                                        </span>
-                                                        {conv.room?.title && (
-                                                            <span className={`text-[9px] truncate max-w-[120px] font-medium ${isDark ? "text-zinc-500" : "text-slate-400"}`}>
-                                                                {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className={`text-[10px] truncate mt-2 ${isActive ? "text-zinc-300" : textVariant}`}>
-                                                        {conv.last_message ?? "No messages yet"}
-                                                    </p>
-                                                </div>
-                                            </motion.button>
-                                        );
-                                    })}
-                                </AnimatePresence>
-                            )}
+                        <div className="relative">
+                            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textVariant}`} />
+                            <input
+                                type="text"
+                                placeholder="Search messages..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className={`w-full pl-9 pr-4 py-2.5 rounded-xl text-xs border-none outline-none focus:ring-1 focus:ring-purple-500/50 transition-all ${inputBg}`}
+                            />
                         </div>
                     </div>
 
-                    {/* Right Panel: Chat view */}
-                    <div className={`flex-1 min-h-0 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
-                        {activeConversation ? (
-                            <>
-                                {/* Conversation Header */}
-                                {(() => {
-                                    const other = getOtherParticipant(activeConversation);
+                    {/* Conversations list container */}
+                    <div className="flex-1 overflow-y-auto space-y-1.5 p-3">
+                        {isLoading && conversations.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <Loader2 className="animate-spin text-purple-500 mb-3" size={24} />
+                                <p className="text-xs text-zinc-500">Retrieving support threads...</p>
+                            </div>
+                        ) : filteredConversations.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 text-center text-zinc-500 p-4">
+                                <MessageCircle size={28} className="text-zinc-600 mb-2" />
+                                <p className="text-xs font-semibold">No support tickets found</p>
+                                <p className="text-[10px] text-zinc-500 mt-1">Direct support chat threads will show here.</p>
+                            </div>
+                        ) : (
+                            <AnimatePresence>
+                                {filteredConversations.map((conv) => {
+                                    const isActive = conv.id === activeConversationId;
+                                    const other = getOtherParticipant(conv);
                                     return (
-                                        <div className={`p-4 border-b flex items-center justify-between relative z-20 ${headerBg}`}>
-                                            <div className="flex items-center gap-3">
-                                                {/* Back button on mobile */}
-                                                <button
-                                                    onClick={() => dispatch(setActiveConversation(null))}
-                                                    className={`p-2 -ml-2 rounded-xl transition-all md:hidden ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
-                                                    title="Back to Chats"
-                                                >
-                                                    <ArrowLeft size={18} />
-                                                </button>
-                                                <div className="w-11 h-11 rounded-xl overflow-hidden border border-white/5 flex-shrink-0 flex items-center justify-center bg-purple-500/10 text-purple-500">
-                                                    {other?.profile_photo_url ? (
-                                                        <img src={other.profile_photo_url} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="text-sm font-bold uppercase">{other?.full_name?.[0] ?? "?"}</span>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <h3 className={`text-sm font-bold ${textPrimary}`}>{other?.full_name}</h3>
-                                                    <div className="flex gap-2 items-center text-[10px] text-purple-400 font-semibold mt-0.5 flex-wrap">
-                                                        <span className="uppercase tracking-wider font-extrabold">{other?.role}</span>
-                                                        <span className="text-zinc-600">•</span>
-                                                        {activeConversation.room && (
-                                                            <>
-                                                                <span className="text-xs font-bold text-purple-500">
-                                                                    {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
-                                                                </span>
-                                                                <span className="text-zinc-600">•</span>
-                                                            </>
-                                                        )}
-                                                        <span>{other?.mobile_number ?? "No phone number listed"}</span>
-                                                    </div>
-                                                </div>
+                                        <motion.button
+                                            key={conv.id}
+                                            onClick={() => {
+                                                dispatch(setActiveConversation(conv.id));
+                                            }}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className={`w-full text-left p-4 rounded-xl transition-all relative flex gap-3 border ${isActive
+                                                    ? isDark
+                                                        ? "bg-purple-500/10 border-purple-500/30 shadow-[0_8px_30px_rgb(0,0,0,0.15)]"
+                                                        : "bg-violet-50 border-violet-200"
+                                                    : isDark
+                                                        ? "bg-transparent border-transparent hover:bg-white/5"
+                                                        : "bg-transparent border-transparent hover:bg-slate-50"
+                                                }`}
+                                        >
+                                            {conv.unread_count > 0 && (
+                                                <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-purple-500 rounded-full" />
+                                            )}
+                                            <div className="w-10 h-10 rounded-xl overflow-hidden bg-purple-500/10 border border-purple-500/20 flex-shrink-0 flex items-center justify-center text-purple-500">
+                                                {other?.profile_photo_url ? (
+                                                    <img src={other.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-xs font-bold uppercase">{other?.full_name?.[0] ?? "?"}</span>
+                                                )}
                                             </div>
-
-                                            {/* Action modifiers dropdown */}
-                                            <div className="relative">
-                                                <button
-                                                    onClick={() => setShowHeaderDropdown(!showHeaderDropdown)}
-                                                    className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
-                                                >
-                                                    <MoreVertical size={16} />
-                                                </button>
-
-                                                <AnimatePresence>
-                                                    {showHeaderDropdown && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                            animate={{ opacity: 1, y: 4, scale: 1 }}
-                                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                            className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-[200] ${
-                                                                isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
-                                                            }`}
-                                                        >
-                                                            <button
-                                                                onClick={async () => {
-                                                                    setShowHeaderDropdown(false);
-                                                                    const isPinned = !activeConversation.is_pinned;
-                                                                    await dispatch(pinConversation({ conversationId: activeConversation.id, isPinned }));
-                                                                }}
-                                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
-                                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
-                                                                }`}
-                                                            >
-                                                                <Pin size={14} className={activeConversation.is_pinned ? "text-purple-400 fill-purple-400" : ""} />
-                                                                <span>{activeConversation.is_pinned ? "Unpin Support Chat" : "Pin Support Chat"}</span>
-                                                            </button>
-
-                                                            <button
-                                                                onClick={async () => {
-                                                                    setShowHeaderDropdown(false);
-                                                                    const isMuted = !activeConversation.is_muted;
-                                                                    await dispatch(muteConversation({ conversationId: activeConversation.id, isMuted }));
-                                                                }}
-                                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
-                                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
-                                                                }`}
-                                                            >
-                                                                {activeConversation.is_muted ? <Volume2 size={14} className="text-purple-400" /> : <VolumeX size={14} className="text-zinc-500" />}
-                                                                <span>{activeConversation.is_muted ? "Unmute Alerts" : "Mute Alerts"}</span>
-                                                            </button>
-
-                                                            <div className={`h-px my-1 ${divider}`} />
-
-                                                            <button
-                                                                onClick={async () => {
-                                                                    setShowHeaderDropdown(false);
-                                                                    if (activeConversation.is_blocked) {
-                                                                        await dispatch(unblockConversation(activeConversation.id));
-                                                                    } else {
-                                                                        await dispatch(blockConversation(activeConversation.id));
-                                                                    }
-                                                                }}
-                                                                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full text-red-500 hover:bg-red-500/10"
-                                                            >
-                                                                <ShieldX size={14} />
-                                                                <span>{activeConversation.is_blocked ? "Unblock Contact" : "Block Contact"}</span>
-                                                            </button>
-                                                        </motion.div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-1 mb-1">
+                                                    <h4 className={`text-xs font-bold truncate ${textPrimary}`}>
+                                                        {other?.full_name ?? "User"}
+                                                    </h4>
+                                                    {conv.last_message_at && (
+                                                        <span className={`text-[9px] ${textVariant}`}>
+                                                            {new Date(conv.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
                                                     )}
-                                                </AnimatePresence>
+                                                </div>
+                                                <div className="flex justify-between items-center gap-1.5 mt-0.5">
+                                                    <span className={`text-[8px] font-black px-1.5 py-0.2 rounded uppercase tracking-wider ${other?.role === "owner" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                                        }`}>
+                                                        {other?.role ?? "User"}
+                                                    </span>
+                                                    {conv.room?.title && (
+                                                        <span className={`text-[9px] truncate max-w-[120px] font-medium ${isDark ? "text-zinc-500" : "text-slate-400"}`}>
+                                                            {conv.room.title === "General Discussion" ? "Direct Chat" : conv.room.title}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className={`text-[10px] truncate mt-2 ${isActive ? "text-zinc-300" : textVariant}`}>
+                                                    {conv.last_message ?? "No messages yet"}
+                                                </p>
+                                            </div>
+                                        </motion.button>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Panel: Chat view */}
+                <div className={`flex-1 min-h-0 ${activeConversationId ? "flex" : "hidden md:flex"} flex-col rounded-none md:rounded-2xl overflow-hidden ${surfaceLow}`}>
+                    {activeConversation ? (
+                        <>
+                            {/* Conversation Header */}
+                            {(() => {
+                                const other = getOtherParticipant(activeConversation);
+                                return (
+                                    <div className={`p-4 border-b flex items-center justify-between relative z-20 ${headerBg}`}>
+                                        <div className="flex items-center gap-3">
+                                            {/* Back button on mobile */}
+                                            <button
+                                                onClick={() => dispatch(setActiveConversation(null))}
+                                                className={`p-2 -ml-2 rounded-xl transition-all md:hidden ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
+                                                title="Back to Chats"
+                                            >
+                                                <ArrowLeft size={18} />
+                                            </button>
+                                            <div className="w-11 h-11 rounded-xl overflow-hidden border border-white/5 flex-shrink-0 flex items-center justify-center bg-purple-500/10 text-purple-500">
+                                                {other?.profile_photo_url ? (
+                                                    <img src={other.profile_photo_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-sm font-bold uppercase">{other?.full_name?.[0] ?? "?"}</span>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className={`text-sm font-bold ${textPrimary}`}>{other?.full_name}</h3>
+                                                <div className="flex gap-2 items-center text-[10px] text-purple-400 font-semibold mt-0.5 flex-wrap">
+                                                    <span className="uppercase tracking-wider font-extrabold">{other?.role}</span>
+                                                    <span className="text-zinc-600">•</span>
+                                                    {activeConversation.room && (
+                                                        <>
+                                                            <span className="text-xs font-bold text-purple-500">
+                                                                {activeConversation.room.title === "General Discussion" ? "Direct Chat" : activeConversation.room.title}
+                                                            </span>
+                                                            <span className="text-zinc-600">•</span>
+                                                        </>
+                                                    )}
+                                                    <span>{other?.mobile_number ?? "No phone number listed"}</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    );
-                                })()}
 
-                                {/* Messages scrolling window */}
-                                <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
-                                    {messages[activeConversation.id]?.map((msg) => {
-                                        const isSelf = msg.sender_id === user?.id;
-
-                                        return (
-                                            <div key={msg.id} className={`flex ${isSelf ? "justify-end" : "justify-start"} group`}>
-                                                <div className="max-w-[70%] flex flex-col gap-1.5">
-                                                    <div className={`flex items-center gap-2 ${isSelf ? "justify-end" : "justify-start"}`}>
-                                                        <span className="text-[10px] font-bold text-zinc-500">
-                                                            {isSelf ? "You" : msg.sender?.full_name}
-                                                        </span>
-                                                        <button
-                                                            onClick={() => handleDelete(msg.id)}
-                                                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded"
-                                                            title="Delete Message"
-                                                        >
-                                                            <Trash2 size={12} />
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex flex-col gap-2">
-                                                        {msg.attachments && msg.attachments.length > 0 && (
-                                                            <div className="rounded-xl overflow-hidden max-w-xs border border-white/5 shadow-md flex flex-col gap-1">
-                                                                {msg.attachments.map((att: any) => {
-                                                                    if (att.file_type === "image") {
-                                                                        return (
-                                                                            <img
-                                                                                key={att.id}
-                                                                                src={att.file_url}
-                                                                                alt={att.file_name}
-                                                                                className="w-full object-cover max-h-48 cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
-                                                                                onClick={() => window.open(att.file_url, "_blank")}
-                                                                            />
-                                                                        );
-                                                                    } else if (att.file_type === "video") {
-                                                                        return (
-                                                                            <video
-                                                                                key={att.id}
-                                                                                src={att.file_url}
-                                                                                controls
-                                                                                className="w-full max-h-48 object-cover rounded-lg"
-                                                                            />
-                                                                        );
-                                                                    } else {
-                                                                        return (
-                                                                            <a
-                                                                                key={att.id}
-                                                                                href={att.file_url}
-                                                                                target="_blank"
-                                                                                rel="noreferrer"
-                                                                                className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-xs rounded-xl"
-                                                                            >
-                                                                                <FileText size={16} className="text-purple-400" />
-                                                                                <span className="truncate max-w-[150px]">{att.file_name}</span>
-                                                                            </a>
-                                                                        );
-                                                                    }
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                        <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isSelf
-                                                                ? isDark
-                                                                    ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-tr-none shadow-[0_4px_20px_rgba(147,51,234,0.2)]"
-                                                                    : "bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-tr-none shadow-[0_4px_20px_rgba(147,51,234,0.15)]"
-                                                                : isDark
-                                                                    ? "bg-[#201f1f] text-zinc-200 border border-white/5 rounded-tl-none"
-                                                                    : "bg-white text-slate-800 border border-slate-100 rounded-tl-none shadow-sm"
-                                                            }`}>
-                                                            <p className="whitespace-pre-wrap">{msg.content}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className={`flex items-center gap-1 mt-1 ${isSelf ? "flex-row-reverse" : ""}`}>
-                                                        <span className={`text-[8px] ${textVariant}`}>
-                                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </span>
-                                                        {isSelf && (
-                                                            <CheckCircle size={10} className="text-purple-400" fill="currentColor" />
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    <div ref={messagesEndRef} />
-                                </div>
-
-                                {/* Action bar at bottom: Send Message & Attachments */}
-                                <div className={`p-4 border-t ${divider}`}>
-                                    <div className="flex gap-2 items-center relative">
-                                        {/* Hidden File Inputs */}
-                                        <input
-                                            type="file"
-                                            ref={imageInputRef}
-                                            onChange={handleImageChange}
-                                            accept="image/*"
-                                            className="hidden"
-                                        />
-                                        <input
-                                            type="file"
-                                            ref={videoInputRef}
-                                            onChange={handleVideoChange}
-                                            accept="video/*"
-                                            className="hidden"
-                                        />
-
-                                        {/* Paperclip button */}
+                                        {/* Action modifiers dropdown */}
                                         <div className="relative">
                                             <button
-                                                onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                                                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isDark ? "bg-[#1d1b26] text-zinc-400 hover:text-purple-400" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                                                onClick={() => setShowHeaderDropdown(!showHeaderDropdown)}
+                                                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${isDark ? "hover:bg-white/5 text-zinc-400 hover:text-white" : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"}`}
                                             >
-                                                <Paperclip size={18} />
+                                                <MoreVertical size={16} />
                                             </button>
 
                                             <AnimatePresence>
-                                                {showAttachmentMenu && (
+                                                {showHeaderDropdown && (
                                                     <motion.div
-                                                        initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                                         animate={{ opacity: 1, y: 4, scale: 1 }}
-                                                        exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                                                        className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${
-                                                            isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
-                                                        }`}
+                                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                        className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-[200] ${isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
+                                                            }`}
                                                     >
                                                         <button
-                                                            onClick={() => handleAttachmentSelect("image")}
-                                                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                            onClick={async () => {
+                                                                setShowHeaderDropdown(false);
+                                                                const isPinned = !activeConversation.is_pinned;
+                                                                await dispatch(pinConversation({ conversationId: activeConversation.id, isPinned }));
+                                                            }}
+                                                            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                                }`}
                                                         >
-                                                            <Image size={14} className="text-purple-400" />
-                                                            <span>Send Photo</span>
+                                                            <Pin size={14} className={activeConversation.is_pinned ? "text-purple-400 fill-purple-400" : ""} />
+                                                            <span>{activeConversation.is_pinned ? "Unpin Support Chat" : "Pin Support Chat"}</span>
                                                         </button>
+
                                                         <button
-                                                            onClick={() => handleAttachmentSelect("video")}
-                                                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                            onClick={async () => {
+                                                                setShowHeaderDropdown(false);
+                                                                const isMuted = !activeConversation.is_muted;
+                                                                await dispatch(muteConversation({ conversationId: activeConversation.id, isMuted }));
+                                                            }}
+                                                            className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                                }`}
                                                         >
-                                                            <Video size={14} className="text-indigo-400" />
-                                                            <span>Send Video</span>
+                                                            {activeConversation.is_muted ? <Volume2 size={14} className="text-purple-400" /> : <VolumeX size={14} className="text-zinc-500" />}
+                                                            <span>{activeConversation.is_muted ? "Unmute Alerts" : "Mute Alerts"}</span>
                                                         </button>
+
+                                                        <div className={`h-px my-1 ${divider}`} />
+
                                                         <button
-                                                            onClick={() => handleAttachmentSelect("location")}
-                                                            className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                            onClick={async () => {
+                                                                setShowHeaderDropdown(false);
+                                                                if (activeConversation.is_blocked) {
+                                                                    await dispatch(unblockConversation(activeConversation.id));
+                                                                } else {
+                                                                    await dispatch(blockConversation(activeConversation.id));
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full text-red-500 hover:bg-red-500/10"
                                                         >
-                                                            <MapPin size={14} className="text-emerald-400" />
-                                                            <span>Share Location</span>
+                                                            <ShieldX size={14} />
+                                                            <span>{activeConversation.is_blocked ? "Unblock Contact" : "Block Contact"}</span>
                                                         </button>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
                                         </div>
-
-                                        <input
-                                            type="text"
-                                            placeholder="Write your support message..."
-                                            value={inputText}
-                                            onChange={(e) => setInputText(e.target.value)}
-                                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                                            className={`flex-1 px-4 py-3 rounded-xl text-sm outline-none focus:ring-1 focus:ring-purple-500/50 transition-all ${inputBg}`}
-                                        />
-                                        <button
-                                            onClick={handleSendMessage}
-                                            disabled={isSending || !inputText.trim()}
-                                            className="px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl flex items-center gap-1.5 transition-all text-sm font-bold disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-purple-500/10"
-                                        >
-                                            {isSending ? (
-                                                <Loader2 size={16} className="animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <Send size={16} />
-                                                    <span>Send</span>
-                                                </>
-                                            )}
-                                        </button>
                                     </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-500">
-                                <MessageCircle size={40} className="text-zinc-700 mb-3 animate-pulse" />
-                                <h3 className={`text-base font-bold mb-1 ${textPrimary}`}>Select a Conversation</h3>
-                                <p className="text-xs max-w-sm">
-                                    Click any active conversation thread on the left pane to chat directly in real-time.
-                                </p>
+                                );
+                            })()}
+
+                            {/* Messages scrolling window */}
+                            <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
+                                {messages[activeConversation.id]?.map((msg) => {
+                                    const isSelf = msg.sender_id === user?.id;
+
+                                    return (
+                                        <div key={msg.id} className={`flex ${isSelf ? "justify-end" : "justify-start"} group`}>
+                                            <div className="max-w-[70%] flex flex-col gap-1.5">
+                                                <div className={`flex items-center gap-2 ${isSelf ? "justify-end" : "justify-start"}`}>
+                                                    <span className="text-[10px] font-bold text-zinc-500">
+                                                        {isSelf ? "You" : msg.sender?.full_name}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => handleDelete(msg.id)}
+                                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded"
+                                                        title="Delete Message"
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </div>
+
+                                                <div className="flex flex-col gap-2">
+                                                    {msg.attachments && msg.attachments.length > 0 && (
+                                                        <div className="rounded-xl overflow-hidden max-w-xs border border-white/5 shadow-md flex flex-col gap-1">
+                                                            {msg.attachments.map((att: any) => {
+                                                                if (att.file_type === "image") {
+                                                                    return (
+                                                                        <img
+                                                                            key={att.id}
+                                                                            src={att.file_url}
+                                                                            alt={att.file_name}
+                                                                            className="w-full object-cover max-h-48 cursor-pointer hover:opacity-90 transition-opacity rounded-lg"
+                                                                            onClick={() => window.open(att.file_url, "_blank")}
+                                                                        />
+                                                                    );
+                                                                } else if (att.file_type === "video") {
+                                                                    return (
+                                                                        <video
+                                                                            key={att.id}
+                                                                            src={att.file_url}
+                                                                            controls
+                                                                            className="w-full max-h-48 object-cover rounded-lg"
+                                                                        />
+                                                                    );
+                                                                } else {
+                                                                    return (
+                                                                        <a
+                                                                            key={att.id}
+                                                                            href={att.file_url}
+                                                                            target="_blank"
+                                                                            rel="noreferrer"
+                                                                            className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 text-xs rounded-xl"
+                                                                        >
+                                                                            <FileText size={16} className="text-purple-400" />
+                                                                            <span className="truncate max-w-[150px]">{att.file_name}</span>
+                                                                        </a>
+                                                                    );
+                                                                }
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isSelf
+                                                        ? isDark
+                                                            ? "bg-gradient-to-br from-purple-500 to-indigo-600 text-white rounded-tr-none shadow-[0_4px_20px_rgba(147,51,234,0.2)]"
+                                                            : "bg-gradient-to-br from-purple-600 to-indigo-700 text-white rounded-tr-none shadow-[0_4px_20px_rgba(147,51,234,0.15)]"
+                                                        : isDark
+                                                            ? "bg-[#201f1f] text-zinc-200 border border-white/5 rounded-tl-none"
+                                                            : "bg-white text-slate-800 border border-slate-100 rounded-tl-none shadow-sm"
+                                                        }`}>
+                                                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                                                    </div>
+                                                </div>
+                                                <div className={`flex items-center gap-1 mt-1 ${isSelf ? "flex-row-reverse" : ""}`}>
+                                                    <span className={`text-[8px] ${textVariant}`}>
+                                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    {isSelf && (
+                                                        <CheckCircle size={10} className="text-purple-400" fill="currentColor" />
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                                <div ref={messagesEndRef} />
                             </div>
-                        )}
-                    </div>
+
+                            {/* Action bar at bottom: Send Message & Attachments */}
+                            <div className={`p-4 border-t ${divider}`}>
+                                <div className="flex gap-2 items-center relative">
+                                    {/* Hidden File Inputs */}
+                                    <input
+                                        type="file"
+                                        ref={imageInputRef}
+                                        onChange={handleImageChange}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={videoInputRef}
+                                        onChange={handleVideoChange}
+                                        accept="video/*"
+                                        className="hidden"
+                                    />
+
+                                    {/* Paperclip button */}
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                                            className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all ${isDark ? "bg-[#1d1b26] text-zinc-400 hover:text-purple-400" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                                        >
+                                            <Paperclip size={18} />
+                                        </button>
+
+                                        <AnimatePresence>
+                                            {showAttachmentMenu && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                                    animate={{ opacity: 1, y: 4, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                                    className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
+                                                        }`}
+                                                >
+                                                    <button
+                                                        onClick={() => handleAttachmentSelect("image")}
+                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                    >
+                                                        <Image size={14} className="text-purple-400" />
+                                                        <span>Send Photo</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAttachmentSelect("video")}
+                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                    >
+                                                        <Video size={14} className="text-indigo-400" />
+                                                        <span>Send Video</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAttachmentSelect("location")}
+                                                        className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                    >
+                                                        <MapPin size={14} className="text-emerald-400" />
+                                                        <span>Share Location</span>
+                                                    </button>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        placeholder="Write your support message..."
+                                        value={inputText}
+                                        onChange={(e) => setInputText(e.target.value)}
+                                        onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                        className={`flex-1 px-4 py-3 rounded-xl text-sm outline-none focus:ring-1 focus:ring-purple-500/50 transition-all ${inputBg}`}
+                                    />
+                                    <button
+                                        onClick={handleSendMessage}
+                                        disabled={isSending || !inputText.trim()}
+                                        className="px-5 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl flex items-center gap-1.5 transition-all text-sm font-bold disabled:opacity-50 hover:scale-[1.02] active:scale-[0.98] shadow-md shadow-purple-500/10"
+                                    >
+                                        {isSending ? (
+                                            <Loader2 size={16} className="animate-spin" />
+                                        ) : (
+                                            <>
+                                                <Send size={16} />
+                                                <span>Send</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-zinc-500">
+                            <MessageCircle size={40} className="text-zinc-700 mb-3 animate-pulse" />
+                            <h3 className={`text-base font-bold mb-1 ${textPrimary}`}>Select a Conversation</h3>
+                            <p className="text-xs max-w-sm">
+                                Click any active conversation thread on the left pane to chat directly in real-time.
+                            </p>
+                        </div>
+                    )}
                 </div>
+            </div>
 
             {/* Start Chat by Email Modal */}
             <AnimatePresence>
@@ -668,11 +662,10 @@ export default function AdminInbox() {
                                         placeholder="tenant@example.com or owner@example.com"
                                         value={newChatEmail}
                                         onChange={(e) => setNewChatEmail(e.target.value)}
-                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
-                                            isDark
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${isDark
                                                 ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-purple-500/40"
                                                 : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-purple-600/40"
-                                        }`}
+                                            }`}
                                     />
                                 </div>
 

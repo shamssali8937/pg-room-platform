@@ -246,7 +246,7 @@ export default function OwnerInquiriesPage() {
     };
 
     return (
-        <div className="max-w-[1400px] mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto h-[calc(110vh-12rem)] md:h-[calc(110vh-14rem)] lg:h-[calc(110vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
             {/* Left Panel */}
             <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
                 {/* Header */}

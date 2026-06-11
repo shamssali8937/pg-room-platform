@@ -68,15 +68,14 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${isDark ? "bg-[#a27cff]/20 text-[#a27cff]" : "bg-violet-100 text-violet-600"}`}>
                     ⚡ Booking Offer
                 </span>
-                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
-                    isApproved ? "bg-emerald-500/20 text-emerald-400" :
+                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${isApproved ? "bg-emerald-500/20 text-emerald-400" :
                     isCancelled ? "bg-red-500/20 text-red-400" :
-                    "bg-amber-500/20 text-amber-400 animate-pulse"
-                }`}>
+                        "bg-amber-500/20 text-amber-400 animate-pulse"
+                    }`}>
                     {booking.status}
                 </span>
             </div>
-            
+
             <div className="space-y-1">
                 <h5 className={`font-bold text-sm ${isDark ? "text-white" : "text-slate-800"}`}>
                     {booking.room?.title ?? "Room Booking"}
@@ -233,7 +232,7 @@ export default function TenantInboxPage() {
     const isOnline = activeConversation?.other_participant?.is_online;
 
     return (
-        <div className="max-w-[1400px] mx-auto h-[calc(100vh-12rem)] md:h-[calc(100vh-14rem)] lg:h-[calc(100vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
+        <div className="max-w-[1400px] mx-auto h-[calc(110vh-12rem)] md:h-[calc(110vh-14rem)] lg:h-[calc(110vh-15rem)] flex flex-col md:flex-row gap-4 md:gap-6 pb-2 overflow-hidden">
             {/* Left Panel: Conversation List */}
             <div className={`w-full md:w-80 lg:w-96 ${activeConversationId ? "hidden md:flex" : "flex"} flex-col rounded-none md:rounded-2xl overflow-hidden shrink-0 ${surfaceLow}`}>
                 {/* Header */}
@@ -297,11 +296,10 @@ export default function TenantInboxPage() {
                                         }}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
-                                        className={`w-full text-left p-4 rounded-xl transition-all relative border ${
-                                            isActive
-                                                ? isDark ? "bg-[#a27cff]/10 border-[#a27cff]/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]" : "bg-violet-50 border-violet-200"
-                                                : isDark ? "bg-transparent border-transparent hover:bg-white/5" : "hover:bg-slate-50 border-transparent"
-                                        }`}
+                                        className={`w-full text-left p-4 rounded-xl transition-all relative border ${isActive
+                                            ? isDark ? "bg-[#a27cff]/10 border-[#a27cff]/20 shadow-[0_8px_30px_rgb(0,0,0,0.12)]" : "bg-violet-50 border-violet-200"
+                                            : isDark ? "bg-transparent border-transparent hover:bg-white/5" : "hover:bg-slate-50 border-transparent"
+                                            }`}
                                     >
                                         {conv.unread_count > 0 && (
                                             <div className="absolute left-0 top-4 bottom-4 w-0.5 bg-[#a27cff] rounded-full" />
@@ -428,9 +426,8 @@ export default function TenantInboxPage() {
                                             initial={{ opacity: 0, y: 10, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 4, scale: 1 }}
                                             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-[200] ${
-                                                isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
-                                            }`}
+                                            className={`absolute right-0 top-full mt-2 w-48 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-[200] ${isDark ? "bg-[#1d1b26] border-white/10" : "bg-white border-slate-200"
+                                                }`}
                                         >
                                             <button
                                                 onClick={async () => {
@@ -438,9 +435,8 @@ export default function TenantInboxPage() {
                                                     const isPinned = !activeConversation.is_pinned;
                                                     await dispatch(pinConversation({ conversationId: activeConversation.id, isPinned }));
                                                 }}
-                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
-                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                    }`}
                                             >
                                                 <Pin size={14} className={activeConversation.is_pinned ? "text-[#a27cff] fill-[#a27cff]" : ""} />
                                                 <span>{activeConversation.is_pinned ? "Unpin Chat" : "Pin Chat"}</span>
@@ -452,9 +448,8 @@ export default function TenantInboxPage() {
                                                     const isMuted = !activeConversation.is_muted;
                                                     await dispatch(muteConversation({ conversationId: activeConversation.id, isMuted }));
                                                 }}
-                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${
-                                                    isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
-                                                }`}
+                                                className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"
+                                                    }`}
                                             >
                                                 {activeConversation.is_muted ? <Volume2 size={14} className="text-[#a27cff]" /> : <VolumeX size={14} className="text-zinc-500" />}
                                                 <span>{activeConversation.is_muted ? "Unmute Alerts" : "Mute Alerts"}</span>
@@ -501,7 +496,7 @@ export default function TenantInboxPage() {
                                     const otherParticipant = getOtherParticipant(activeConversation);
                                     const senderPhoto = isMine ? user?.profile_photo_url : (msg.sender?.profile_photo_url || msg.sender?.image || otherParticipant?.profile_photo_url);
                                     const senderName = isMine ? user?.full_name : (msg.sender?.full_name || otherParticipant?.full_name);
-                                    
+
                                     return (
                                         <motion.div
                                             key={msg.id}
@@ -585,12 +580,12 @@ export default function TenantInboxPage() {
                                                             </div>
                                                         )}
                                                         <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${isMine
-                                                                ? isDark
-                                                                    ? "bg-[#a27cff]/15 text-white border border-[#a27cff]/20 rounded-tr-none"
-                                                                    : "bg-violet-100 text-slate-900 rounded-tr-none"
-                                                                : isDark
-                                                                    ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
-                                                                    : "bg-slate-100 text-slate-700 rounded-tl-none"
+                                                            ? isDark
+                                                                ? "bg-[#a27cff]/15 text-white border border-[#a27cff]/20 rounded-tr-none"
+                                                                : "bg-violet-100 text-slate-900 rounded-tr-none"
+                                                            : isDark
+                                                                ? "bg-[#201f1f] text-[#adaaaa] rounded-tl-none"
+                                                                : "bg-slate-100 text-slate-700 rounded-tl-none"
                                                             }`}>
                                                             {msg.content}
                                                         </div>
@@ -650,9 +645,8 @@ export default function TenantInboxPage() {
                                             initial={{ opacity: 0, y: 15, scale: 0.95 }}
                                             animate={{ opacity: 1, y: 4, scale: 1 }}
                                             exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                                            className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${
-                                                isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
-                                            }`}
+                                            className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
+                                                }`}
                                         >
                                             <button
                                                 onClick={() => handleAttachmentSelect("image")}
@@ -746,11 +740,10 @@ export default function TenantInboxPage() {
                                         placeholder="owner@example.com or admin@example.com"
                                         value={newChatEmail}
                                         onChange={(e) => setNewChatEmail(e.target.value)}
-                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
-                                            isDark
-                                                ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
-                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
-                                        }`}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${isDark
+                                            ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
+                                            : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
+                                            }`}
                                     />
                                 </div>
 
