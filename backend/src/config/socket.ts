@@ -19,9 +19,16 @@ export const initSocket = (server: HttpServer) => {
     io.use(async (socket: Socket, next) => {
         try {
             // Try to get token from cookie or auth header
-            const token =
+            let token =
                 socket.handshake.auth?.token ||
                 socket.handshake.headers?.authorization?.split(" ")[1];
+
+            if (!token && socket.handshake.headers.cookie) {
+                const match = socket.handshake.headers.cookie.match(/(?:^|;\s*)accessToken=([^;]*)/);
+                if (match && match[1]) {
+                    token = decodeURIComponent(match[1]);
+                }
+            }
 
             if (!token) return next(new Error("Authentication required"));
 

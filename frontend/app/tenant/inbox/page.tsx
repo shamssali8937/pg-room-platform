@@ -101,7 +101,7 @@ export default function TenantInboxPage() {
     const { isDark } = useTenantTheme();
     const { user } = useAuth();
     const dispatch = useAppDispatch();
-    const { conversations, messages, activeConversationId, isLoading, isSending, error } = useAppSelector((s) => s.chat);
+    const { conversations, messages, activeConversationId, isLoading, isSending, error, typing } = useAppSelector((s) => s.chat);
 
     const [inputText, setInputText] = useState("");
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -110,6 +110,9 @@ export default function TenantInboxPage() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isSendingTyping, setIsSendingTyping] = useState(false);
 
     const [showStartChatModal, setShowStartChatModal] = useState(false);
     const [newChatEmail, setNewChatEmail] = useState("");
@@ -155,7 +158,7 @@ export default function TenantInboxPage() {
     }, [dispatch]);
 
     const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
-    useSocket(conversationIds);
+    const { socket } = useSocket(conversationIds);
 
     const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? null;
 
@@ -190,7 +193,32 @@ export default function TenantInboxPage() {
         if (!inputText.trim() || !activeConversationId) return;
         const content = inputText.trim();
         setInputText("");
+        
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        if (socket) {
+            socket.emit("stop_typing", { conversationId: activeConversationId });
+        }
+        setIsSendingTyping(false);
+
         await dispatch(sendMessage({ conversationId: activeConversationId, content }));
+    };
+
+    const handleInputChange = (val: string) => {
+        setInputText(val);
+        if (!activeConversationId || !socket) return;
+        if (!isSendingTyping) {
+            setIsSendingTyping(true);
+            socket.emit("typing", { conversationId: activeConversationId });
+        }
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit("stop_typing", { conversationId: activeConversationId });
+            setIsSendingTyping(false);
+        }, 2000);
     };
 
     const handleBlock = async (conversationId: string) => {
@@ -609,8 +637,34 @@ export default function TenantInboxPage() {
                                 )}
                             </>
                         )}
-                        <div ref={messagesEndRef} />
-                    </div>
+                                {activeConversationId && typing && typing[activeConversationId] && (
+                                    <div className="flex items-end gap-3 px-1">
+                                        <div className="w-8 h-8 shrink-0">
+                                            {getOtherParticipant(activeConversation)?.profile_photo_url || getOtherParticipant(activeConversation)?.image ? (
+                                                <img
+                                                    src={getOtherParticipant(activeConversation)?.profile_photo_url || getOtherParticipant(activeConversation)?.image || ""}
+                                                    alt={getOtherParticipant(activeConversation)?.full_name ?? "User"}
+                                                    className="w-8 h-8 rounded-lg object-cover"
+                                                />
+                                            ) : (
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isDark ? "bg-[#a27cff]/20" : "bg-violet-100"}`}>
+                                                    <span className="text-[#a27cff] text-[10px] font-bold">
+                                                        {(getOtherParticipant(activeConversation)?.full_name?.[0] ?? "?").toUpperCase()}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className={`px-4 py-3.5 rounded-2xl ${isDark ? "bg-[#201f1f] text-[#adaaaa]" : "bg-slate-100 text-slate-700"} rounded-tl-none`}>
+                                            <div className="flex gap-1 items-center justify-center h-4 w-9">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div ref={messagesEndRef} />
+                            </div>
 
                     {/* Chat Input */}
                     <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
@@ -684,7 +738,7 @@ export default function TenantInboxPage() {
                                 type="text"
                                 placeholder="Type a message..."
                                 value={inputText}
-                                onChange={(e) => setInputText(e.target.value)}
+                                onChange={(e) => handleInputChange(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleSend()}
                                 className={`flex-grow rounded-xl py-3 px-4 text-sm outline-none focus:ring-1 focus:ring-[#a27cff]/40 ${inputBg}`}
                             />

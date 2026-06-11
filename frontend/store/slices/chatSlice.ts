@@ -90,6 +90,7 @@ interface ChatState {
     isLoading: boolean;
     isSending: boolean;
     error: string | null;
+    typing: Record<string, boolean>; // conversationId -> isOtherParticipantTyping
 }
 
 const initialState: ChatState = {
@@ -99,6 +100,7 @@ const initialState: ChatState = {
     isLoading: false,
     isSending: false,
     error: null,
+    typing: {},
 };
 
 // ─── Async Thunks ────────────────────────────────────────────────────────────
@@ -330,6 +332,13 @@ const chatSlice = createSlice({
                 if (conv) conv.unread_count = 0;
             }
         },
+        setTypingStatus(state, action: PayloadAction<{ conversationId: string; isTyping: boolean }>) {
+            const { conversationId, isTyping } = action.payload;
+            if (!state.typing) {
+                state.typing = {};
+            }
+            state.typing[conversationId] = isTyping;
+        },
         addLocalMessage(state, action: PayloadAction<{ conversationId: string; message: ChatMessage }>) {
             const { conversationId, message } = action.payload;
             if (!state.messages[conversationId]) state.messages[conversationId] = [];
@@ -527,5 +536,5 @@ const chatSlice = createSlice({
     },
 });
 
-export const { setActiveConversation, addLocalMessage, deleteLocalMessage, clearChatError } = chatSlice.actions;
+export const { setActiveConversation, addLocalMessage, deleteLocalMessage, clearChatError, setTypingStatus } = chatSlice.actions;
 export default chatSlice.reducer;

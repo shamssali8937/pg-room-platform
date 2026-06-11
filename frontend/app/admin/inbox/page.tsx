@@ -93,7 +93,7 @@ export default function AdminInbox() {
     const { isDark } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { user } = useAuth();
-    const { conversations, messages, activeConversationId, isLoading, isSending, error } = useAppSelector((s) => s.chat);
+    const { conversations, messages, activeConversationId, isLoading, isSending, error, typing } = useAppSelector((s) => s.chat);
 
     const [inputText, setInputText] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
@@ -102,6 +102,9 @@ export default function AdminInbox() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
+
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [isSendingTyping, setIsSendingTyping] = useState(false);
 
     const [showStartChatModal, setShowStartChatModal] = useState(false);
     const [newChatEmail, setNewChatEmail] = useState("");
@@ -161,7 +164,7 @@ export default function AdminInbox() {
     }, [dispatch]);
 
     const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
-    useSocket(conversationIds);
+    const { socket } = useSocket(conversationIds);
 
     const activeConversation = conversations.find((c) => c.id === activeConversationId) ?? null;
 
@@ -197,7 +200,32 @@ export default function AdminInbox() {
         if (!inputText.trim() || !activeConversationId) return;
         const content = inputText.trim();
         setInputText("");
+        
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        if (socket) {
+            socket.emit("stop_typing", { conversationId: activeConversationId });
+        }
+        setIsSendingTyping(false);
+
         await dispatch(sendMessage({ conversationId: activeConversationId, content }));
+    };
+
+    const handleInputChange = (val: string) => {
+        setInputText(val);
+        if (!activeConversationId || !socket) return;
+        if (!isSendingTyping) {
+            setIsSendingTyping(true);
+            socket.emit("typing", { conversationId: activeConversationId });
+        }
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        typingTimeoutRef.current = setTimeout(() => {
+            socket.emit("stop_typing", { conversationId: activeConversationId });
+            setIsSendingTyping(false);
+        }, 2000);
     };
 
     const handleDelete = async (messageId: string) => {
@@ -528,6 +556,19 @@ export default function AdminInbox() {
                                         </div>
                                     );
                                 })}
+                                {activeConversationId && typing && typing[activeConversationId] && (
+                                    <div className="flex justify-start px-1">
+                                        <div className="max-w-[70%] flex flex-col gap-1.5">
+                                            <div className={`px-4 py-3.5 rounded-2xl ${isDark ? "bg-[#201f1f] text-zinc-200 border border-white/5" : "bg-white text-slate-800 border border-slate-100 shadow-sm"} rounded-tl-none`}>
+                                                <div className="flex gap-1 items-center justify-center h-4 w-9">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "0ms" }} />
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "150ms" }} />
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: "300ms" }} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
@@ -598,7 +639,7 @@ export default function AdminInbox() {
                                         type="text"
                                         placeholder="Write your support message..."
                                         value={inputText}
-                                        onChange={(e) => setInputText(e.target.value)}
+                                        onChange={(e) => handleInputChange(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                                         className={`flex-1 px-4 py-3 rounded-xl text-sm outline-none focus:ring-1 focus:ring-purple-500/50 transition-all ${inputBg}`}
                                     />
