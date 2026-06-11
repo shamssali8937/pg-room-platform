@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { useAppDispatch } from "@/store/hooks";
-import { addLocalMessage, deleteLocalMessage } from "@/store/slices/chatSlice";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { addLocalMessage, deleteLocalMessage, setTypingStatus } from "@/store/slices/chatSlice";
 import type { ChatMessage } from "@/store/slices/chatSlice";
 import { updateRoomViews } from "@/store/slices/roomSlice";
 
@@ -14,6 +14,13 @@ let globalSocket: Socket | null = null;
 export const useSocket = (conversationIds: string[] = []) => {
     const dispatch = useAppDispatch();
     const socketRef = useRef<Socket | null>(null);
+    const { isAuthenticated } = useAppSelector((s) => s.auth);
+    const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+    
+    const activeConvIdRef = useRef(activeConversationId);
+    useEffect(() => {
+        activeConvIdRef.current = activeConversationId;
+    }, [activeConversationId]);
 
     const getToken = useCallback((): string | null => {
         // Try to get the access token from cookies
@@ -24,14 +31,14 @@ export const useSocket = (conversationIds: string[] = []) => {
 
     useEffect(() => {
         if (typeof window === "undefined") return;
+        if (!isAuthenticated) return;
 
         const token = getToken();
-        if (!token) return;
 
         // Reuse existing socket or create new one
         if (!globalSocket || !globalSocket.connected) {
             globalSocket = io(SOCKET_URL, {
-                auth: { token },
+                auth: token ? { token } : undefined,
                 withCredentials: true,
                 transports: ["websocket", "polling"],
                 reconnectionDelay: 1000,
@@ -44,6 +51,10 @@ export const useSocket = (conversationIds: string[] = []) => {
         // Listen for incoming messages
         const handleNewMessage = (message: ChatMessage) => {
             dispatch(addLocalMessage({ conversationId: message.conversation_id, message }));
+            // If the chat is currently open for this conversation, mark it as seen immediately
+            if (globalSocket && message.conversation_id === activeConvIdRef.current) {
+                globalSocket.emit("mark_seen", { conversationId: message.conversation_id });
+            }
         };
 
         const handleDeleteMessage = ({ messageId }: { messageId: string }) => {
@@ -54,9 +65,19 @@ export const useSocket = (conversationIds: string[] = []) => {
             dispatch(updateRoomViews({ id: roomId, views }));
         };
 
+        const handleUserTyping = ({ conversationId }: { conversationId: string; userId: string }) => {
+            dispatch(setTypingStatus({ conversationId, isTyping: true }));
+        };
+
+        const handleUserStopTyping = ({ conversationId }: { conversationId: string; userId: string }) => {
+            dispatch(setTypingStatus({ conversationId, isTyping: false }));
+        };
+
         globalSocket.on("new_message", handleNewMessage);
         globalSocket.on("delete_message", handleDeleteMessage);
         globalSocket.on("room_viewed", handleRoomViewed);
+        globalSocket.on("user_typing", handleUserTyping);
+        globalSocket.on("user_stop_typing", handleUserStopTyping);
 
         // Join all active conversation rooms
         conversationIds.forEach((id) => {
@@ -67,12 +88,18 @@ export const useSocket = (conversationIds: string[] = []) => {
             globalSocket?.off("new_message", handleNewMessage);
             globalSocket?.off("delete_message", handleDeleteMessage);
             globalSocket?.off("room_viewed", handleRoomViewed);
-            // Leave rooms on unmount
-            conversationIds.forEach((id) => {
-                globalSocket?.emit("leave_conversation", id);
-            });
+            globalSocket?.off("user_typing", handleUserTyping);
+            globalSocket?.off("user_stop_typing", handleUserStopTyping);
+            // DO NOT leave conversation rooms on component unmount so background notifications work
         };
-    }, [dispatch, getToken, conversationIds.join(",")]); // eslint-disable-line
+    }, [dispatch, getToken, conversationIds.join(","), isAuthenticated]); // eslint-disable-line
+
+    // Emit mark_seen when activeConversationId changes
+    useEffect(() => {
+        if (globalSocket && activeConversationId) {
+            globalSocket.emit("mark_seen", { conversationId: activeConversationId });
+        }
+    }, [activeConversationId]);
 
     const joinConversation = useCallback((conversationId: string) => {
         globalSocket?.emit("join_conversation", conversationId);
@@ -82,5 +109,5 @@ export const useSocket = (conversationIds: string[] = []) => {
         globalSocket?.emit("leave_conversation", conversationId);
     }, []);
 
-    return { socket: socketRef.current, joinConversation, leaveConversation };
+    return { socket: globalSocket || socketRef.current, joinConversation, leaveConversation };
 };
