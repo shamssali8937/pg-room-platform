@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AdminThemeProvider, useAdminTheme } from "@/context/AdminThemeContext";
 import Sidebar from "@/components/admin/Sidebar";
 import Topbar from "@/components/admin/Topbar";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchConversations } from "@/store/slices/chatSlice";
+import { useSocket } from "@/hooks/useSocket";
 
 // Map pathnames to active sidebar IDs
 function getActiveId(pathname: string): string {
@@ -33,8 +37,21 @@ function getPlaceholder(pathname: string): string {
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     const { isDark } = useAdminTheme();
     const pathname = usePathname();
+    const { user, isAuthenticated } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
+    const dispatch = useAppDispatch();
+    const conversations = useAppSelector((s) => s.chat.conversations);
+    const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+    // Global socket listener for real-time messages on any page
+    useSocket(conversationIds);
+
+    // Fetch conversations globally so badges work on all pages
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            dispatch(fetchConversations());
+        }
+    }, [isAuthenticated, user, dispatch]);
 
     const activeId = getActiveId(pathname);
     const placeholder = getPlaceholder(pathname);

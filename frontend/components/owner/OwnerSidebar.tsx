@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logoutUser } from "@/store/slices/authSlice";
 import {
     Home,
@@ -43,6 +43,8 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
     const { isDark, toggleTheme } = useOwnerTheme();
     const dispatch = useAppDispatch();
     const router = useRouter();
+    const conversations = useAppSelector((s) => s.chat.conversations);
+    const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
 
     const handleSignOut = async () => {
         await dispatch(logoutUser());
@@ -141,6 +143,7 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
                 <nav className="flex-grow space-y-1">
                     {navItems.map((item) => {
                         const isActive = item.id === activeId;
+                        const showBadge = item.id === "inquiries" && totalUnread > 0;
                         return (
                             <Link key={item.id} href={item.href} onClick={onClose}>
                                 <motion.div
@@ -148,8 +151,20 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
                                     className={`py-3 px-6 flex items-center gap-4 transition-all duration-200 ${isActive ? 'translate-x-1' : ''}
                                         ${isActive ? navActiveClass : navInactiveClass}`}
                                 >
-                                    <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
+                                    <div className="relative">
+                                        <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
+                                        {showBadge && (
+                                            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5">
+                                                {totalUnread > 9 ? "9+" : totalUnread}
+                                            </span>
+                                        )}
+                                    </div>
                                     <span>{item.label}</span>
+                                    {showBadge && (
+                                        <span className="ml-auto min-w-[18px] h-[18px] bg-violet-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                                            {totalUnread > 99 ? "99+" : totalUnread}
+                                        </span>
+                                    )}
                                 </motion.div>
                             </Link>
                         );

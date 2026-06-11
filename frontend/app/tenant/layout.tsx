@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import TenantSidebar from "@/components/tenant/TenantSidebar";
 import TenantTopbar from "@/components/tenant/TenantTopbar";
 import { TenantThemeProvider, useTenantTheme } from "@/context/TenantThemeContext";
 import { useAuth } from "@/context/AuthContext";
 import { LayoutDashboard, Search, CalendarCheck, MessageSquare, ShieldCheck, Loader2 } from "lucide-react";
-import { useAppSelector } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { fetchConversations } from "@/store/slices/chatSlice";
+import { useSocket } from "@/hooks/useSocket";
 
 function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     const { user, isLoading, isAuthenticated } = useAuth();
@@ -15,7 +17,19 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     const { isDark } = useTenantTheme();
     const pathname = usePathname();
     const router = useRouter();
+    const dispatch = useAppDispatch();
+    const conversations = useAppSelector((s) => s.chat.conversations);
     const activeConversationId = useAppSelector((s) => s.chat.activeConversationId);
+    const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
+    // Global socket listener for real-time messages on any page
+    useSocket(conversationIds);
+
+    // Fetch conversations globally so badges work on all pages
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            dispatch(fetchConversations());
+        }
+    }, [isAuthenticated, user, dispatch]);
 
     useEffect(() => {
         if (!isLoading && (!isAuthenticated || (user?.role !== "tenant" && user?.role !== "admin"))) {
@@ -95,8 +109,11 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
                 <div className={`md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 px-5 py-3.5 rounded-full border z-[45] flex items-center gap-6 shadow-2xl backdrop-blur-[20px] transition-colors ${isDark ? "bg-[#262626]/60 border-white/10" : "bg-white/80 border-slate-200 shadow-[0_10px_40px_-10px_rgba(138,92,246,0.15)]"
                     }`}>
                     {dockItems.map(({ id, icon: Icon, href }) => (
-                        <button key={id} onClick={() => router.push(href)}>
+                        <button key={id} onClick={() => router.push(href)} className="relative">
                             <Icon size={22} className={activeId === id ? "text-[#a27cff]" : isDark ? "text-zinc-400" : "text-slate-400"} />
+                            {id === "inbox" && conversations.reduce((s, c) => s + (c.unread_count ?? 0), 0) > 0 && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                            )}
                         </button>
                     ))}
                 </div>

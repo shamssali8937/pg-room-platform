@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bell, Search, X, Menu } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import { useAppSelector } from "@/store/hooks";
 import api from "@/lib/api";
 
 interface Notification {
@@ -47,6 +48,8 @@ export default function OwnerTopbar({
     const notifRef = useRef<HTMLDivElement>(null);
     const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
     const { user } = useAuth();
+    const conversations = useAppSelector((s) => s.chat.conversations);
+    const totalUnreadMessages = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
 
     useEffect(() => { setIsMounted(true); }, []);
 
@@ -140,9 +143,12 @@ export default function OwnerTopbar({
                 <div className="flex items-center gap-3 flex-1 max-w-md">
                     <button
                         onClick={onMenuToggle}
-                        className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors flex-shrink-0 ${iconBtn}`}
+                        className={`w-11 h-11 flex items-center justify-center rounded-full transition-colors flex-shrink-0 relative ${iconBtn}`}
                     >
                         <Menu size={22} />
+                        {totalUnreadMessages > 0 && (
+                            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-transparent" />
+                        )}
                     </button>
 
                     <div className="relative w-full group">

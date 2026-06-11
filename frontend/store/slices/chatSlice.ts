@@ -344,6 +344,12 @@ const chatSlice = createSlice({
             if (conv) {
                 conv.last_message = message.content;
                 conv.last_message_at = message.created_at;
+                // Increment unread count when message arrives for a non-active conversation.
+                // The unread_count is reset to 0 in setActiveConversation when the user opens the chat.
+                const isActiveConv = state.activeConversationId === conversationId;
+                if (!isActiveConv) {
+                    conv.unread_count = (conv.unread_count ?? 0) + 1;
+                }
             }
         },
         clearChatError(state) {
