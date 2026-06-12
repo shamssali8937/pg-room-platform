@@ -10,7 +10,7 @@ export default function Navbar() {
     const navLinks = [
         { name: "About Us", href: "/general/aboutus" },
         { name: "Privacy Policy", href: "/general/privacypolicy" },
-        { name: "Term & Conditions", href: "/general/term&conditions" },
+        { name: "Term & Conditions", href: "/general/terms-and-conditions" },
         { name: "Contact Us", href: "/general/contactus" },
     ];
 
