@@ -9,7 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/general/aboutus",
     "/general/contactus",
     "/general/privacypolicy",
-    "/general/term%26conditions",
+    "/general/term&conditions",
     "/auth/signin",
     "/auth/signup",
   ];
