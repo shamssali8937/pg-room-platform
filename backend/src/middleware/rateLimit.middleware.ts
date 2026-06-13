@@ -1,5 +1,23 @@
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis";
+import { redis } from "../config/redis.js";
 import { logger } from "../config/logger.js";
+
+// ─── Shared Redis store for all rate limiters ─────────────────────────────────
+// Falls back to in-memory if Redis is not configured (e.g. local dev with no REDIS_URL).
+// Returns a partial options spread so the `store` key is simply absent (not undefined)
+// when Redis is unavailable — required by exactOptionalPropertyTypes: true.
+const redisStoreOptions = (prefix: string): { store: RedisStore } | Record<string, never> =>
+    redis
+        ? {
+              store: new RedisStore({
+                  // ioredis exposes .call(command, ...args) for raw commands
+                  sendCommand: (command: string, ...args: string[]) =>
+                      (redis as any).call(command, ...args),
+                  prefix: `rl:${prefix}:`,
+              }),
+          }
+        : {};
 
 const createLimiter = (
     windowMs: number,
@@ -12,6 +30,7 @@ const createLimiter = (
         max,
         standardHeaders: true,   // Returns rate limit info in RateLimit-* headers
         legacyHeaders: false,     // Disables X-RateLimit-* headers
+        ...redisStoreOptions(name), // spreads { store } or {} — never undefined
         handler: (req, res) => {
             logger.warn(`Rate limit exceeded [${name}]`, {
                 ip: req.ip,
@@ -72,6 +91,7 @@ export const chatMessageRateLimiter = rateLimit({
     max: process.env.NODE_ENV === "production" ? 20 : 200,
     standardHeaders: true,
     legacyHeaders: false,
+    ...redisStoreOptions("CHAT_MESSAGE"), // spreads { store } or {} — never undefined
     keyGenerator: (req) => {
         // Use authenticated user ID if available — immune to IP spoofing on shared IPs.
         // Fall back to ipKeyGenerator(req.ip) to normalize IPv6 addresses correctly

@@ -51,7 +51,7 @@ export const getRoomById = async (
 ): Promise<void> => {
     try {
         const id = req.params.id as string;
-        const data = await getRoomByIdService(id);
+        const data = await getRoomByIdService(id, req.user?.id);
         res.json({ success: true, data });
     } catch (error) {
         next(error);

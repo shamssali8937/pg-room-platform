@@ -1,9 +1,14 @@
 import { MetadataRoute } from "next";
+import { headers } from "next/headers";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pg-room-platform.vercel.app";
+export const dynamic = "force-dynamic";
 
-  // Publicly crawlable routes on PG Nexus website
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const headersList = await headers();
+  const host = headersList.get("host") || "pg-room-platform.vercel.app";
+  const protocol = headersList.get("x-forwarded-proto") || "https";
+  const baseUrl = `${protocol}://${host}`;
+
   const routes = [
     "",
     "/general/aboutus",

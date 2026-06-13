@@ -2,16 +2,16 @@ import { prisma } from "../config/prisma.js";
 import { uploadToCloudinary } from "../utils/upload.js";
 import { getIO } from "../config/socket.js";
 import { logger } from "../config/logger.js";
+import { getOrSet, invalidateCache } from "../utils/cache.js";
+import { redis } from "../config/redis.js";
 
-// ─── Lightweight in-memory cache for the public rooms listing ──────────────────
-// The rooms list is the most-hit public endpoint; the same filters are often
-// requested multiple times within a short window (SSR + hydration, repeated scrolls).
-// A 30-second TTL prevents hammering Supabase (ap-northeast-1) on every hit.
-const roomsCache = new Map<string, { data: any; expiresAt: number }>();
-const ROOMS_CACHE_TTL_MS = 30_000; // 30 seconds
+// ─── Redis-backed cache for the public rooms listing ─────────────────────────
+// Replaces the previous in-memory Map — now survives server restarts and works
+// across multiple Node.js instances. TTL: 30 seconds.
+const ROOMS_CACHE_TTL_S = 120; // 2 minutes — safe because mutations call invalidateRoomsCache()
 
-const getRoomsCacheKey = (query: any): string =>
-    JSON.stringify({
+const getRoomsCacheKey = (query: any): string => {
+    const params = JSON.stringify({
         city: query.city,
         min_price: query.min_price,
         max_price: query.max_price,
@@ -27,8 +27,12 @@ const getRoomsCacheKey = (query: any): string =>
         limit: query.limit ?? 12,
         status: query.status,
     });
+    // Use a short hash as the key suffix to keep Redis keys readable
+    return `rooms:list:${Buffer.from(params).toString("base64url").slice(0, 64)}`;
+};
 
-export const invalidateRoomsCache = () => roomsCache.clear();
+/** Bust all rooms listing cache entries (e.g. after create/update/delete). */
+export const invalidateRoomsCache = () => invalidateCache("rooms:list:*");
 
 // ─── Shared room transform to normalize field names for frontend ──────────────
 // Privacy: exposes only name + avatar for owner; exact address and phone are stripped.
@@ -209,13 +213,9 @@ export const createRoomService = async (userId: string, data: any, files: any) =
 };
 
 export const getRoomsService = async (query: any) => {
-    // ── Cache lookup ──────────────────────────────────────────────────────────
     const cacheKey = getRoomsCacheKey(query);
-    const cached = roomsCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) {
-        return cached.data;
-    }
 
+    return getOrSet(cacheKey, ROOMS_CACHE_TTL_S, async () => {
     const {
         city,
         min_price,
@@ -294,15 +294,11 @@ export const getRoomsService = async (query: any) => {
         prisma.room.count({ where }),
     ]);
 
-    const result = { rooms: rooms.map(transformRoom), total, page: Number(page), limit: Number(limit) };
-
-    // ── Cache store ───────────────────────────────────────────────────────────
-    roomsCache.set(cacheKey, { data: result, expiresAt: Date.now() + ROOMS_CACHE_TTL_MS });
-
-    return result;
+        return { rooms: rooms.map(transformRoom), total, page: Number(page), limit: Number(limit) };
+    }); // end getOrSet
 };
 
-export const getRoomByIdService = async (id: string) => {
+export const getRoomByIdService = async (id: string, userId?: string) => {
     const room = await prisma.room.findUnique({
         where: { id },
         include: {
@@ -315,22 +311,37 @@ export const getRoomByIdService = async (id: string) => {
 
     if (!room) throw new Error("Room not found");
 
-    // Increment view count
-    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
-        .then(async (updatedRoom) => {
-            try {
-                const io = getIO();
-                io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
-                    roomId: updatedRoom.id,
-                    views: updatedRoom.views
-                });
-            } catch (err) {
-                // socket not initialized yet or other issues
+    let shouldIncrement = true;
+    if (userId && redis) {
+        try {
+            // SADD returns 1 if the element was added, 0 if it was already in the set
+            const added = await redis.sadd(`user:views:${userId}`, id);
+            if (added === 0) {
+                shouldIncrement = false;
             }
-        })
-        .catch((err) => {
-            logger.error("Failed to increment room views", { roomId: id, error: err });
-        });
+        } catch (err) {
+            logger.error("Failed to check/add room view in Redis", { userId, roomId: id, error: err });
+        }
+    }
+
+    // Increment view count only if it's a unique view for this user (or guest)
+    if (shouldIncrement) {
+        prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
+            .then(async (updatedRoom) => {
+                try {
+                    const io = getIO();
+                    io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
+                        roomId: updatedRoom.id,
+                        views: updatedRoom.views
+                    });
+                } catch (err) {
+                    // socket not initialized yet or other issues
+                }
+            })
+            .catch((err) => {
+                logger.error("Failed to increment room views", { roomId: id, error: err });
+            });
+    }
 
     return transformRoom(room);
 };

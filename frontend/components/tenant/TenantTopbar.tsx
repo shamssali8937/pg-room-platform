@@ -49,9 +49,9 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
 
     useEffect(() => { setIsMounted(true); }, []);
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = async (signal?: AbortSignal) => {
         try {
-            const { data } = await api.get("/users/me/notifications");
+            const { data } = await api.get("/users/me/notifications", { signal });
             if (data?.success && Array.isArray(data?.data)) {
                 const mapped = data.data.map((n: any) => ({
                     id: n.id,
@@ -63,18 +63,26 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                 }));
                 setNotifications(mapped);
             }
-        } catch (err) {
+        } catch (err: any) {
+            // Ignore abort errors — component unmounted before request completed
+            if (err?.name === "AbortError" || err?.code === "ERR_CANCELED") return;
             console.error("Failed to fetch notifications:", err);
         }
     };
 
     useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            // Poll every 30 seconds for live notifications
-            const interval = setInterval(fetchNotifications, 30000);
-            return () => clearInterval(interval);
-        }
+        if (!user) return;
+
+        const controller = new AbortController();
+        fetchNotifications(controller.signal);
+
+        // Poll every 30 seconds for live notifications
+        const interval = setInterval(() => fetchNotifications(controller.signal), 30000);
+
+        return () => {
+            controller.abort(); // cancel any in-flight request
+            clearInterval(interval);
+        };
     }, [user]);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
