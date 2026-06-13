@@ -23,9 +23,43 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "PG Nexus — Find Your Perfect PG Room",
-  description: "PG Nexus — Discover, list, and book verified PG rooms across Pakistan.",
+  description: "Discover, list, and book verified premium PG rooms across Pakistan. Experience high-end verified student & professional living spaces.",
+  keywords: [
+    "PG rooms Pakistan",
+    "Paying guest Lahore",
+    "Hostels in Karachi",
+    "Verified room rentals",
+    "Student accommodation Islamabad",
+    "Rent PG rooms",
+    "PG Nexus",
+    "Shared living Pakistan"
+  ],
   icons: {
     icon: "/icon.svg",
+  },
+  openGraph: {
+    title: "PG Nexus — Find Your Perfect PG Room",
+    description: "Discover, list, and book verified premium PG rooms across Pakistan. Experience high-end verified student & professional living spaces.",
+    url: "https://pg-room-platform.vercel.app",
+    siteName: "PG Nexus",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PG Nexus — Find Your Perfect PG Room",
+    description: "Discover, list, and book verified premium PG rooms across Pakistan.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
