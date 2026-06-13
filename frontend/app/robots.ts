@@ -1,20 +1,14 @@
 import { MetadataRoute } from "next";
-import { headers } from "next/headers";
 
-export const dynamic = "force-dynamic";
+const BASE_URL = "https://pg-room-platform.vercel.app";
 
-export default async function robots(): Promise<MetadataRoute.Robots> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "pg-room-platform.vercel.app";
-  const protocol = headersList.get("x-forwarded-proto") || "https";
-  const baseUrl = `${protocol}://${host}`;
-
+export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/tenant/", "/owner/", "/admin/"],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${BASE_URL}/sitemap.xml`,
   };
 }

@@ -1,14 +1,8 @@
 import { MetadataRoute } from "next";
-import { headers } from "next/headers";
 
-export const dynamic = "force-dynamic";
+const BASE_URL = "https://pg-room-platform.vercel.app";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "pg-room-platform.vercel.app";
-  const protocol = headersList.get("x-forwarded-proto") || "https";
-  const baseUrl = `${protocol}://${host}`;
-
+export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     "",
     "/general/aboutus",
@@ -20,9 +14,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   return routes.map((route) => ({
-    url: `${baseUrl}${route}`,
+    url: `${BASE_URL}${route}`,
     lastModified: new Date(),
-    changeFrequency: "weekly",
+    changeFrequency: "weekly" as const,
     priority: route === "" ? 1.0 : 0.8,
   }));
 }
