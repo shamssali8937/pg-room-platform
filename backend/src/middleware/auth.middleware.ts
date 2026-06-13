@@ -58,3 +58,24 @@ export const authorize = (...allowedRoles: string[]) =>
 
         next();
     };
+
+/**
+ * Optionally verifies the Bearer JWT token.
+ * Attaches decoded user payload to req.user if present, but does not block the request.
+ */
+export const optionalAuthenticate = (
+    req: Request,
+    _res: Response,
+    next: NextFunction
+): void => {
+    try {
+        const token = req.cookies?.accessToken;
+        if (token) {
+            const decoded = jwt.verify(token, SECRET) as any;
+            req.user = decoded;
+        }
+    } catch (err) {
+        // Ignore JWT verification errors for optional authentication
+    }
+    next();
+};

@@ -42,6 +42,9 @@ export default function OwnerBookingsPage() {
     const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; message: string; onConfirm: (() => void) | null }>({ isOpen: false, message: "", onConfirm: null });
+
     // Filters and Search
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled" | "completed" | "closed" | "expired">("all");
@@ -70,31 +73,37 @@ export default function OwnerBookingsPage() {
 
     const handleUpdateStatus = async (bookingId: string, newStatus: "approved" | "rejected" | "completed" | "closed") => {
         const actionText = newStatus === "approved" ? "confirm" : newStatus === "completed" ? "complete" : newStatus === "closed" ? "close" : "reject";
-        if (!confirm(`Are you sure you want to ${actionText} this booking offer?`)) {
-            return;
-        }
+        
+        setConfirmModal({
+            isOpen: true,
+            message: `Are you sure you want to ${actionText} this booking offer?`,
+            onConfirm: async () => {
+                try {
+                    setActionLoadingId(bookingId);
+                    const { data } = await api.patch(`/bookings/${bookingId}/status`, {
+                        status: newStatus,
+                        owner_note: newStatus === "approved" ? "Booking confirmed by Owner" : newStatus === "completed" ? "Stay marked completed" : newStatus === "closed" ? "Booking request closed" : "Booking rejected by Owner"
+                    });
 
-        try {
-            setActionLoadingId(bookingId);
-            const { data } = await api.patch(`/bookings/${bookingId}/status`, {
-                status: newStatus,
-                owner_note: newStatus === "approved" ? "Booking confirmed by Owner" : newStatus === "completed" ? "Stay marked completed" : newStatus === "closed" ? "Booking request closed" : "Booking rejected by Owner"
-            });
-
-            if (data?.success) {
-                // Update local state dynamically
-                setBookings((prev) =>
-                    prev.map((b) =>
-                        b.id === bookingId ? { ...b, status: newStatus } : b
-                    )
-                );
+                    if (data?.success) {
+                        // Update local state dynamically
+                        setBookings((prev) =>
+                            prev.map((b) =>
+                                b.id === bookingId ? { ...b, status: newStatus } : b
+                            )
+                        );
+                    }
+                } catch (err: any) {
+                    console.error("Failed to update status:", err);
+                    setAlertModal({
+                        isOpen: true,
+                        message: err.response?.data?.message ?? "Failed to update booking status"
+                    });
+                } finally {
+                    setActionLoadingId(null);
+                }
             }
-        } catch (err: any) {
-            console.error("Failed to update status:", err);
-            alert(err.response?.data?.message ?? "Failed to update booking status");
-        } finally {
-            setActionLoadingId(null);
-        }
+        });
     };
 
     // Filter and search computation
@@ -161,7 +170,7 @@ export default function OwnerBookingsPage() {
                             <button
                                 key={filter}
                                 onClick={() => setStatusFilter(filter)}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all select-none ${
+                                className={`px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all select-none cursor-pointer ${
                                     isActive
                                         ? "bg-gradient-to-r from-[#ba9eff] to-[#699cff] text-white shadow-md shadow-violet-500/20"
                                         : isDark
@@ -187,7 +196,7 @@ export default function OwnerBookingsPage() {
                     <p className="text-red-400 text-sm">{error}</p>
                     <button
                         onClick={fetchBookings}
-                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors"
+                        className="px-4 py-2 rounded-xl bg-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/30 transition-colors cursor-pointer"
                     >
                         Try Again
                     </button>
@@ -336,14 +345,14 @@ export default function OwnerBookingsPage() {
                                             <button
                                                 disabled={actionLoadingId === booking.id}
                                                 onClick={() => handleUpdateStatus(booking.id, "approved")}
-                                                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                                             >
                                                 Confirm Booking
                                             </button>
                                             <button
                                                 disabled={actionLoadingId === booking.id}
                                                 onClick={() => handleUpdateStatus(booking.id, "rejected")}
-                                                className={`py-2.5 px-4 rounded-xl border border-red-500/20 hover:bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50`}
+                                                className={`py-2.5 px-4 rounded-xl border border-red-500/20 hover:bg-red-500/10 text-red-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50 cursor-pointer`}
                                             >
                                                 Reject
                                             </button>
@@ -355,14 +364,14 @@ export default function OwnerBookingsPage() {
                                             <button
                                                 disabled={actionLoadingId === booking.id}
                                                 onClick={() => handleUpdateStatus(booking.id, "completed")}
-                                                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                                className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-98 flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
                                             >
                                                 Mark Completed
                                             </button>
                                             <button
                                                 disabled={actionLoadingId === booking.id}
                                                 onClick={() => handleUpdateStatus(booking.id, "closed")}
-                                                className={`py-2.5 px-4 rounded-xl border border-zinc-500/20 hover:bg-zinc-500/10 text-zinc-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50`}
+                                                className={`py-2.5 px-4 rounded-xl border border-zinc-500/20 hover:bg-zinc-500/10 text-zinc-400 text-xs font-bold transition-all active:scale-98 disabled:opacity-50 cursor-pointer`}
                                             >
                                                 Close Request
                                             </button>
@@ -374,6 +383,78 @@ export default function OwnerBookingsPage() {
                     </AnimatePresence>
                 </div>
             )}
+            {/* Custom Confirm Modal */}
+            <AnimatePresence>
+                {confirmModal.isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4"
+                        onClick={() => setConfirmModal({ isOpen: false, message: "", onConfirm: null })}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`w-full max-w-md border rounded-2xl p-6 ${isDark ? "bg-[#131313] border-white/[0.08]" : "bg-white border-slate-200 shadow-2xl"}`}
+                        >
+                            <h3 className={`text-lg font-bold mb-4 ${textPrimary}`}>Confirm Action</h3>
+                            <p className={`text-sm mb-6 ${textSecondary}`}>{confirmModal.message}</p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setConfirmModal({ isOpen: false, message: "", onConfirm: null })}
+                                    className={`px-4 py-2 rounded-xl border text-xs font-bold uppercase cursor-pointer ${isDark ? "border-[#484847] text-white hover:bg-white/5" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirmModal.onConfirm) confirmModal.onConfirm();
+                                        setConfirmModal({ isOpen: false, message: "", onConfirm: null });
+                                    }}
+                                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase cursor-pointer shadow-lg hover:brightness-110 active:scale-95"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Custom Alert Modal */}
+            <AnimatePresence>
+                {alertModal.isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4"
+                        onClick={() => setAlertModal({ isOpen: false, message: "" })}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`w-full max-w-md border rounded-2xl p-6 ${isDark ? "bg-[#131313] border-white/[0.08]" : "bg-white border-slate-200 shadow-2xl"}`}
+                        >
+                            <h3 className={`text-lg font-bold mb-4 text-red-400`}>Notification</h3>
+                            <p className={`text-sm mb-6 ${textSecondary}`}>{alertModal.message}</p>
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => setAlertModal({ isOpen: false, message: "" })}
+                                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase cursor-pointer shadow-lg hover:brightness-110 active:scale-95"
+                                >
+                                    OK
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

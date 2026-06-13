@@ -3,6 +3,7 @@ import { uploadToCloudinary } from "../utils/upload.js";
 import { getIO } from "../config/socket.js";
 import { logger } from "../config/logger.js";
 import { getOrSet, invalidateCache } from "../utils/cache.js";
+import { redis } from "../config/redis.js";
 
 // ─── Redis-backed cache for the public rooms listing ─────────────────────────
 // Replaces the previous in-memory Map — now survives server restarts and works
@@ -297,7 +298,7 @@ export const getRoomsService = async (query: any) => {
     }); // end getOrSet
 };
 
-export const getRoomByIdService = async (id: string) => {
+export const getRoomByIdService = async (id: string, userId?: string) => {
     const room = await prisma.room.findUnique({
         where: { id },
         include: {
@@ -310,22 +311,37 @@ export const getRoomByIdService = async (id: string) => {
 
     if (!room) throw new Error("Room not found");
 
-    // Increment view count
-    prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
-        .then(async (updatedRoom) => {
-            try {
-                const io = getIO();
-                io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
-                    roomId: updatedRoom.id,
-                    views: updatedRoom.views
-                });
-            } catch (err) {
-                // socket not initialized yet or other issues
+    let shouldIncrement = true;
+    if (userId && redis) {
+        try {
+            // SADD returns 1 if the element was added, 0 if it was already in the set
+            const added = await redis.sadd(`user:views:${userId}`, id);
+            if (added === 0) {
+                shouldIncrement = false;
             }
-        })
-        .catch((err) => {
-            logger.error("Failed to increment room views", { roomId: id, error: err });
-        });
+        } catch (err) {
+            logger.error("Failed to check/add room view in Redis", { userId, roomId: id, error: err });
+        }
+    }
+
+    // Increment view count only if it's a unique view for this user (or guest)
+    if (shouldIncrement) {
+        prisma.room.update({ where: { id }, data: { views: { increment: 1 } } })
+            .then(async (updatedRoom) => {
+                try {
+                    const io = getIO();
+                    io.to(`user:${updatedRoom.owner_id}`).emit("room_viewed", {
+                        roomId: updatedRoom.id,
+                        views: updatedRoom.views
+                    });
+                } catch (err) {
+                    // socket not initialized yet or other issues
+                }
+            })
+            .catch((err) => {
+                logger.error("Failed to increment room views", { roomId: id, error: err });
+            });
+    }
 
     return transformRoom(room);
 };

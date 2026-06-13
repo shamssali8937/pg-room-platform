@@ -52,6 +52,8 @@ export default function OwnerSettingsPage() {
             const idDoc = data.data?.find((d: any) => d.doc_type === "identity");
             if (idDoc) {
                 setIdentityStatus(idDoc.status);
+            } else {
+                setIdentityStatus(null);
             }
         } catch (err) {
             console.error("Failed to load documents", err);
@@ -211,14 +213,14 @@ export default function OwnerSettingsPage() {
                         <>
                             <button
                                 onClick={() => { setIsEditing(false); setSaveError(null); setAvatarFile(null); setProfileImage(user?.profile_photo_url ?? ""); }}
-                                className={`flex-1 md:flex-none px-6 py-3 md:py-2.5 rounded-xl border hover:opacity-80 transition-colors font-headline font-bold text-xs md:text-sm tracking-tight uppercase ${isDark ? "border-[#484847] text-white" : "border-slate-300 text-slate-700"}`}
+                                className={`flex-1 md:flex-none px-6 py-3 md:py-2.5 rounded-xl border hover:opacity-80 transition-colors font-headline font-bold text-xs md:text-sm tracking-tight uppercase cursor-pointer ${isDark ? "border-[#484847] text-white" : "border-slate-300 text-slate-700"}`}
                             >
                                 Discard
                             </button>
                             <button
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="flex-1 md:flex-none px-8 py-3 md:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-headline font-bold text-xs md:text-sm tracking-tight uppercase shadow-[0_0_20px_rgba(138,92,246,0.4)] hover:brightness-110 transition-all disabled:opacity-70 flex items-center gap-2 justify-center"
+                                className="flex-1 md:flex-none px-8 py-3 md:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-headline font-bold text-xs md:text-sm tracking-tight uppercase shadow-[0_0_20px_rgba(138,92,246,0.4)] hover:brightness-110 transition-all disabled:opacity-70 flex items-center gap-2 justify-center cursor-pointer"
                             >
                                 {isSaving ? <Loader2 size={14} className="animate-spin" /> : null}
                                 {isSaving ? "Saving..." : "Save Changes"}
@@ -227,7 +229,7 @@ export default function OwnerSettingsPage() {
                     ) : (
                         <button
                             onClick={() => setIsEditing(true)}
-                            className="flex-1 md:flex-none px-8 py-3 md:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-headline font-bold text-xs md:text-sm tracking-tight uppercase shadow-[0_0_20px_rgba(138,92,246,0.4)] hover:brightness-110 transition-all flex items-center justify-center gap-2"
+                            className="flex-1 md:flex-none px-8 py-3 md:py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-headline font-bold text-xs md:text-sm tracking-tight uppercase shadow-[0_0_20px_rgba(138,92,246,0.4)] hover:brightness-110 transition-all flex items-center justify-center gap-2 cursor-pointer"
                         >
                             <Edit size={16} /> Edit Profile
                         </button>
@@ -286,21 +288,23 @@ export default function OwnerSettingsPage() {
                                         <p className={`text-xs ${textVariant}`}>Passport / License</p>
                                         {identityStatus && (
                                             <p className={`text-xs mt-1 font-bold ${
-                                                identityStatus === "verified" ? "text-emerald-400" :
+                                                (identityStatus === "verified" || identityStatus === "approved") ? "text-emerald-400" :
                                                 identityStatus === "rejected" ? "text-red-400" : "text-amber-400 animate-pulse"
                                             }`}>
-                                                {identityStatus === "verified" ? "Verified" :
+                                                {(identityStatus === "verified" || identityStatus === "approved") ? "Verified" :
                                                  identityStatus === "rejected" ? "Rejected" : "Under Review by Admin"}
                                             </p>
                                         )}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => setIsVerifyOpen(true)}
-                                    className={`text-[10px] md:text-xs font-bold uppercase tracking-tighter underline decoration-2 underline-offset-4 transition-opacity ${secondaryColor} hover:opacity-80`}
-                                >
-                                    Upload
-                                </button>
+                                {(!identityStatus || identityStatus === "rejected") && (
+                                    <button
+                                        onClick={() => setIsVerifyOpen(true)}
+                                        className={`text-[10px] md:text-xs font-bold uppercase tracking-tighter underline decoration-2 underline-offset-4 transition-opacity cursor-pointer ${secondaryColor} hover:opacity-80`}
+                                    >
+                                        Upload
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -500,7 +504,7 @@ export default function OwnerSettingsPage() {
                                 <button
                                     onClick={handleSaveCard}
                                     disabled={isSavingCard}
-                                    className={`px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                    className={`px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                                         cardSaveSuccess
                                             ? "bg-emerald-500 text-white"
                                             : isDark
@@ -571,7 +575,7 @@ export default function OwnerSettingsPage() {
                         >
                             <div className="flex justify-between items-center mb-6">
                                 <h3 className={`text-xl font-bold ${textPrimary}`}>Identity Verification</h3>
-                                <button onClick={() => setIsVerifyOpen(false)} className={`p-2 rounded-full transition-colors ${isDark ? "text-zinc-400 hover:bg-white/10" : "text-slate-500 hover:bg-slate-100"}`}>
+                                <button onClick={() => setIsVerifyOpen(false)} className={`p-2 rounded-full transition-colors cursor-pointer ${isDark ? "text-zinc-400 hover:bg-white/10" : "text-slate-500 hover:bg-slate-100"}`}>
                                     <X size={20} />
                                 </button>
                             </div>
@@ -603,7 +607,7 @@ export default function OwnerSettingsPage() {
                             <button
                                 onClick={handleDocSubmit}
                                 disabled={isUploadingDoc || docUploadSuccess}
-                                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-bold text-xs uppercase tracking-widest shadow-lg hover:brightness-110 transition-all disabled:opacity-70 flex items-center justify-center gap-2"
+                                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-bold text-xs uppercase tracking-widest shadow-lg hover:brightness-110 transition-all disabled:opacity-70 flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 {isUploadingDoc ? <Loader2 size={14} className="animate-spin" /> : null}
                                 {isUploadingDoc ? "Uploading..." : docUploadSuccess ? "Submitted for Review" : docFileName ? "Submit for Review" : "Cancel"}
