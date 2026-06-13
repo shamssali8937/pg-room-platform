@@ -1,6 +1,8 @@
 import { prisma } from "../config/prisma.js";
+import { getOrSet } from "../utils/cache.js";
 
 export const getOwnerDashboardStats = async (userId: string) => {
+    return getOrSet(`dashboard:owner:${userId}`, 300, async () => {
     const rooms = await prisma.room.findMany({
         where: { owner_id: userId },
         include: { _count: { select: { saved_by_users: true, bookings: true } } },
@@ -41,9 +43,11 @@ export const getOwnerDashboardStats = async (userId: string) => {
             },
         }),
     };
+    }); // end getOrSet
 };
 
 export const getAdminDashboardStats = async () => {
+    return getOrSet("dashboard:admin", 120, async () => {
     const [totalUsers, activeListings, pendingListings, pendingReports, totalOwners, totalTenants] = await Promise.all([
         prisma.user.count(),
         prisma.room.count({ where: { status: "active" } }),
@@ -104,9 +108,11 @@ export const getAdminDashboardStats = async () => {
         recentReports: mappedReports,
         recentPointsActivity: mappedPointsActivity,
     };
+    }); // end getOrSet
 };
 
 export const getTenantDashboardStats = async (userId: string) => {
+    return getOrSet(`dashboard:tenant:${userId}`, 300, async () => {
     const [savedCount, bookingCount, pointsResult] = await Promise.all([
         prisma.savedRoom.count({ where: { user_id: userId } }),
         prisma.booking.count({ where: { tenant_id: userId } }),
@@ -145,4 +151,5 @@ export const getTenantDashboardStats = async (userId: string) => {
         points: points,
         tier: tier,
     };
+    }); // end getOrSet
 };

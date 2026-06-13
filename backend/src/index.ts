@@ -1,3 +1,11 @@
+// ─── Load env FIRST ─────────────────────────────────────────────────────────
+// IMPORTANT: In ESM all static imports are hoisted and evaluated before any
+// module body code runs. dotenv.config() inside app.ts fires too late — by
+// then redis.ts, prisma.ts, etc. have already read process.env with undefined
+// values. Loading dotenv here (entry point, before any other import) ensures
+// process.env is fully populated when every config module initializes.
+import "dotenv/config";
+
 import { createServer } from "http";
 import app from "./app.js";
 import { logger } from "./config/logger.js";

@@ -54,7 +54,15 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
+        // ── Bail out immediately for aborted requests ──────────────────────────
+        // When an AbortController signal fires, axios throws with code "ERR_CANCELED".
+        // Passing it through unwrapped preserves the code so callers can ignore it.
+        if (axios.isCancel(error) || error?.code === "ERR_CANCELED") {
+            return Promise.reject(error);
+        }
+
         const originalRequest = error.config;
+
 
         if (error.response?.status === 403 && !originalRequest._retryCsrf) {
             originalRequest._retryCsrf = true;

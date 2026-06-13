@@ -4,6 +4,23 @@ import { generateAccessToken, generateRefreshToken, verifyToken } from "../utils
 import { sendEmail } from "../utils/mail.js";
 import crypto from "crypto";
 import { generateOTP, getOTPExpiry } from "../utils/otp.js";
+import { redis } from "../config/redis.js";
+
+// ─── Redis key helpers ────────────────────────────────────────────────────────
+const OTP_PHONE_KEY = (mobile: string) => `otp:phone:${mobile}`;
+const OTP_RESET_KEY = (email: string) => `otp:reset:${email}`;
+const RESET_TOKEN_KEY = (token: string) => `reset:token:${token}`;
+
+const setRedisKey = async (key: string, ttlSeconds: number, value: string): Promise<void> => {
+    if (redis) await redis.setex(key, ttlSeconds, value);
+};
+const getRedisKey = async (key: string): Promise<string | null> => {
+    if (!redis) return null;
+    return redis.get(key);
+};
+const delRedisKey = async (key: string): Promise<void> => {
+    if (redis) await redis.del(key);
+};
 
 
 export const signupService = async (data: any) => {
@@ -211,15 +228,8 @@ export const sendPhoneOTPService = async (mobile_number: string) => {
 
     const otp = generateOTP();
 
-    await prisma.user.update({
-        where: { mobile_number },
-        data: {
-            phone_otp: otp,
-            phone_otp_expiry: getOTPExpiry(),
-        },
-    });
-
-    // console.log("OTP:", otp); // FREE METHOD
+    // Store OTP in Redis with 5-minute TTL instead of Postgres
+    await setRedisKey(OTP_PHONE_KEY(mobile_number), 300, otp);
 
     return { message: "OTP sent" };
 };
@@ -234,12 +244,14 @@ export const verifyPhoneOTPService = async (
 
     if (!user) throw new Error("User not found");
 
-    if (
-        user.phone_otp !== otp ||
-        new Date() > (user.phone_otp_expiry as Date)
-    ) {
+    // Verify OTP from Redis
+    const storedOtp = await getRedisKey(OTP_PHONE_KEY(mobile_number));
+    if (!storedOtp || storedOtp !== otp) {
         throw new Error("Invalid or expired OTP");
     }
+
+    // OTP verified — delete it immediately (single-use)
+    await delRedisKey(OTP_PHONE_KEY(mobile_number));
 
     await prisma.user.update({
         where: { id: user.id },
@@ -284,16 +296,9 @@ export const forgotPasswordService = async (email: string) => {
     if (!user) throw new Error("User not found");
 
     const token = crypto.randomBytes(32).toString("hex");
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // P1-B: Persist token and expiry so it can be verified on reset
-    await prisma.user.update({
-        where: { id: user.id },
-        data: {
-            reset_token: token,
-            reset_token_expiry: expiry,
-        },
-    });
+    // Store reset token in Redis with 1-hour TTL
+    await setRedisKey(RESET_TOKEN_KEY(token), 3600, user.id);
 
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
     const resetLink = `${frontendUrl}/auth/reset-password?token=${token}`;
@@ -318,26 +323,23 @@ export const forgotPasswordService = async (email: string) => {
 export const resetPasswordService = async (token: string, newPassword: string) => {
     if (!token) throw new Error("Invalid or missing token");
 
-    // P1-B: Verify the token exists in the database and has not expired
-    const user = await prisma.user.findFirst({
-        where: {
-            reset_token: token,
-            reset_token_expiry: { gt: new Date() },
-        },
-    });
-
-    if (!user) throw new Error("Invalid or expired password reset token");
+    // Look up userId from Redis (token has 1h TTL set in forgotPasswordService)
+    const userId = await getRedisKey(RESET_TOKEN_KEY(token));
+    if (!userId) throw new Error("Invalid or expired password reset token");
 
     const hashedPassword = await hashPassword(newPassword);
 
     await prisma.user.update({
-        where: { id: user.id },
+        where: { id: userId },
         data: {
             password_hash: hashedPassword,
             reset_token: null,
             reset_token_expiry: null,
         },
     });
+
+    // Delete the token from Redis — single use
+    await delRedisKey(RESET_TOKEN_KEY(token));
 
     return { message: "Password reset successfully" };
 };
@@ -471,15 +473,9 @@ export const requestPasswordOTPService = async (email: string) => {
     if (!user) return { message: "If this email exists, an OTP has been sent." };
 
     const otp = generateOTP();
-    const expiry = getOTPExpiry(); // 5 minutes
 
-    await prisma.user.update({
-        where: { id: user.id },
-        data: {
-            reset_token: otp,
-            reset_token_expiry: expiry,
-        },
-    });
+    // Store OTP in Redis with 5-minute TTL
+    await setRedisKey(OTP_RESET_KEY(email), 300, otp);
 
     console.log("\n==========================================");
     console.log("🔑 PASSWORD RESET OTP:", otp);
@@ -509,11 +505,9 @@ export const verifyPasswordOTPService = async (email: string, otp: string) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new Error("Invalid OTP or email");
 
-    if (
-        user.reset_token !== otp ||
-        !user.reset_token_expiry ||
-        new Date() > user.reset_token_expiry
-    ) {
+    // Verify OTP from Redis
+    const storedOtp = await getRedisKey(OTP_RESET_KEY(email));
+    if (!storedOtp || storedOtp !== otp) {
         throw new Error("Invalid or expired OTP");
     }
 
@@ -528,11 +522,9 @@ export const resetPasswordWithOTPService = async (
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) throw new Error("Invalid OTP or email");
 
-    if (
-        user.reset_token !== otp ||
-        !user.reset_token_expiry ||
-        new Date() > user.reset_token_expiry
-    ) {
+    // Verify OTP from Redis
+    const storedOtp = await getRedisKey(OTP_RESET_KEY(email));
+    if (!storedOtp || storedOtp !== otp) {
         throw new Error("Invalid or expired OTP");
     }
 
@@ -548,6 +540,9 @@ export const resetPasswordWithOTPService = async (
             locked_until: null,
         },
     });
+
+    // Delete OTP from Redis — single use
+    await delRedisKey(OTP_RESET_KEY(email));
 
     return { message: "Password reset successfully. You can now sign in." };
 };
