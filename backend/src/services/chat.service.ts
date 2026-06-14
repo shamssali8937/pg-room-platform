@@ -42,13 +42,9 @@ export const normalizeMessage = (msg: any) => ({
 });
 
 export const getConversationsService = async (userId: string, role: string, search?: string) => {
-    // 1. Determine conversation membership conditions
-    // Admins can see all chats in which they are a participant (tenant_id or owner_id)
-    const membershipFilter = role === "admin"
-        ? { OR: [{ tenant_id: userId }, { owner_id: userId }] }
-        : role === "owner"
-            ? { owner_id: userId }
-            : { tenant_id: userId };
+    // Support and administrative chats can result in columns being swapped,
+    // so we search both tenant_id and owner_id for all roles (Tenant, Owner, Admin).
+    const membershipFilter = { OR: [{ tenant_id: userId }, { owner_id: userId }] };
 
     // Soft delete check
     const softDeleteFilter = {
@@ -346,7 +342,12 @@ export const createConversationByEmailService = async (initiatorId: string, reci
     let ownerId = recipient.id;
 
     const initiator = await prisma.user.findUnique({ where: { id: initiatorId } });
-    if (initiator?.role === "owner" && recipient.role === "tenant") {
+    // Determine proper role slot assignment.
+    // If the initiator is the owner, or the recipient is the tenant, swap roles to align.
+    if (
+        (initiator?.role === "owner") ||
+        (recipient.role === "tenant")
+    ) {
         tenantId = recipient.id;
         ownerId = initiatorId;
     }

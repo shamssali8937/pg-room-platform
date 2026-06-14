@@ -8,6 +8,8 @@ const transformRoom = (room: any) => ({
     address: room.address ?? room.locality ?? "",
     locality: room.locality,
     landmark: room.landmark,
+    approximate_latitude: room.approximate_latitude ?? null,
+    approximate_longitude: room.approximate_longitude ?? null,
     room_type: room.room_type,
     furnished_status: room.furnished_status,
     beds: room.beds,

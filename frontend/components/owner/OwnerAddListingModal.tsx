@@ -34,6 +34,8 @@ const INITIAL_FORM = {
     security_deposit_amount: "0",
     available_for: "any",
     availability_date: "",
+    approximate_latitude: "",
+    approximate_longitude: "",
 };
 
 export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListingModalProps) {
@@ -143,6 +145,8 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
             formData.append("security_deposit_amount", form.security_deposit_amount);
             formData.append("available_for", form.available_for);
             formData.append("availability_date", form.availability_date || new Date().toISOString().split('T')[0]);
+            if (form.approximate_latitude) formData.append("approximate_latitude", form.approximate_latitude);
+            if (form.approximate_longitude) formData.append("approximate_longitude", form.approximate_longitude);
             form.amenities.forEach((a) => formData.append("amenities[]", a));
             images.forEach((img) => formData.append("images", img));
 
@@ -319,6 +323,31 @@ export default function OwnerAddListingModal({ isOpen, onClose }: OwnerAddListin
                                                 value={form.landmark}
                                                 onChange={(e) => setField("landmark", e.target.value)}
                                                 placeholder="e.g. Near Raya Club"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Latitude (Approximate)</label>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={form.approximate_latitude}
+                                                onChange={(e) => setField("approximate_latitude", e.target.value)}
+                                                placeholder="e.g. 31.4826"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Longitude (Approximate)</label>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={form.approximate_longitude}
+                                                onChange={(e) => setField("approximate_longitude", e.target.value)}
+                                                placeholder="e.g. 74.3721"
                                                 className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
                                             />
                                         </div>

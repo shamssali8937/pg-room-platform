@@ -65,7 +65,7 @@ export const updateRoom = async (
 ): Promise<void> => {
     try {
         const id = req.params.id as string;
-        const data = await updateRoomService(req.user!.id, id, req.body);
+        const data = await updateRoomService(req.user!.id, id, req.body, req.files);
         logger.info("Room updated", {
             roomId: id,
             ownerId: req.user!.id,

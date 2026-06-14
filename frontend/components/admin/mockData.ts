@@ -362,6 +362,8 @@ export interface ModerationListing {
     wasSuspended?: boolean;
     lastSuspensionReason?: string;
     availabilityDate?: string;
+    approximate_latitude?: number | null;
+    approximate_longitude?: number | null;
 }
 
 export const rejectionReasons = [

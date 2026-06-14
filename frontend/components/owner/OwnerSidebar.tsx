@@ -1,11 +1,12 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logoutUser } from "@/store/slices/authSlice";
+import { createConversationByEmail, sendMessage } from "@/store/slices/chatSlice";
 import {
     Home,
     Building2,
@@ -19,7 +20,8 @@ import {
     Moon,
     Plus,
     Settings,
-    ClipboardList
+    ClipboardList,
+    Loader2
 } from "lucide-react";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 
@@ -43,12 +45,44 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
     const { isDark, toggleTheme } = useOwnerTheme();
     const dispatch = useAppDispatch();
     const router = useRouter();
+    const user = useAppSelector((state) => state.auth.user);
     const conversations = useAppSelector((s) => s.chat.conversations);
     const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
+    const [isSupportLoading, setIsSupportLoading] = useState(false);
 
     const handleSignOut = async () => {
         await dispatch(logoutUser());
         router.push("/auth/signin");
+    };
+
+    const handleSupportClick = async () => {
+        if (isSupportLoading) return;
+        setIsSupportLoading(true);
+        try {
+            const resultAction = await dispatch(createConversationByEmail({ email: "admin@pgnexus.com" }));
+            if (createConversationByEmail.fulfilled.match(resultAction)) {
+                const conversation = resultAction.payload;
+                const isSuspended = user?.account_status?.toLowerCase() === "suspended";
+                const messageText = isSuspended
+                    ? `Hello support, my account is suspended. My user ID is ${user?.id || 'N/A'}. What should I do next?`
+                    : `Hello support, I need assistance. My user ID is ${user?.id || 'N/A'}.`;
+                
+                await dispatch(sendMessage({
+                    conversationId: conversation.id,
+                    content: messageText
+                }));
+
+                router.push("/owner/inquiries");
+                if (onClose) onClose();
+            } else {
+                alert(resultAction.payload ?? "Failed to initiate support chat");
+            }
+        } catch (err: any) {
+            console.error("Support chat error:", err);
+            alert("An unexpected error occurred while starting support chat.");
+        } finally {
+            setIsSupportLoading(false);
+        }
     };
 
     // Close on Escape key
@@ -190,9 +224,17 @@ export default function OwnerSidebar({ activeId = "listings", isOpen = false, on
                         </div>
                     </button>
 
-                    <button className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor}`}>
-                        <HelpCircle size={18} strokeWidth={1.8} />
-                        <span>Support</span>
+                    <button
+                        onClick={handleSupportClick}
+                        disabled={isSupportLoading}
+                        className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} ${isSupportLoading ? "opacity-60 cursor-not-allowed" : ""}`}
+                    >
+                        {isSupportLoading ? (
+                            <Loader2 size={18} className="animate-spin" strokeWidth={1.8} />
+                        ) : (
+                            <HelpCircle size={18} strokeWidth={1.8} />
+                        )}
+                        <span>{isSupportLoading ? "Connecting..." : "Support"}</span>
                     </button>
                     <button onClick={handleSignOut} className={`py-3 px-6 flex items-center gap-4 w-full transition-colors ${bottomBtnColor} hover:!text-red-500`}>
                         <LogOut size={18} strokeWidth={1.8} />

@@ -11,6 +11,9 @@ import {
 import { type ModerationListing, type ModerationStatus } from "./mockData";
 import { useAdminTheme } from "@/context/AdminThemeContext";
 import api from "@/lib/api";
+import dynamic from "next/dynamic";
+
+const RoomLocationMap = dynamic(() => import("@/components/RoomLocationMap"), { ssr: false });
 
 const statusConfig: Record<ModerationStatus, { label: string; bg: string; text: string; border: string; dot: string }> = {
     pending: { label: "Pending Review", bg: "bg-purple-500/15", text: "text-purple-400", border: "border-purple-500/30", dot: "bg-purple-400" },
@@ -228,6 +231,24 @@ export default function ListingDetailModal({ listing, onClose, onApprove, onSusp
                                         )}
                                     </div>
                                 )}
+                                <div className="grid grid-cols-2 gap-4 text-xs pt-1">
+                                    <div>
+                                        <p className={metaLabel}>Latitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_latitude ?? "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className={metaLabel}>Longitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_longitude ?? "—"}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-3">
+                                    <RoomLocationMap
+                                        latitude={listing.approximate_latitude}
+                                        longitude={listing.approximate_longitude}
+                                        locality={listing.locality}
+                                        landmark={listing.landmark}
+                                    />
+                                </div>
                             </div>
                         </div>
 

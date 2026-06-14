@@ -35,6 +35,10 @@ export const createRoomSchema = z.object({
         availability_date: z.string().optional(),
         amenities: z.union([z.string(), z.array(z.string())]).optional(),
         "amenities[]": z.union([z.string(), z.array(z.string())]).optional(),
+        approximate_latitude: z.union([z.number(), z.string()]).optional().nullable(),
+        approximate_longitude: z.union([z.number(), z.string()]).optional().nullable(),
+        latitude: z.union([z.number(), z.string()]).optional().nullable(),
+        longitude: z.union([z.number(), z.string()]).optional().nullable(),
     }).passthrough(),
 });
 
@@ -61,6 +65,10 @@ export const updateRoomSchema = z.object({
         availability_date: z.string().optional(),
         amenities: z.union([z.string(), z.array(z.string())]).optional(),
         "amenities[]": z.union([z.string(), z.array(z.string())]).optional(),
+        approximate_latitude: z.union([z.number(), z.string()]).optional().nullable(),
+        approximate_longitude: z.union([z.number(), z.string()]).optional().nullable(),
+        latitude: z.union([z.number(), z.string()]).optional().nullable(),
+        longitude: z.union([z.number(), z.string()]).optional().nullable(),
     }).passthrough(),
 });
 

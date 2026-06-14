@@ -34,8 +34,10 @@ export const moderateListing = async (req: Request, res: Response, next: NextFun
 
 export const getUsers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getUsersService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getUsersService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) {
         next(error);
     }
@@ -55,8 +57,10 @@ export const updateUserStatus = async (req: Request, res: Response, next: NextFu
 
 export const getReports = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getReportsService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getReportsService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) {
         next(error);
     }
@@ -73,8 +77,10 @@ export const resolveReport = async (req: Request, res: Response, next: NextFunct
 
 export const getPointsTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getAdminPointsTransactionsService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getAdminPointsTransactionsService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) { next(error); }
 };
 
@@ -90,15 +96,19 @@ export const adjustPoints = async (req: Request, res: Response, next: NextFuncti
 
 export const getAuditActions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getAuditActionsService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getAuditActionsService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) { next(error); }
 };
 
 export const getInquiries = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getInquiriesService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getInquiriesService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) { next(error); }
 };
 
@@ -124,8 +134,10 @@ export const verifyUser = async (req: Request, res: Response, next: NextFunction
 
 export const getReviews = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-        const data = await adminService.getReviewsService();
-        res.json({ success: true, data });
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 20;
+        const data = await adminService.getReviewsService(page, limit);
+        res.json({ success: true, ...data });
     } catch (error) { next(error); }
 };
 

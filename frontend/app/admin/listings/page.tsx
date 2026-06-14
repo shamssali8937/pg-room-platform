@@ -97,6 +97,8 @@ export default function ListingsPage() {
                 wasSuspended: (r as any).was_suspended ?? false,
                 lastSuspensionReason: (r as any).last_suspension_reason ?? undefined,
                 availabilityDate: r.availability_date ? new Date(r.availability_date).toLocaleDateString() : "Immediate",
+                approximate_latitude: r.approximate_latitude ?? null,
+                approximate_longitude: r.approximate_longitude ?? null,
             };
         });
     }, [reduxRooms]);

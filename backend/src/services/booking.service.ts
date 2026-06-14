@@ -1,5 +1,7 @@
 import { prisma } from "../config/prisma.js";
 import { NotFoundError } from "../middleware/errorHandler.middleware.js";
+import { sendEmail } from "../utils/mail.js";
+import { bookingCreatedEmail, bookingStatusChangedEmail, bookingCancelledEmail, pointsEarnedEmail } from "../utils/emailTemplates.js";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -91,6 +93,20 @@ export const createBookingService = async (tenantId: string, roomId: string, dat
         `/owner/bookings`
     );
 
+    // Gap 1: Send email notification to owner
+    try {
+        const ownerUser = await prisma.user.findUnique({ where: { id: room.owner_id }, select: { email: true, full_name: true } });
+        if (ownerUser?.email) {
+            await sendEmail(
+                ownerUser.email,
+                isVisit ? "New Visit Request – PG Room" : "New Booking Inquiry – PG Room",
+                bookingCreatedEmail(ownerUser.full_name ?? "Owner", tenant?.full_name ?? "A tenant", room.title, data.request_type || "inquiry")
+            );
+        }
+    } catch (err) {
+        console.error("[Email] Failed to send booking created email:", err);
+    }
+
     return booking;
 };
 
@@ -164,6 +180,54 @@ export const updateBookingStatusService = async (
         await createNotification(booking.tenant_id, `booking_${status}`, notif.title, notif.body, `/tenant/bookings`);
     }
 
+    // Gap 1: Send email notification to tenant on status change
+    try {
+        const tenantUser = await prisma.user.findUnique({ where: { id: booking.tenant_id }, select: { email: true, full_name: true } });
+        if (tenantUser?.email) {
+            await sendEmail(
+                tenantUser.email,
+                `Booking ${status.charAt(0).toUpperCase() + status.slice(1)} – PG Room`,
+                bookingStatusChangedEmail(tenantUser.full_name ?? "Tenant", booking.room.title, status, ownerNote)
+            );
+        }
+    } catch (err) {
+        console.error("[Email] Failed to send booking status email:", err);
+    }
+
+    // Gap 4: Award tenant points when booking is completed
+    if (status === "completed") {
+        try {
+            const existingPtsTx = await prisma.pointsTransaction.findFirst({
+                where: { owner_id: booking.tenant_id, reference_id: bookingId, reason_code: "booking_completed" }
+            });
+            if (!existingPtsTx) {
+                const currentPts = await prisma.pointsTransaction.aggregate({ where: { owner_id: booking.tenant_id }, _sum: { points: true } });
+                const balanceAfter = (currentPts._sum.points ?? 0) + 25;
+                await prisma.pointsTransaction.create({
+                    data: {
+                        owner_id: booking.tenant_id,
+                        room_id: booking.room_id,
+                        transaction_type: "EARNED",
+                        points: 25,
+                        reason_code: "booking_completed",
+                        reference_id: bookingId,
+                        balance_after: balanceAfter,
+                        expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+                    }
+                });
+                await createNotification(booking.tenant_id, "points_credited", "Points Earned! 🪙", `You earned 25 points for completing your stay at "${booking.room.title}".`, `/tenant/bookings`);
+
+                // Send points email
+                const tenantForPts = await prisma.user.findUnique({ where: { id: booking.tenant_id }, select: { email: true, full_name: true } });
+                if (tenantForPts?.email) {
+                    await sendEmail(tenantForPts.email, "Points Earned – PG Room", pointsEarnedEmail(tenantForPts.full_name ?? "User", 25, "Booking completed"));
+                }
+            }
+        } catch (err) {
+            console.error("[TenantPoints] Failed to award booking_completed points:", err);
+        }
+    }
+
     return updated;
 };
 
@@ -192,6 +256,21 @@ export const cancelBookingService = async (tenantId: string, bookingId: string) 
         `A tenant cancelled their booking request for "${booking.room?.title ?? "your room"}".`,
         `/owner/bookings`
     );
+
+    // Gap 1: Send email notification to owner on cancellation
+    try {
+        const ownerUser = await prisma.user.findUnique({ where: { id: booking.owner_id }, select: { email: true, full_name: true } });
+        const tenantUser = await prisma.user.findUnique({ where: { id: booking.tenant_id }, select: { full_name: true } });
+        if (ownerUser?.email) {
+            await sendEmail(
+                ownerUser.email,
+                "Booking Cancelled – PG Room",
+                bookingCancelledEmail(ownerUser.full_name ?? "Owner", tenantUser?.full_name ?? "A tenant", booking.room?.title ?? "your room")
+            );
+        }
+    } catch (err) {
+        console.error("[Email] Failed to send booking cancelled email:", err);
+    }
 
     return updated;
 };
