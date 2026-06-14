@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { invalidateRoomsCache } from "./room.service.js";
+import { invalidateRoomsCache, invalidateRoomCache } from "./room.service.js";
 import { sendEmail } from "../utils/mail.js";
 import { listingModeratedEmail } from "../utils/emailTemplates.js";
 
@@ -124,6 +124,10 @@ export const moderateListingService = async (adminId: string, roomId: string, st
             images: true
         }
     });
+
+    if (room.owner_id) {
+        await invalidateRoomCache(roomId, room.owner_id);
+    }
 
     await prisma.adminAction.create({
         data: {

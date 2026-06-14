@@ -34,6 +34,13 @@ const getRoomsCacheKey = (query: any): string => {
 /** Bust all rooms listing cache entries (e.g. after create/update/delete). */
 export const invalidateRoomsCache = () => invalidateCache("rooms:list:*");
 
+/** Bust all specific room detail cache entries and owner listing caches. */
+export const invalidateRoomCache = async (roomId: string, ownerId: string) => {
+    invalidateRoomsCache();
+    await invalidateCache(`rooms:detail:${roomId}`);
+    await invalidateCache(`owner:rooms:${ownerId}`);
+};
+
 // ─── Shared room transform to normalize field names for frontend ──────────────
 // Privacy: exposes only name + avatar for owner; exact address and phone are stripped.
 const transformRoom = (room: any) => ({
@@ -226,7 +233,7 @@ export const createRoomService = async (userId: string, data: any, files: any) =
     });
 
     // 7. Build response from in-memory data — no extra findUnique round trip needed
-    invalidateRoomsCache();
+    await invalidateRoomCache(room.id, userId);
     return transformRoom({ ...room, images: uploadedImages });
 };
 
@@ -317,17 +324,20 @@ export const getRoomsService = async (query: any) => {
 };
 
 export const getRoomByIdService = async (id: string, userId?: string) => {
-    const room = await prisma.room.findUnique({
-        where: { id },
-        include: {
-            images: true,
-            amenities: { include: { amenity: true } },
-            // Privacy: intentionally omit mobile_number and email (SRS §6.4, §10.1)
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
-        },
+    const cacheKey = `rooms:detail:${id}`;
+    const room = await getOrSet(cacheKey, 300, async () => {
+        const fetched = await prisma.room.findUnique({
+            where: { id },
+            include: {
+                images: true,
+                amenities: { include: { amenity: true } },
+                // Privacy: intentionally omit mobile_number and email (SRS §6.4, §10.1)
+                owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
+            },
+        });
+        if (!fetched) throw new Error("Room not found");
+        return fetched;
     });
-
-    if (!room) throw new Error("Room not found");
 
     let shouldIncrement = true;
     if (userId && redis) {
@@ -352,6 +362,8 @@ export const getRoomByIdService = async (id: string, userId?: string) => {
                         roomId: updatedRoom.id,
                         views: updatedRoom.views
                     });
+                    // Invalidate detail cache so next hits read updated views
+                    await invalidateCache(`rooms:detail:${id}`);
                 } catch (err) {
                     // socket not initialized yet or other issues
                 }
@@ -478,7 +490,7 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
         });
     });
 
-    invalidateRoomsCache(); // listing updated — bust the public feed cache
+    await invalidateRoomCache(roomId, userId);
     return transformRoom(updated);
 };
 
@@ -488,7 +500,7 @@ export const deleteRoomService = async (userId: string, roomId: string) => {
     if (room.owner_id !== userId) throw new Error("Unauthorized");
 
     await prisma.room.delete({ where: { id: roomId } });
-    invalidateRoomsCache(); // listing deleted — bust the public feed cache
+    await invalidateRoomCache(roomId, userId);
     return { message: "Room deleted successfully" };
 };
 
