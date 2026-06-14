@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     X, UploadCloud, MapPin, Building, BedDouble, Bath,
@@ -12,7 +12,7 @@ import { type OwnerListing } from "./mockData";
 interface OwnerEditListingModalProps {
     listing: OwnerListing | null;
     onClose: () => void;
-    onSave?: (updated: OwnerListing) => void;
+    onSave?: (updated: OwnerListing, newImages: File[], remainingImages: string[]) => void;
 }
 
 const ALL_AMENITIES = ["WiFi", "AC", "Parking", "Kitchen", "Pool", "Gym", "CCTV", "Power Backup", "Study Room", "Breakfast", "Housekeeping", "Laundry", "Terrace", "Concierge"];
@@ -21,6 +21,29 @@ const DOC_TYPES = ["CNIC Copy", "Property Deed", "Utility Bill"];
 export default function OwnerEditListingModal({ listing, onClose, onSave }: OwnerEditListingModalProps) {
     const { isDark } = useOwnerTheme();
     const [step, setStep] = useState(1);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [existingGallery, setExistingGallery] = useState<string[]>(listing?.gallery ?? []);
+    const [newImages, setNewImages] = useState<File[]>([]);
+    const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
+
+    const handleImageSelect = (files: FileList | null) => {
+        if (!files) return;
+        const totalCount = existingGallery.length + newImages.length;
+        const newFiles = Array.from(files).slice(0, 10 - totalCount);
+        const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
+        setNewImages((prev) => [...prev, ...newFiles]);
+        setNewImagePreviews((prev) => [...prev, ...newPreviews]);
+    };
+
+    const removeExistingImage = (idx: number) => {
+        setExistingGallery((prev) => prev.filter((_, i) => i !== idx));
+    };
+
+    const removeNewImage = (idx: number) => {
+        setNewImages((prev) => prev.filter((_, i) => i !== idx));
+        setNewImagePreviews((prev) => prev.filter((_, i) => i !== idx));
+    };
 
     // Pre-fill state from existing listing
     const [title, setTitle] = useState(listing?.title ?? "");
@@ -40,6 +63,16 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
     const [genderPreference, setGenderPreference] = useState(listing?.genderPreference ?? "any");
     const [sqft, setSqft] = useState(String(listing?.sqft ?? ""));
     const [availabilityDate, setAvailabilityDate] = useState(listing?.availabilityDate ?? "");
+    const [approximateLatitude, setApproximateLatitude] = useState(
+        listing?.approximate_latitude !== undefined && listing?.approximate_latitude !== null
+            ? String(listing.approximate_latitude)
+            : ""
+    );
+    const [approximateLongitude, setApproximateLongitude] = useState(
+        listing?.approximate_longitude !== undefined && listing?.approximate_longitude !== null
+            ? String(listing.approximate_longitude)
+            : ""
+    );
     const [saved, setSaved] = useState(false);
 
     if (!listing) return null;
@@ -82,7 +115,9 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
                 genderPreference,
                 sqft: Number(sqft),
                 availabilityDate,
-            });
+                approximate_latitude: approximateLatitude !== "" ? Number(approximateLatitude) : null,
+                approximate_longitude: approximateLongitude !== "" ? Number(approximateLongitude) : null,
+            }, newImages, existingGallery);
         }
         setSaved(true);
         setTimeout(() => {
@@ -257,6 +292,31 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Latitude (Approximate)</label>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={approximateLatitude}
+                                                onChange={e => setApproximateLatitude(e.target.value)}
+                                                placeholder="e.g. 31.4826"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Longitude (Approximate)</label>
+                                            <input
+                                                type="number"
+                                                step="any"
+                                                value={approximateLongitude}
+                                                onChange={e => setApproximateLongitude(e.target.value)}
+                                                placeholder="e.g. 74.3721"
+                                                className={`w-full px-4 py-3 rounded-xl outline-none transition-all ${inputBg}`}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
                                             <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Monthly Rent (PKR)</label>
                                             <div className="relative">
                                                 <span className={`absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold select-none ${isDark ? "text-zinc-500" : "text-slate-400"}`}>Rs.</span>
@@ -413,24 +473,54 @@ export default function OwnerEditListingModal({ listing, onClose, onSave }: Owne
 
                                     <div>
                                         <label className={`block text-xs font-bold uppercase tracking-widest mb-2 ${inputLabel}`}>Property Gallery</label>
-                                        {/* Existing gallery thumbnails */}
-                                        {listing.gallery && listing.gallery.length > 0 && (
+                                        {/* Existing & New gallery thumbnails combined */}
+                                        {(existingGallery.length > 0 || newImagePreviews.length > 0) && (
                                             <div className="flex gap-2 mb-3 flex-wrap">
-                                                {listing.gallery.map((img, i) => (
-                                                    <div key={i} className="relative w-20 h-16 rounded-lg overflow-hidden border border-white/10 group">
+                                                {/* Existing Images */}
+                                                {existingGallery.map((img, i) => (
+                                                    <div key={`existing-${i}`} className="relative w-20 h-16 rounded-lg overflow-hidden border border-white/10 group">
                                                         <img src={img} alt="" className="w-full h-full object-cover" />
-                                                        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => removeExistingImage(i)}
+                                                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                                        >
                                                             <X size={14} className="text-white" />
-                                                        </div>
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                                {/* New Image Previews */}
+                                                {newImagePreviews.map((preview, i) => (
+                                                    <div key={`new-${i}`} className="relative w-20 h-16 rounded-lg overflow-hidden border border-white/10 group">
+                                                        <img src={preview} alt="" className="w-full h-full object-cover" />
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => removeNewImage(i)}
+                                                            className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                                                        >
+                                                            <X size={14} className="text-white" />
+                                                        </button>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
-                                        <div className={`w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center cursor-pointer transition-colors ${uploadArea}`}>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={(e) => handleImageSelect(e.target.files)}
+                                            multiple
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className={`w-full h-28 rounded-xl border-2 flex flex-col items-center justify-center cursor-pointer transition-colors ${uploadArea}`}
+                                        >
                                             <UploadCloud size={24} className={`mb-1.5 ${isDark ? "text-zinc-500" : "text-slate-400"}`} />
                                             <p className={`text-sm font-medium ${titleColor}`}>Add more images</p>
                                             <p className={`text-xs mt-0.5 ${subText}`}>PNG, JPG up to 5MB each</p>
-                                        </div>
+                                        </button>
                                     </div>
 
                                     <div>

@@ -54,6 +54,8 @@ export interface OwnerListing {
     genderPreference?: string;
     sqft?: number;
     availabilityDate?: string;
+    approximate_latitude?: number | null;
+    approximate_longitude?: number | null;
 }
 
 export interface WalletTransaction {

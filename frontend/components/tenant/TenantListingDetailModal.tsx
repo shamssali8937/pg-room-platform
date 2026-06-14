@@ -10,6 +10,9 @@ import {
 import { type TenantListing } from "./mockData";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import api from "@/lib/api";
+import dynamic from "next/dynamic";
+
+const RoomLocationMap = dynamic(() => import("@/components/RoomLocationMap"), { ssr: false });
 
 
 const amenityIcons: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -273,6 +276,24 @@ export default function TenantListingDetailModal({
                                         )}
                                     </div>
                                 )}
+                                <div className="grid grid-cols-2 gap-4 text-xs pt-1">
+                                    <div>
+                                        <p className={metaLabel}>Latitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_latitude ?? "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className={metaLabel}>Longitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_longitude ?? "—"}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-3">
+                                    <RoomLocationMap
+                                        latitude={listing.approximate_latitude}
+                                        longitude={listing.approximate_longitude}
+                                        locality={listing.locality}
+                                        landmark={listing.landmark}
+                                    />
+                                </div>
                             </div>
                         </div>
 

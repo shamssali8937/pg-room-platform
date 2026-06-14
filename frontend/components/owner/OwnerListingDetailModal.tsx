@@ -11,6 +11,9 @@ import {
 import { type OwnerListing } from "./mockData";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import api from "@/lib/api";
+import dynamic from "next/dynamic";
+
+const RoomLocationMap = dynamic(() => import("@/components/RoomLocationMap"), { ssr: false });
 
 
 const statusConfig: Record<string, { label: string; bg: string; text: string; border: string; dot: string }> = {
@@ -240,6 +243,24 @@ export default function OwnerListingDetailModal({ listing, onClose, onEdit, onDe
                                         )}
                                     </div>
                                 )}
+                                <div className="grid grid-cols-2 gap-4 text-xs pt-1">
+                                    <div>
+                                        <p className={metaLabel}>Latitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_latitude ?? "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className={metaLabel}>Longitude</p>
+                                        <p className={`font-bold mt-0.5 ${metaVal}`}>{listing.approximate_longitude ?? "—"}</p>
+                                    </div>
+                                </div>
+                                <div className="pt-3">
+                                    <RoomLocationMap
+                                        latitude={listing.approximate_latitude}
+                                        longitude={listing.approximate_longitude}
+                                        locality={listing.locality}
+                                        landmark={listing.landmark}
+                                    />
+                                </div>
                             </div>
                         </div>
 

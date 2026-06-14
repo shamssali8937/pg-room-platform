@@ -36,6 +36,8 @@ export interface AdminRoom {
     was_suspended?: boolean;
     last_suspension_reason?: string | null;
     availability_date?: string | null;
+    approximate_latitude?: number | null;
+    approximate_longitude?: number | null;
 }
 
 export interface UserDocument {

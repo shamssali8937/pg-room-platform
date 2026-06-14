@@ -58,7 +58,9 @@ function roomToTenantListing(room: Room): any {
         availableFor: room.available_for ?? "any",
         genderPreference: room.gender_preference ?? "any",
         status: room.status,
-        availabilityDate: room.availability_date ? new Date(room.availability_date).toISOString().split('T')[0] : ""
+        availabilityDate: room.availability_date ? new Date(room.availability_date).toISOString().split('T')[0] : "",
+        approximate_latitude: room.approximate_latitude ?? null,
+        approximate_longitude: room.approximate_longitude ?? null,
     };
 }
 

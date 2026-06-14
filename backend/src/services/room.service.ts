@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { uploadToCloudinary } from "../utils/upload.js";
+import { uploadToCloudinary, uploadWithModeration } from "../utils/upload.js";
 import { getIO } from "../config/socket.js";
 import { logger } from "../config/logger.js";
 import { getOrSet, invalidateCache } from "../utils/cache.js";
@@ -41,8 +41,8 @@ const transformRoom = (room: any) => ({
     title: room.title,
     description: room.description,
     city: room.city,
-    // Privacy: do NOT expose raw `address` (may contain exact house/street number).
-    // Expose only locality + landmark for approximate location.
+    // User requested full address exposure to tenant:
+    address: room.address ?? "",
     locality: room.locality,
     landmark: room.landmark ?? null,
     approximate_latitude: room.approximate_latitude ?? null,
@@ -111,9 +111,18 @@ export const createRoomService = async (userId: string, data: any, files: any) =
         sqft,
         size_value,
         availability_date,
+        approximate_latitude,
+        approximate_longitude,
+        latitude,
+        longitude,
     } = data;
 
     const finalPrice = Number(price ?? rent_amount ?? 0);
+
+    const latVal = approximate_latitude ?? latitude;
+    const lngVal = approximate_longitude ?? longitude;
+    const parsedLat = latVal !== undefined && latVal !== null && latVal !== "" ? Number(latVal) : null;
+    const parsedLng = lngVal !== undefined && lngVal !== null && lngVal !== "" ? Number(lngVal) : null;
 
     // 1. Min 3 / max 10 photo enforcement (Phase 8)
     const imageCount = files ? files.length : 0;
@@ -132,10 +141,14 @@ export const createRoomService = async (userId: string, data: any, files: any) =
 
     // 3. Start ALL Cloudinary uploads immediately in parallel — they'll run while the
     //    duplicate-check DB query is in flight, overlapping ~500ms of network latency.
+    //    Gap 2: Use moderation-enabled upload for NSFW detection on room images.
     const uploadPromises = (files ?? []).map((file: any, idx: number) =>
-        uploadToCloudinary(file.buffer)
-            .then((result: any) => ({ secure_url: result.secure_url, public_id: result.public_id, idx }))
-            .catch((e) => { console.error("Image upload failed:", e); return null; })
+        uploadWithModeration(file.buffer)
+            .then((result: any) => ({ secure_url: result.secure_url, public_id: result.public_id, moderation: result.moderation, idx }))
+            .catch((e) => {
+                console.error("Image upload failed:", e);
+                throw new Error(`Image upload failed for photo ${idx + 1}: ${e.message || e}`);
+            })
     );
 
     // 4. Duplicate listing detection (runs in parallel with uploads above)
@@ -155,57 +168,62 @@ export const createRoomService = async (userId: string, data: any, files: any) =
         throw new Error("Duplicate listing detected. You have already listed this room with the same address, room type, and price.");
     }
 
-    // 5. Create the room — amenities written here, no separate UPDATE needed
-    const room = await prisma.room.create({
-        data: {
-            owner_id: userId,
-            title,
-            description,
-            city,
-            address: address ?? locality ?? "",
-            locality: locality ?? address ?? "",
-            landmark: landmark ?? null,
-            room_type,
-            furnished_status,
-            beds: Number(beds ?? 1),
-            baths: Number(baths ?? 1),
-            size_value: Number(sqft ?? size_value ?? 0),
-            price: finalPrice,
-            rent_amount: finalPrice,
-            price_unit,
-            security_deposit_amount: Number(security_deposit_amount),
-            available_for,
-            gender_preference,
-            availability_date: availability_date ? new Date(availability_date) : new Date(),
-            status: "pending",
-            amenities_list: amenityList, // ← folded in, no extra UPDATE round trip
-        },
-        include: {
-            owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
-        },
-    });
+    // 5. Await all uploads (started in step 3)
+    const results = await Promise.all(uploadPromises);
 
-    // 6. Await all uploads (started in step 3, should be mostly done by now)
-    //    then batch-insert all images with ONE createMany — N uploads → 1 DB round trip
+    // 6. Create the room and its images in a database transaction to ensure rollback if either fails
     let uploadedImages: Array<{ file_url: string; file_hash: string }> = [];
-    if (files && files.length > 0) {
-        const results = (await Promise.all(uploadPromises))
-            .filter(Boolean)
-            .sort((a, b) => a!.idx - b!.idx);
+    const room = await prisma.$transaction(async (tx) => {
+        const createdRoom = await tx.room.create({
+            data: {
+                owner_id: userId,
+                title,
+                description,
+                city,
+                address: address ?? locality ?? "",
+                locality: locality ?? address ?? "",
+                landmark: landmark ?? null,
+                approximate_latitude: parsedLat,
+                approximate_longitude: parsedLng,
+                room_type,
+                furnished_status,
+                beds: Number(beds ?? 1),
+                baths: Number(baths ?? 1),
+                size_value: Number(sqft ?? size_value ?? 0),
+                price: finalPrice,
+                rent_amount: finalPrice,
+                price_unit,
+                security_deposit_amount: Number(security_deposit_amount),
+                available_for,
+                gender_preference,
+                availability_date: availability_date ? new Date(availability_date) : new Date(),
+                status: "pending",
+                amenities_list: amenityList,
+            },
+            include: {
+                owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } },
+            },
+        });
 
         if (results.length > 0) {
-            await prisma.roomImage.createMany({
-                data: results.map(r => ({
-                    room_id: room.id,
-                    file_url: r!.secure_url,
-                    file_hash: r!.public_id,
-                    sort_order: r!.idx,
-                    moderation_status: "approved",
-                })),
+            await tx.roomImage.createMany({
+                data: results.map(r => {
+                    const moderationStatus = r.moderation?.some?.((m: any) => m.status === "rejected")
+                        ? "rejected" : "approved";
+                    return {
+                        room_id: createdRoom.id,
+                        file_url: r.secure_url,
+                        file_hash: r.public_id,
+                        sort_order: r.idx,
+                        moderation_status: moderationStatus,
+                    };
+                }),
             });
-            uploadedImages = results.map(r => ({ file_url: r!.secure_url, file_hash: r!.public_id }));
+            uploadedImages = results.map(r => ({ file_url: r.secure_url, file_hash: r.public_id }));
         }
-    }
+
+        return createdRoom;
+    });
 
     // 7. Build response from in-memory data — no extra findUnique round trip needed
     invalidateRoomsCache();
@@ -346,12 +364,14 @@ export const getRoomByIdService = async (id: string, userId?: string) => {
     return transformRoom(room);
 };
 
-export const updateRoomService = async (userId: string, roomId: string, data: any) => {
+export const updateRoomService = async (userId: string, roomId: string, data: any, files?: any) => {
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new Error("Room not found");
     if (room.owner_id !== userId) throw new Error("Unauthorized");
 
     const { price, rent_amount, amenities, ...rest } = data;
+    delete rest["remaining_images"];
+    delete rest["remaining_images[]"];
     const finalPrice = price ?? rent_amount ?? undefined;
 
     const updateData: any = { ...rest };
@@ -368,17 +388,94 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
     if (updateData.availability_date !== undefined) {
         updateData.availability_date = new Date(updateData.availability_date);
     }
+    if (updateData.approximate_latitude !== undefined) {
+        updateData.approximate_latitude = updateData.approximate_latitude !== null && updateData.approximate_latitude !== "" ? Number(updateData.approximate_latitude) : null;
+    }
+    if (updateData.latitude !== undefined) {
+        updateData.approximate_latitude = updateData.latitude !== null && updateData.latitude !== "" ? Number(updateData.latitude) : null;
+        delete updateData.latitude;
+    }
+    if (updateData.approximate_longitude !== undefined) {
+        updateData.approximate_longitude = updateData.approximate_longitude !== null && updateData.approximate_longitude !== "" ? Number(updateData.approximate_longitude) : null;
+    }
+    if (updateData.longitude !== undefined) {
+        updateData.approximate_longitude = updateData.longitude !== null && updateData.longitude !== "" ? Number(updateData.longitude) : null;
+        delete updateData.longitude;
+    }
 
     const finalAmenities = amenities ?? data["amenities[]"] ?? data["amenities"];
 
-    const updated = await prisma.room.update({
-        where: { id: roomId },
-        data: {
-            ...updateData,
-            ...(finalPrice !== undefined && { price: Number(finalPrice), rent_amount: Number(finalPrice) }),
-            ...(finalAmenities && { amenities_list: Array.isArray(finalAmenities) ? finalAmenities : [finalAmenities] }),
-        },
-        include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
+    // 1. Start uploads for any new files
+    const uploadPromises = (files ?? []).map((file: any, idx: number) =>
+        uploadWithModeration(file.buffer)
+            .then((result: any) => ({ secure_url: result.secure_url, public_id: result.public_id, idx }))
+            .catch((e) => {
+                console.error("Image upload failed:", e);
+                throw new Error(`Image upload failed for photo ${idx + 1}: ${e.message || e}`);
+            })
+    );
+
+    const rawRemaining = data.remaining_images ?? data["remaining_images[]"];
+    const isMediaUpdate = rawRemaining !== undefined || (files && files.length > 0);
+
+    let results: any[] = [];
+    if (files && files.length > 0) {
+        results = await Promise.all(uploadPromises);
+    }
+
+    if (isMediaUpdate) {
+        const remainingImages: string[] = rawRemaining
+            ? (Array.isArray(rawRemaining) ? rawRemaining : [rawRemaining])
+            : [];
+        const totalImageCount = remainingImages.length + results.length;
+        if (totalImageCount < 3) {
+            throw new Error("You must have at least 3 photos for your room listing.");
+        }
+        if (totalImageCount > 10) {
+            throw new Error("You cannot have more than 10 photos for your room listing.");
+        }
+    }
+
+    // 2. Perform updates inside a transaction
+    const updated = await prisma.$transaction(async (tx) => {
+        if (isMediaUpdate) {
+            const remainingImages: string[] = rawRemaining
+                ? (Array.isArray(rawRemaining) ? rawRemaining : [rawRemaining])
+                : [];
+
+            // Delete removed images
+            await tx.roomImage.deleteMany({
+                where: {
+                    room_id: roomId,
+                    NOT: {
+                        file_url: { in: remainingImages }
+                    }
+                }
+            });
+
+            // Insert new images
+            if (results.length > 0) {
+                await tx.roomImage.createMany({
+                    data: results.map((r, idx) => ({
+                        room_id: roomId,
+                        file_url: r.secure_url,
+                        file_hash: r.public_id,
+                        sort_order: remainingImages.length + idx,
+                        moderation_status: "approved"
+                    }))
+                });
+            }
+        }
+
+        return await tx.room.update({
+            where: { id: roomId },
+            data: {
+                ...updateData,
+                ...(finalPrice !== undefined && { price: Number(finalPrice), rent_amount: Number(finalPrice) }),
+                ...(finalAmenities && { amenities_list: Array.isArray(finalAmenities) ? finalAmenities : [finalAmenities] }),
+            },
+            include: { images: true, owner: { select: { id: true, full_name: true, profile_photo_url: true, verification_status: true } } },
+        });
     });
 
     invalidateRoomsCache(); // listing updated — bust the public feed cache
@@ -396,7 +493,33 @@ export const deleteRoomService = async (userId: string, roomId: string) => {
 };
 
 export const saveRoomService = async (userId: string, roomId: string) => {
-    return prisma.savedRoom.create({ data: { user_id: userId, room_id: roomId } });
+    const saved = await prisma.savedRoom.create({ data: { user_id: userId, room_id: roomId } });
+
+    // Gap 4: Award 2 points for first-time save (idempotent — one reward per room per tenant)
+    try {
+        const existingPtsTx = await prisma.pointsTransaction.findFirst({
+            where: { owner_id: userId, room_id: roomId, reason_code: "room_saved" }
+        });
+        if (!existingPtsTx) {
+            const currentPts = await prisma.pointsTransaction.aggregate({ where: { owner_id: userId }, _sum: { points: true } });
+            const balanceAfter = (currentPts._sum.points ?? 0) + 2;
+            await prisma.pointsTransaction.create({
+                data: {
+                    owner_id: userId,
+                    room_id: roomId,
+                    transaction_type: "EARNED",
+                    points: 2,
+                    reason_code: "room_saved",
+                    balance_after: balanceAfter,
+                    expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+                }
+            });
+        }
+    } catch (err) {
+        console.error("[TenantPoints] Failed to award room_saved points:", err);
+    }
+
+    return saved;
 };
 
 export const unsaveRoomService = async (userId: string, roomId: string) => {

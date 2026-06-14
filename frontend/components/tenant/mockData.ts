@@ -49,6 +49,8 @@ export interface TenantListing {
     genderPreference?: string;
     gallery?: string[];
     availabilityDate?: string;
+    approximate_latitude?: number | null;
+    approximate_longitude?: number | null;
 }
 
 export interface TenantMessage {

@@ -13,7 +13,7 @@ router.get("/:id", optionalAuthenticate, ctrl.getRoomById);
 
 // OWNER ONLY — must be authenticated AND have role "owner"
 router.post("/", authenticate, authorize("owner"), upload.array("images", 10), validate(createRoomSchema), ctrl.createRoom);
-router.patch("/:id", authenticate, authorize("owner"), validate(updateRoomSchema), ctrl.updateRoom);
+router.patch("/:id", authenticate, authorize("owner"), upload.array("images", 10), validate(updateRoomSchema), ctrl.updateRoom);
 router.delete("/:id", authenticate, authorize("owner"), ctrl.deleteRoom);
 
 // SAVE

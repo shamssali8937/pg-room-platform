@@ -41,6 +41,8 @@ export interface Room {
     gender_preference?: string;
     size_value?: number | null;
     availability_date?: string | null;
+    approximate_latitude?: number | null;
+    approximate_longitude?: number | null;
 }
 
 export interface RoomFilters {
@@ -178,9 +180,10 @@ export const createRoom = createAsyncThunk(
 
 export const updateRoom = createAsyncThunk(
     "room/updateRoom",
-    async ({ id, body }: { id: string; body: Partial<Room> }, { rejectWithValue }) => {
+    async ({ id, body }: { id: string; body: Partial<Room> | FormData }, { rejectWithValue }) => {
         try {
-            const { data } = await api.patch(`/rooms/${id}`, body);
+            const headers = body instanceof FormData ? { "Content-Type": "multipart/form-data" } : undefined;
+            const { data } = await api.patch(`/rooms/${id}`, body, { headers });
             return data.data as Room;
         } catch (err: any) {
             return rejectWithValue(err.message ?? "Failed to update room");

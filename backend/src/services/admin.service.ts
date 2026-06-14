@@ -1,5 +1,7 @@
 import { prisma } from "../config/prisma.js";
 import { invalidateRoomsCache } from "./room.service.js";
+import { sendEmail } from "../utils/mail.js";
+import { listingModeratedEmail } from "../utils/emailTemplates.js";
 
 // Phase 3: Notification helper — mirrors pattern from booking.service.ts
 const createNotification = async (
@@ -227,29 +229,52 @@ export const moderateListingService = async (adminId: string, roomId: string, st
         await createNotification(room.owner.id, notif.type, notif.title, notif.body, `/owner/listings`);
     }
 
+    // Gap 1: Send email notification to owner on listing moderation
+    try {
+        if (room.owner) {
+            const ownerUser = await prisma.user.findUnique({ where: { id: room.owner.id }, select: { email: true, full_name: true } });
+            if (ownerUser?.email) {
+                await sendEmail(
+                    ownerUser.email,
+                    `Listing ${status === "active" ? "Approved" : status.charAt(0).toUpperCase() + status.slice(1)} \u2013 PG Room`,
+                    listingModeratedEmail(ownerUser.full_name ?? "Owner", room.title, status, reason)
+                );
+            }
+        }
+    } catch (err) {
+        console.error("[Email] Failed to send listing moderation email:", err);
+    }
+
     invalidateRoomsCache(); // admin changed listing status — bust the public feed cache
     return room;
 };
 
-export const getUsersService = async () => {
-    return prisma.user.findMany({
-        select: {
-            id: true, full_name: true, email: true, role: true, created_at: true,
-            account_status: true, mobile_number: true, verification_status: true,
-            profile_photo_url: true,
-            documents: {
-                select: {
-                    id: true,
-                    doc_type: true,
-                    file_url: true,
-                    status: true,
-                    created_at: true
-                }
+export const getUsersService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.user.findMany({
+            select: {
+                id: true, full_name: true, email: true, role: true, created_at: true,
+                account_status: true, mobile_number: true, verification_status: true,
+                profile_photo_url: true,
+                documents: {
+                    select: {
+                        id: true,
+                        doc_type: true,
+                        file_url: true,
+                        status: true,
+                        created_at: true
+                    }
+                },
+                _count: { select: { rooms: true, bookings_as_tenant: true } }
             },
-            _count: { select: { rooms: true, bookings_as_tenant: true } }
-        },
-        orderBy: { created_at: "desc" }
-    });
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.user.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
 export const updateUserStatusService = async (adminId: string, userId: string, status: string, reason: string) => {
@@ -283,11 +308,18 @@ export const updateUserStatusService = async (adminId: string, userId: string, s
     return user;
 };
 
-export const getReportsService = async () => {
-    return prisma.report.findMany({
-        include: { reporter: { select: { full_name: true, email: true, profile_photo_url: true } } },
-        orderBy: { created_at: "desc" }
-    });
+export const getReportsService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.report.findMany({
+            include: { reporter: { select: { full_name: true, email: true, profile_photo_url: true } } },
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.report.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
 export const resolveReportService = async (adminId: string, reportId: string, resolutionDetails: string) => {
@@ -322,11 +354,18 @@ export const resolveReportService = async (adminId: string, reportId: string, re
     return report;
 };
 
-export const getAdminPointsTransactionsService = async () => {
-    return prisma.pointsTransaction.findMany({
-        include: { owner: { select: { full_name: true, email: true, profile_photo_url: true } } },
-        orderBy: { created_at: "desc" }
-    });
+export const getAdminPointsTransactionsService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.pointsTransaction.findMany({
+            include: { owner: { select: { full_name: true, email: true, profile_photo_url: true } } },
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.pointsTransaction.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
 export const adjustPointsService = async (adminId: string, ownerId: string, points: number, reasonCode: string) => {
@@ -361,22 +400,36 @@ export const adjustPointsService = async (adminId: string, ownerId: string, poin
     return transaction;
 };
 
-export const getAuditActionsService = async () => {
-    return prisma.adminAction.findMany({
-        include: { admin: { select: { full_name: true, email: true } } },
-        orderBy: { created_at: "desc" }
-    });
+export const getAuditActionsService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.adminAction.findMany({
+            include: { admin: { select: { full_name: true, email: true } } },
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.adminAction.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
-export const getInquiriesService = async () => {
-    return prisma.booking.findMany({
-        include: {
-            tenant: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
-            owner: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
-            room: { select: { id: true, title: true, price: true, rent_amount: true, city: true, locality: true } }
-        },
-        orderBy: { created_at: "desc" }
-    });
+export const getInquiriesService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.booking.findMany({
+            include: {
+                tenant: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+                owner: { select: { id: true, full_name: true, email: true, mobile_number: true, profile_photo_url: true } },
+                room: { select: { id: true, title: true, price: true, rent_amount: true, city: true, locality: true } }
+            },
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.booking.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
 export const moderateInquiryService = async (adminId: string, bookingId: string, status: string, notes?: string) => {
@@ -430,15 +483,22 @@ export const verifyUserService = async (adminId: string, userId: string, status:
     return user;
 };
 
-export const getReviewsService = async () => {
-    return prisma.review.findMany({
-        include: {
-            reviewer: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
-            reviewee: { select: { id: true, full_name: true, email: true } },
-            room: { select: { id: true, title: true } }
-        },
-        orderBy: { created_at: "desc" }
-    });
+export const getReviewsService = async (page = 1, limit = 20) => {
+    const skip = (page - 1) * limit;
+    const [data, total] = await Promise.all([
+        prisma.review.findMany({
+            include: {
+                reviewer: { select: { id: true, full_name: true, email: true, profile_photo_url: true } },
+                reviewee: { select: { id: true, full_name: true, email: true } },
+                room: { select: { id: true, title: true } }
+            },
+            orderBy: { created_at: "desc" },
+            skip,
+            take: limit,
+        }),
+        prisma.review.count(),
+    ]);
+    return { data, total, page, limit };
 };
 
 export const moderateReviewService = async (adminId: string, reviewId: string, status: string) => {

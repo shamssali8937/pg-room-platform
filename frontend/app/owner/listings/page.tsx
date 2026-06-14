@@ -85,6 +85,8 @@ function roomToOwnerListing(room: Room): any {
         genderPreference: room.gender_preference ?? "any",
         sqft: room.sqft ?? room.size_value ?? 0,
         availabilityDate: room.availability_date ? new Date(room.availability_date).toISOString().split('T')[0] : "",
+        approximate_latitude: room.approximate_latitude ?? null,
+        approximate_longitude: room.approximate_longitude ?? null,
     };
 }
 
@@ -478,29 +480,46 @@ export default function OwnerListingsPage() {
                 <OwnerEditListingModal
                     listing={roomToOwnerListing(editRoom)}
                     onClose={() => setEditRoom(null)}
-                    onSave={async (updated) => {
+                    onSave={async (updated, newImages, remainingImages) => {
                         const { updateRoom } = await import("@/store/slices/roomSlice");
+                        const formData = new FormData();
+                        formData.append("title", updated.title);
+                        formData.append("price", String(updated.price));
+                        formData.append("description", updated.description ?? "");
+                        formData.append("city", updated.location);
+                        formData.append("address", updated.address ?? "");
+                        formData.append("locality", updated.locality ?? "");
+                        formData.append("landmark", updated.landmark ?? "");
+                        formData.append("room_type", updated.roomType ?? "private");
+                        formData.append("beds", String(updated.beds));
+                        formData.append("baths", String(updated.baths));
+                        formData.append("sqft", String(updated.sqft));
+                        formData.append("furnished_status", updated.furnishedStatus ?? "unfurnished");
+                        formData.append("security_deposit_amount", String(updated.securityDeposit));
+                        formData.append("available_for", updated.availableFor ?? "any");
+                        formData.append("gender_preference", updated.genderPreference ?? "any");
+                        formData.append("availability_date", updated.availabilityDate ?? "");
+                        if (updated.approximate_latitude !== undefined && updated.approximate_latitude !== null) {
+                            formData.append("approximate_latitude", String(updated.approximate_latitude));
+                        }
+                        if (updated.approximate_longitude !== undefined && updated.approximate_longitude !== null) {
+                            formData.append("approximate_longitude", String(updated.approximate_longitude));
+                        }
+
+                        // Append remaining image URLs
+                        remainingImages.forEach((img) => formData.append("remaining_images[]", img));
+
+                        // Append new files
+                        newImages.forEach((file) => formData.append("images", file));
+
+                        // Append amenities
+                        if (updated.amenities) {
+                            updated.amenities.forEach((a: string) => formData.append("amenities[]", a));
+                        }
+
                         await dispatch(updateRoom({
                             id: editRoom.id,
-                            body: {
-                                title: updated.title,
-                                price: Number(updated.price),
-                                description: updated.description,
-                                city: updated.location,
-                                address: updated.address,
-                                locality: updated.locality,
-                                landmark: updated.landmark,
-                                room_type: updated.roomType,
-                                beds: Number(updated.beds),
-                                baths: Number(updated.baths),
-                                sqft: Number(updated.sqft),
-                                furnished_status: updated.furnishedStatus,
-                                security_deposit_amount: Number(updated.securityDeposit),
-                                available_for: updated.availableFor,
-                                gender_preference: updated.genderPreference,
-                                amenities: updated.amenities,
-                                availability_date: updated.availabilityDate,
-                            }
+                            body: formData,
                         }));
                         setEditRoom(null);
                     }}
