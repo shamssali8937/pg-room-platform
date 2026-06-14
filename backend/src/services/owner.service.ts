@@ -1,4 +1,5 @@
 import { prisma } from "../config/prisma.js";
+import { getOrSet, invalidateCache } from "../utils/cache.js";
 
 const transformRoom = (room: any) => ({
     id: room.id,
@@ -44,17 +45,20 @@ const transformRoom = (room: any) => ({
 });
 
 export const getOwnerRoomsService = async (ownerId: string) => {
-    const rooms = await prisma.room.findMany({
-        where: { owner_id: ownerId },
-        include: {
-            images: true,
-            owner: { select: { id: true, full_name: true, email: true } },
-            _count: { select: { bookings: true } },
-        },
-        orderBy: { created_at: "desc" },
-    });
+    const cacheKey = `owner:rooms:${ownerId}`;
+    return getOrSet(cacheKey, 300, async () => {
+        const rooms = await prisma.room.findMany({
+            where: { owner_id: ownerId },
+            include: {
+                images: true,
+                owner: { select: { id: true, full_name: true, email: true } },
+                _count: { select: { bookings: true } },
+            },
+            orderBy: { created_at: "desc" },
+        });
 
-    return rooms.map(transformRoom);
+        return rooms.map(transformRoom);
+    });
 };
 
 export const getOwnerRoomStatsService = async (ownerId: string, roomId: string) => {
@@ -124,6 +128,10 @@ export const boostRoomService = async (ownerId: string, roomId: string) => {
         include: { images: true },
     });
 
+    await invalidateCache(`owner:rooms:${ownerId}`);
+    await invalidateCache(`rooms:detail:${roomId}`);
+    await invalidateCache("rooms:list:*");
+
     return { message: "Room boosted successfully", points_spent: 300, balance_after: balanceAfter, room: transformRoom(updatedRoom) };
 };
 
@@ -178,6 +186,10 @@ export const featureRoomService = async (ownerId: string, roomId: string) => {
         },
         include: { images: true },
     });
+
+    await invalidateCache(`owner:rooms:${ownerId}`);
+    await invalidateCache(`rooms:detail:${roomId}`);
+    await invalidateCache("rooms:list:*");
 
     return { message: "Room featured successfully", points_spent: 500, balance_after: balanceAfter, room: transformRoom(updatedRoom) };
 };
