@@ -26,7 +26,9 @@ export const sendEmail = async (to: string, subject: string, html: string) => {
             connectionTimeout: 10000, // 10 seconds
             greetingTimeout: 10000,   // 10 seconds
             socketTimeout: 15000,     // 15 seconds
-        });
+            // Force IPv4 connection to prevent ENETUNREACH errors on platforms (like Render) with disabled IPv6 routes
+            family: 4,
+        } as any);
 
         await transporter.sendMail({
             from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
