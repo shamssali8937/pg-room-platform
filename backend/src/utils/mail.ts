@@ -2,60 +2,45 @@ import nodemailer from "nodemailer";
 import { logger } from "../config/logger.js";
 
 export const sendEmail = async (to: string, subject: string, html: string) => {
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const smtpHost = process.env.SMTP_HOST || "smtp.gmail.com";
+    const smtpPort = Number(process.env.SMTP_PORT) || 465;
+    const smtpSecure = process.env.SMTP_SECURE === "true" || (!process.env.SMTP_SECURE && smtpPort === 465);
 
-    if (resendApiKey) {
-        const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
-        logger.info(`Sending email via Resend API to ${to}`, { subject, from: fromEmail });
+    logger.info(`Sending email to ${to} via Nodemailer SMTP`, {
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        subject
+    });
 
-        try {
-            const response = await fetch("https://api.resend.com/emails", {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${resendApiKey}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    from: fromEmail,
-                    to: [to],
-                    subject,
-                    html,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                logger.error(`Resend API error response when sending email to ${to}: ${response.status} - ${errorText}`);
-                throw new Error(`Resend email sending failed: ${response.status} - ${errorText}`);
-            }
-            logger.info(`Email successfully sent via Resend API to ${to}`);
-            return;
-        } catch (error: any) {
-            logger.error(`Failed to send email via Resend API to ${to}`, { error: error.message || error });
-            throw error;
-        }
-    }
-
-    // Fallback to Gmail SMTP
-    logger.info(`Sending email via SMTP (Gmail) to ${to}`, { subject, user: process.env.EMAIL_USER });
     try {
         const transporter = nodemailer.createTransport({
-            service: "gmail",
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
             auth: {
                 user: process.env.EMAIL_USER,
                 pass: process.env.EMAIL_PASS,
             },
+            // Fast failure settings to prevent hanging requests on network timeout
+            connectionTimeout: 10000, // 10 seconds
+            greetingTimeout: 10000,   // 10 seconds
+            socketTimeout: 15000,     // 15 seconds
         });
 
         await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
             to,
             subject,
             html,
         });
-        logger.info(`Email successfully sent via SMTP (Gmail) to ${to}`);
+
+        logger.info(`Email successfully sent to ${to} via Nodemailer SMTP`);
     } catch (error: any) {
-        logger.error(`Failed to send email via SMTP (Gmail) to ${to}`, { error: error.message || error });
+        logger.error(`Failed to send email to ${to} via Nodemailer SMTP`, {
+            error: error.message || error,
+            code: error.code
+        });
         throw error;
     }
 };
