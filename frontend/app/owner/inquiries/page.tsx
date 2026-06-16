@@ -498,16 +498,22 @@ export default function OwnerInquiriesPage() {
 
                                             <div className={`h-[1px] my-1 ${isDark ? "bg-white/5" : "bg-slate-100"}`} />
 
-                                            <button
-                                                onClick={async () => {
-                                                    setShowHeaderDropdown(false);
-                                                    handleBlock();
-                                                }}
-                                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left text-red-500 hover:bg-red-500/10 w-full"
-                                            >
-                                                <ShieldX size={14} />
-                                                Block Contact
-                                            </button>
+                                            {getOther(activeConversation)?.role !== "admin" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        setShowHeaderDropdown(false);
+                                                        if (activeConversation.blocked_by_me) {
+                                                            await dispatch(unblockConversation(activeConversation.id));
+                                                        } else {
+                                                            await dispatch(blockConversation(activeConversation.id));
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left text-red-500 hover:bg-red-500/10 w-full"
+                                                >
+                                                    <ShieldX size={14} />
+                                                    {activeConversation.blocked_by_me ? "Unblock Contact" : "Block Contact"}
+                                                </button>
+                                            )}
                                         </motion.div>
                                     )}
                                 </AnimatePresence>
@@ -670,83 +676,103 @@ export default function OwnerInquiriesPage() {
                             </div>
 
                     {/* Chat Input */}
-                    <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
-                        <div className="flex items-center gap-3 relative">
-                            {/* Hidden File Inputs */}
-                            <input
-                                type="file"
-                                ref={imageInputRef}
-                                onChange={handleImageChange}
-                                accept="image/*"
-                                className="hidden"
-                            />
-                            <input
-                                type="file"
-                                ref={videoInputRef}
-                                onChange={handleVideoChange}
-                                accept="video/*"
-                                className="hidden"
-                            />
-
-                            <div className="relative">
+                    {activeConversation.is_blocked ? (
+                        <div className={`p-4 text-center border-t flex flex-col sm:flex-row items-center justify-center gap-3 ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
+                            <p className={`text-sm ${textVariant}`}>
+                                {activeConversation.blocked_by_me ?? (!activeConversation.blocked_by_other)
+                                    ? "You have blocked this contact. First unblock to send a message."
+                                    : "You cannot message this user because they have blocked you."}
+                            </p>
+                            {(activeConversation.blocked_by_me ?? (!activeConversation.blocked_by_other)) && (
                                 <button
-                                    onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? "bg-white/5 text-zinc-400 hover:text-[#ba9eff]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                                    onClick={async () => {
+                                        await dispatch(unblockConversation(activeConversation.id));
+                                    }}
+                                    className="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all shadow-[0_4px_12px_rgba(239,68,68,0.25)] active:scale-95 cursor-pointer"
                                 >
-                                    <Paperclip size={18} />
+                                    Unblock
                                 </button>
-                                <AnimatePresence>
-                                    {showAttachmentMenu && (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 15, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 4, scale: 1 }}
-                                            exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                                            className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
-                                                }`}
-                                        >
-                                            <button
-                                                onClick={() => handleAttachmentSelect("image")}
-                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
-                                            >
-                                                <Image size={14} className="text-[#ba9eff]" />
-                                                <span>Send Photo</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleAttachmentSelect("video")}
-                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
-                                            >
-                                                <Video size={14} className="text-indigo-400" />
-                                                <span>Send Video</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleAttachmentSelect("location")}
-                                                className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
-                                            >
-                                                <MapPin size={14} className="text-emerald-400" />
-                                                <span>Share Location</span>
-                                            </button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
-                            </div>
-
-                            <input
-                                type="text"
-                                placeholder="Write your reply..."
-                                value={inputText}
-                                onChange={(e) => handleInputChange(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                                className={`flex-grow rounded-xl py-3 px-4 text-sm outline-none focus:ring-1 focus:ring-[#ba9eff]/40 ${inputBg}`}
-                            />
-                            <button
-                                onClick={handleSend}
-                                disabled={isSending || !inputText.trim()}
-                                className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ba9eff] to-[#8d69e8] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_4px_12px_rgba(186,158,255,0.25)] shrink-0 disabled:opacity-50"
-                            >
-                                <Send size={16} />
-                            </button>
+                            )}
                         </div>
-                    </div>
+                    ) : (
+                        <div className={`p-4 border-t ${isDark ? "border-white/5 bg-[#171616]/80" : "border-slate-200 bg-white"}`}>
+                            <div className="flex items-center gap-3 relative">
+                                {/* Hidden File Inputs */}
+                                <input
+                                    type="file"
+                                    ref={imageInputRef}
+                                    onChange={handleImageChange}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <input
+                                    type="file"
+                                    ref={videoInputRef}
+                                    onChange={handleVideoChange}
+                                    accept="video/*"
+                                    className="hidden"
+                                />
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+                                        className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isDark ? "bg-white/5 text-zinc-400 hover:text-[#ba9eff]" : "bg-slate-100 text-slate-500 hover:bg-slate-200"}`}
+                                    >
+                                        <Paperclip size={18} />
+                                    </button>
+                                    <AnimatePresence>
+                                        {showAttachmentMenu && (
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 4, scale: 1 }}
+                                                exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                                className={`absolute left-0 bottom-full mb-2 w-40 rounded-2xl shadow-2xl border p-2 flex flex-col gap-1 z-50 ${isDark ? "bg-[#1b1926] border-white/5" : "bg-white border-slate-200"
+                                                    }`}
+                                            >
+                                                <button
+                                                    onClick={() => handleAttachmentSelect("image")}
+                                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                >
+                                                    <Image size={14} className="text-[#ba9eff]" />
+                                                    <span>Send Photo</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAttachmentSelect("video")}
+                                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                >
+                                                    <Video size={14} className="text-indigo-400" />
+                                                    <span>Send Video</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleAttachmentSelect("location")}
+                                                    className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${isDark ? "hover:bg-white/5 text-zinc-300" : "hover:bg-slate-50 text-slate-700"}`}
+                                                >
+                                                    <MapPin size={14} className="text-emerald-400" />
+                                                    <span>Share Location</span>
+                                                </button>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+
+                                <input
+                                    type="text"
+                                    placeholder="Write your reply..."
+                                    value={inputText}
+                                    onChange={(e) => handleInputChange(e.target.value)}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                    className={`flex-grow rounded-xl py-3 px-4 text-sm outline-none focus:ring-1 focus:ring-[#ba9eff]/40 ${inputBg}`}
+                                />
+                                <button
+                                    onClick={handleSend}
+                                    disabled={isSending || !inputText.trim()}
+                                    className="w-10 h-10 rounded-xl bg-gradient-to-r from-[#ba9eff] to-[#8d69e8] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-[0_4px_12px_rgba(186,158,255,0.25)] shrink-0 disabled:opacity-50"
+                                >
+                                    <Send size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             ) : (
                 <div className={`flex-grow ${activeConversationId ? "flex" : "hidden md:flex"} flex-col items-center justify-center rounded-none md:rounded-2xl p-8 text-center ${surfaceLow}`}>

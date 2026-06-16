@@ -72,6 +72,8 @@ export interface Conversation {
     is_archived?: boolean;
     is_muted?: boolean;
     is_blocked?: boolean;
+    blocked_by_me?: boolean;
+    blocked_by_other?: boolean;
     conversation_status?: string;
     other_participant?: {
         id: string;
@@ -471,14 +473,21 @@ const chatSlice = createSlice({
         builder.addCase(blockConversation.fulfilled, (state, action) => {
             const conversationId = action.payload;
             const conv = state.conversations.find((c) => c.id === conversationId);
-            if (conv) conv.is_blocked = true;
+            if (conv) {
+                conv.is_blocked = true;
+                conv.blocked_by_me = true;
+            }
         });
 
         // Unblock Conversation
         builder.addCase(unblockConversation.fulfilled, (state, action) => {
             const conversationId = action.payload;
             const conv = state.conversations.find((c) => c.id === conversationId);
-            if (conv) conv.is_blocked = false;
+            if (conv) {
+                conv.is_blocked = false;
+                conv.blocked_by_me = false;
+                conv.blocked_by_other = false;
+            }
         });
 
         // Pin Conversation

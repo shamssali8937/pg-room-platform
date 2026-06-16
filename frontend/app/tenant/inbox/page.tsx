@@ -484,20 +484,22 @@ export default function TenantInboxPage() {
 
                                             <div className={`h-[1px] my-1 ${isDark ? "bg-white/5" : "bg-slate-100"}`} />
 
-                                            <button
-                                                onClick={async () => {
-                                                    setShowHeaderDropdown(false);
-                                                    if (activeConversation.is_blocked) {
-                                                        await dispatch(unblockConversation(activeConversation.id));
-                                                    } else {
-                                                        await dispatch(blockConversation(activeConversation.id));
-                                                    }
-                                                }}
-                                                className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full text-red-500 hover:bg-red-500/10"
-                                            >
-                                                <ShieldX size={14} />
-                                                <span>{activeConversation.is_blocked ? "Unblock Contact" : "Block Contact"}</span>
-                                            </button>
+                                            {getOtherParticipant(activeConversation)?.role !== "admin" && (
+                                                <button
+                                                    onClick={async () => {
+                                                        setShowHeaderDropdown(false);
+                                                        if (activeConversation.blocked_by_me) {
+                                                            await dispatch(unblockConversation(activeConversation.id));
+                                                        } else {
+                                                            await dispatch(blockConversation(activeConversation.id));
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all text-left whitespace-nowrap w-full text-red-500 hover:bg-red-500/10"
+                                                >
+                                                    <ShieldX size={14} />
+                                                    <span>{activeConversation.blocked_by_me ? "Unblock Contact" : "Block Contact"}</span>
+                                                </button>
+                                            )}
                                         </motion.div>
                                     )}
                                 </AnimatePresence>

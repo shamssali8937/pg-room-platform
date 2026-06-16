@@ -83,7 +83,7 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
             />
 
             <div className={`flex flex-col min-h-screen transition-all duration-300 ${mainMargin}`}>
-                <OwnerTopbar onMenuToggle={() => setSidebarOpen(true)} />
+                <OwnerTopbar onMenuToggle={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
                 {(() => {
                     const isChatPage = pathname?.includes("/inquiries");
                     const mainPadding = isChatPage
