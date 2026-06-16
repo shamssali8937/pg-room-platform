@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
@@ -70,6 +70,11 @@ export default function TenantBrowse() {
     const router = useRouter();
     const { user } = useAuth();
     const { rooms, savedRooms, isLoading, error } = useAppSelector((s) => s.room);
+
+    const preferencesLoadedRef = useRef(false);
+    const originalCityRef = useRef("All");
+    const originalMaxPriceRef = useRef(200000);
+    const prevSearchQueryRef = useRef("");
 
     const [isInquiring, setIsInquiring] = useState(false);
 
@@ -155,21 +160,28 @@ export default function TenantBrowse() {
     }, [savedRooms]);
 
     useEffect(() => {
+        let prefCity = "All";
+        let prefMaxPrice = 200000;
         const savedMaxPrice = localStorage.getItem("tenant_preferences_budget_max");
         if (savedMaxPrice) {
-            setMaxPrice(Number(savedMaxPrice));
+            prefMaxPrice = Number(savedMaxPrice);
+            setMaxPrice(prefMaxPrice);
         }
         const savedCities = localStorage.getItem("tenant_preferences_cities");
         if (savedCities) {
             try {
                 const parsed = JSON.parse(savedCities);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    setSelectedCity(parsed[0]);
+                    prefCity = parsed[0];
+                    setSelectedCity(prefCity);
                 }
             } catch (e) {
                 console.error(e);
             }
         }
+        originalCityRef.current = prefCity;
+        originalMaxPriceRef.current = prefMaxPrice;
+        preferencesLoadedRef.current = true;
 
         // Parse search query parameters from landing page
         if (typeof window !== "undefined") {
@@ -196,6 +208,62 @@ export default function TenantBrowse() {
             }
         }
     }, [dispatch]);
+
+    // Effect to clear/ignore preference restrictions when searching or filtering
+    useEffect(() => {
+        if (!preferencesLoadedRef.current) return;
+
+        let resetCity = false;
+        let resetPrice = false;
+
+        // Determine if there are active user search or custom filters
+        const isSearchActive = searchQuery && searchQuery !== "";
+        const isCustomFilterActive =
+            roomType !== "All" ||
+            furnishedStatus !== "All" ||
+            genderPreference !== "All" ||
+            availabilityDate !== "" ||
+            selectedAmenities.length > 0;
+
+        if (isSearchActive || isCustomFilterActive) {
+            // Override preferences when searching/filtering
+            if (selectedCity !== "All" && selectedCity === originalCityRef.current) {
+                resetCity = true;
+            }
+            if (maxPrice !== 200000 && maxPrice === originalMaxPriceRef.current) {
+                resetPrice = true;
+            }
+        } else {
+            // Restore preferences only when search query transitions from active to clear
+            const wasSearchCleared = prevSearchQueryRef.current !== "" && (!searchQuery || searchQuery === "");
+            if (wasSearchCleared) {
+                if (selectedCity === "All" && selectedCity !== originalCityRef.current) {
+                    setSelectedCity(originalCityRef.current);
+                }
+                if (maxPrice === 200000 && maxPrice !== originalMaxPriceRef.current) {
+                    setMaxPrice(originalMaxPriceRef.current);
+                }
+            }
+        }
+
+        prevSearchQueryRef.current = searchQuery || "";
+
+        if (resetCity) {
+            setSelectedCity("All");
+        }
+        if (resetPrice) {
+            setMaxPrice(200000);
+        }
+    }, [
+        searchQuery,
+        selectedCity,
+        maxPrice,
+        roomType,
+        furnishedStatus,
+        genderPreference,
+        availabilityDate,
+        selectedAmenities
+    ]);
 
     const handleViewRoom = (room: Room) => {
         setSelectedRoom(room);

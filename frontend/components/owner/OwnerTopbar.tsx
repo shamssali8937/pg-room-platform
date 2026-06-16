@@ -36,11 +36,13 @@ interface TopbarProps {
     onSearchChange?: (query: string) => void;
     searchPlaceholder?: string;
     onMenuToggle?: () => void;
+    sidebarOpen?: boolean;
 }
 
 export default function OwnerTopbar({
     searchPlaceholder = "Search Properties...",
-    onMenuToggle
+    onMenuToggle,
+    sidebarOpen = false
 }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -138,7 +140,9 @@ export default function OwnerTopbar({
 
     return (
         <>
-            <header className={`fixed top-0 right-0 w-full z-40 h-16 lg:h-20 px-4 sm:px-6 lg:px-10 flex justify-between items-center transition-colors duration-300 ${headerBg}`}>
+            <header className={`fixed top-0 right-0 transition-all duration-300 z-40 h-16 lg:h-20 px-4 sm:px-6 lg:px-10 flex justify-between items-center ${
+                sidebarOpen ? "w-full xl:w-[calc(100%-16rem)]" : "w-full"
+            } ${headerBg}`}>
                 {/* Left: Hamburger + Search */}
                 <div className="flex items-center gap-3 flex-1 max-w-md">
                     <button

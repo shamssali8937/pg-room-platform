@@ -90,7 +90,7 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
             />
 
             <div className={`flex flex-col min-h-screen transition-all duration-300 ${mainMargin}`}>
-                <TenantTopbar onMenuToggle={() => setSidebarOpen(true)} />
+                <TenantTopbar onMenuToggle={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
                 {(() => {
                     const isChatPage = pathname?.includes("/inbox");
                     const mainPadding = isChatPage

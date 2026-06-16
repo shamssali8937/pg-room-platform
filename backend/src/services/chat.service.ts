@@ -103,6 +103,14 @@ export const getConversationsService = async (userId: string, role: string, sear
         userBlocks.map(b => b.blocker_id === userId ? b.blocked_id : b.blocker_id)
     );
 
+    const blockedByMeIds = new Set(
+        userBlocks.filter(b => b.blocker_id === userId).map(b => b.blocked_id)
+    );
+
+    const blockedByOtherIds = new Set(
+        userBlocks.filter(b => b.blocked_id === userId).map(b => b.blocker_id)
+    );
+
     // Bulk-fetch unread counts for ALL conversations in ONE query instead of N queries
     const conversationIds = conversations.map(c => c.id);
     const unreadGroups = conversationIds.length > 0
@@ -143,6 +151,8 @@ export const getConversationsService = async (userId: string, role: string, sear
 
         // Check block relationship
         const isBlocked = otherParticipant ? blockedUserIds.has(otherParticipant.id) : false;
+        const blockedByMe = otherParticipant ? blockedByMeIds.has(otherParticipant.id) : false;
+        const blockedByOther = otherParticipant ? blockedByOtherIds.has(otherParticipant.id) : false;
 
         return {
             id: conv.id,
@@ -183,6 +193,8 @@ export const getConversationsService = async (userId: string, role: string, sear
             is_archived: isArchived,
             is_muted: isMuted,
             is_blocked: isBlocked,
+            blocked_by_me: blockedByMe,
+            blocked_by_other: blockedByOther,
             conversation_status: conv.conversation_status,
             created_at: conv.created_at,
             updated_at: conv.updated_at
@@ -615,6 +627,14 @@ export const blockConversationService = async (userId: string, conversationId: s
 
     const blockerId = userId;
     const blockedId = conversation.tenant_id === userId ? conversation.owner_id : conversation.tenant_id;
+
+    const blockedUser = await prisma.user.findUnique({
+        where: { id: blockedId },
+        select: { role: true }
+    });
+    if (blockedUser && blockedUser.role === "admin") {
+        throw new Error("You cannot block an administrator.");
+    }
 
     // Create block record
     const block = await prisma.blockedUser.upsert({

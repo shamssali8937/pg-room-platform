@@ -12,6 +12,7 @@ import api from "@/lib/api";
 interface TopbarProps {
     onMenuToggle?: () => void;
     searchPlaceholder?: string;
+    sidebarOpen?: boolean;
 }
 
 interface TenantNotification {
@@ -37,7 +38,7 @@ const formatTime = (dateStr: string) => {
     }
 };
 
-export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities..." }: TopbarProps) {
+export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities...", sidebarOpen = false }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<TenantNotification[]>([]);
     const [isMounted, setIsMounted] = useState(false);
@@ -146,7 +147,9 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
 
     return (
         <>
-        <header className={`fixed top-0 right-0 w-full z-40 h-16 lg:h-20 px-4 sm:px-6 lg:px-10 flex justify-between items-center transition-colors duration-300 ${headerBg}`}>
+        <header className={`fixed top-0 right-0 transition-all duration-300 z-40 h-16 lg:h-20 px-4 sm:px-6 lg:px-10 flex justify-between items-center ${
+            sidebarOpen ? "w-full xl:w-[calc(100%-16rem)]" : "w-full"
+        } ${headerBg}`}>
             {/* Left: Hamburger + Search */}
             <div className="flex items-center gap-3 flex-1 max-w-md">
                 <button
