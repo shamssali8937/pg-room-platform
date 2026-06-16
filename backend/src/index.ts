@@ -5,6 +5,10 @@
 // values. Loading dotenv here (entry point, before any other import) ensures
 // process.env is fully populated when every config module initializes.
 import "dotenv/config";
+import dns from "dns";
+
+// Force Node.js to prefer IPv4 DNS resolution (prevents ENETUNREACH IPv6 errors on Render)
+dns.setDefaultResultOrder("ipv4first");
 
 import { createServer } from "http";
 import app from "./app.js";
