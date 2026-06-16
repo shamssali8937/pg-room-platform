@@ -297,11 +297,22 @@ export const getRoomsService = async (query: any) => {
         ];
     }
 
-    const orderBy: any = sort === "price_asc" ? { price: "asc" }
-        : sort === "price_desc" ? { price: "desc" }
-        : sort === "newest" ? { created_at: "desc" }
-        : sort === "recently_updated" ? { updated_at: "desc" }
-        : { views: "desc" };
+    const orderBy: any[] = [
+        { is_boosted: "desc" },
+        { is_featured: "desc" },
+    ];
+
+    if (sort === "price_asc") {
+        orderBy.push({ price: "asc" });
+    } else if (sort === "price_desc") {
+        orderBy.push({ price: "desc" });
+    } else if (sort === "newest") {
+        orderBy.push({ created_at: "desc" });
+    } else if (sort === "recently_updated") {
+        orderBy.push({ updated_at: "desc" });
+    } else {
+        orderBy.push({ views: "desc" });
+    }
 
     const [rooms, total] = await Promise.all([
         prisma.room.findMany({

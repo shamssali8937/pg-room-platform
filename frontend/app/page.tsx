@@ -70,7 +70,7 @@ export default function Home() {
   const [loadingListings, setLoadingListings] = useState(true);
 
   useEffect(() => {
-    api.get("/rooms?status=active&limit=5")
+    api.get("/rooms?status=active&limit=17")
       .then((res) => {
         const json = res.data;
         if (json.success) {
