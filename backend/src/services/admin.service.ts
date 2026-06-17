@@ -323,7 +323,66 @@ export const getReportsService = async (page = 1, limit = 20) => {
         }),
         prisma.report.count(),
     ]);
-    return { data, total, page, limit };
+
+    const resolvedData = await Promise.all(
+        data.map(async (report) => {
+            let targetName = report.target_type === "room" ? "Room Listing"
+                : report.target_type === "conversation" ? "Chat Conversation"
+                : report.target_type === "review" ? "User Review"
+                : "Platform User";
+            let targetOwnerId: string | null = null;
+
+            try {
+                if (report.target_type === "room" || report.target_type === "listing") {
+                    const room = await prisma.room.findUnique({
+                        where: { id: report.target_id },
+                        select: { title: true, owner_id: true }
+                    });
+                    if (room) {
+                        targetName = `Room: ${room.title}`;
+                        targetOwnerId = room.owner_id;
+                    }
+                } else if (report.target_type === "user") {
+                    const user = await prisma.user.findUnique({
+                        where: { id: report.target_id },
+                        select: { full_name: true }
+                    });
+                    if (user) {
+                        targetName = `User: ${user.full_name}`;
+                        targetOwnerId = report.target_id;
+                    }
+                } else if (report.target_type === "review") {
+                    const review = await prisma.review.findUnique({
+                        where: { id: report.target_id },
+                        select: { comment: true, reviewer_id: true }
+                    });
+                    if (review) {
+                        targetName = `Review: "${review.comment?.slice(0, 30) ?? ""}"`;
+                        targetOwnerId = review.reviewer_id;
+                    }
+                } else if (report.target_type === "conversation") {
+                    const conversation = await prisma.conversation.findUnique({
+                        where: { id: report.target_id },
+                        select: { owner_id: true, room: { select: { title: true } } }
+                    });
+                    if (conversation) {
+                        targetName = conversation.room ? `Chat on: ${conversation.room.title}` : "Chat Conversation";
+                        targetOwnerId = conversation.owner_id;
+                    }
+                }
+            } catch (err) {
+                console.error("[Report Target Resolve] Error resolving target:", err);
+            }
+
+            return {
+                ...report,
+                target_name: targetName,
+                target_owner_id: targetOwnerId,
+            };
+        })
+    );
+
+    return { data: resolvedData, total, page, limit };
 };
 
 export const resolveReportService = async (adminId: string, reportId: string, resolutionDetails: string) => {
@@ -346,14 +405,26 @@ export const resolveReportService = async (adminId: string, reportId: string, re
         }
     });
 
-    // Phase 3: Notify the reporter that their report has been resolved
-    await createNotification(
-        report.reporter_id,
-        "report_resolved",
-        "Report Resolved",
-        `Your report (#${report.id.slice(0, 8)}) has been reviewed and resolved by our admin team.`,
-        `/`
-    );
+    let shouldNotifyReporter = true;
+    if (report.target_type === "room" || report.target_type === "listing") {
+        shouldNotifyReporter = false;
+    } else if (report.target_type === "user") {
+        const targetUser = await prisma.user.findUnique({ where: { id: report.target_id }, select: { role: true } });
+        if (targetUser?.role === "owner") {
+            shouldNotifyReporter = false;
+        }
+    }
+
+    if (shouldNotifyReporter) {
+        // Phase 3: Notify the reporter that their report has been resolved
+        await createNotification(
+            report.reporter_id,
+            "report_resolved",
+            "Report Resolved",
+            `Your report (#${report.id.slice(0, 8)}) has been reviewed and resolved by our admin team.`,
+            `/`
+        );
+    }
 
     return report;
 };

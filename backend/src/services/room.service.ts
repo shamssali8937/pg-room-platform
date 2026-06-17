@@ -262,7 +262,7 @@ export const getRoomsService = async (query: any) => {
     if (status) {
         where.status = status;
     } else {
-        where.status = { in: ["active", "booked"] };
+        where.status = { in: ["active", "booked", "occupied"] };
     }
 
     if (city) where.city = { contains: String(city), mode: "insensitive" };

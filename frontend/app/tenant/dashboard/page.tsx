@@ -82,7 +82,7 @@ export default function TenantDashboard() {
     const surfaceLow = isDark ? "bg-[#131313] border border-[#484847]/15" : "bg-white border border-slate-200 shadow-sm";
     const divider = isDark ? "border-white/[0.06]" : "border-slate-100";
 
-    const activeBooking = tenantBookings.find((b) => b.status === "approved");
+    const activeBooking = tenantBookings.find((b) => b.status === "approved" || b.status === "checked_in");
     const unreadMessages = conversations.reduce((acc, c) => acc + (c.unread_count ?? 0), 0);
     const isLoading = dashLoading || bookingLoading;
 
@@ -196,8 +196,8 @@ export default function TenantDashboard() {
                                     </div>
                                     <h4 className={`text-base font-headline font-bold ${textPrimary}`}>Active Lease</h4>
                                 </div>
-                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full border bg-emerald-400/10 text-emerald-400 border-emerald-400/20">
-                                    Active
+                                <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border ${activeBooking.status === "checked_in" ? "bg-blue-400/10 text-[#699cff] border-blue-400/20" : "bg-emerald-400/10 text-emerald-400 border-emerald-400/20"}`}>
+                                    {activeBooking.status === "checked_in" ? "Checked In" : "Active"}
                                 </span>
                             </div>
                             <div className="flex flex-col sm:flex-row">

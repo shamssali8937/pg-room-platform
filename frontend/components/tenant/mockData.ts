@@ -51,6 +51,7 @@ export interface TenantListing {
     availabilityDate?: string;
     approximate_latitude?: number | null;
     approximate_longitude?: number | null;
+    status?: string;
 }
 
 export interface TenantMessage {

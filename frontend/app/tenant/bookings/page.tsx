@@ -16,6 +16,7 @@ import api from "@/lib/api";
 
 const STATUS_CONFIG: Record<string, { badge: string; icon: React.ReactNode; label: string }> = {
     approved: { badge: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20", icon: <CheckCircle2 size={11} />, label: "Confirmed" },
+    checked_in: { badge: "bg-blue-500/10 text-[#699cff] border-blue-500/20", icon: <CheckCircle2 size={11} />, label: "Checked In" },
     pending: { badge: "bg-[#699cff]/10 text-[#699cff] border-[#699cff]/20", icon: <Clock size={11} />, label: "Pending" },
     completed: { badge: "bg-purple-500/10 text-[#ba9eff] border-purple-500/20", icon: <CheckCircle2 size={11} />, label: "Completed" },
     cancelled: { badge: "bg-red-500/10 text-red-400 border-red-500/20", icon: <X size={11} />, label: "Cancelled" },
@@ -25,7 +26,7 @@ const STATUS_CONFIG: Record<string, { badge: string; icon: React.ReactNode; labe
 };
 
 function BookingCard({
-    booking, isDark, onExpand, isExpanded, onCancel, isCancelling, onLeaveReview
+    booking, isDark, onExpand, isExpanded, onCancel, isCancelling, onLeaveReview, onCheckOut, isCheckingOut
 }: {
     booking: Booking;
     isDark: boolean;
@@ -34,6 +35,8 @@ function BookingCard({
     onCancel: (id: string) => void;
     isCancelling: boolean;
     onLeaveReview: (booking: Booking) => void;
+    onCheckOut: (id: string) => void;
+    isCheckingOut: boolean;
 }) {
 
     const textPrimary = isDark ? "text-white" : "text-slate-900";
@@ -42,7 +45,7 @@ function BookingCard({
     const divider = isDark ? "border-white/[0.06]" : "border-slate-100";
     const cfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
     const roomImage = booking.room?.images?.[0]?.file_url;
-    const rentAmount = booking.room?.rent_amount ?? booking.room?.price ?? 0;
+    const rentAmount = booking.rent_amount ?? booking.room?.rent_amount ?? booking.room?.price ?? 0;
 
     return (
         <motion.div
@@ -73,7 +76,7 @@ function BookingCard({
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3">
+                    <div className={`grid grid-cols-2 ${booking.requested_date ? "sm:grid-cols-4" : "sm:grid-cols-3"} gap-2 mt-3`}>
                         <div>
                             <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>Monthly Rent</p>
                             <p className="text-sm font-bold text-[#a27cff] mt-0.5">PKR {rentAmount.toLocaleString()}</p>
@@ -86,6 +89,12 @@ function BookingCard({
                             <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>Requested On</p>
                             <p className={`text-sm font-bold mt-0.5 ${textPrimary}`}>{new Date(booking.created_at).toLocaleDateString()}</p>
                         </div>
+                        {booking.requested_date && (
+                            <div>
+                                <p className={`text-[10px] uppercase tracking-widest ${textVariant}`}>Move-In Date</p>
+                                <p className="text-sm font-bold mt-0.5 text-violet-400">{new Date(booking.requested_date).toLocaleDateString()}</p>
+                            </div>
+                        )}
                     </div>
 
                     <div className={`flex items-center justify-between mt-4 pt-3 border-t ${divider}`}>
@@ -179,7 +188,7 @@ function BookingCard({
                         )}
 
                         {/* Actions */}
-                        {(booking.status === "pending" || booking.status === "completed") && (
+                        {(booking.status === "pending" || booking.status === "completed" || booking.status === "checked_in") && (
                             <div className="mx-5 mb-5 flex gap-3">
                                 {booking.status === "pending" && (
                                     <button
@@ -189,6 +198,16 @@ function BookingCard({
                                     >
                                         {isCancelling ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
                                         Cancel Booking
+                                    </button>
+                                )}
+                                {booking.status === "checked_in" && (
+                                    <button
+                                        onClick={() => onCheckOut(booking.id)}
+                                        disabled={isCheckingOut}
+                                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-bold text-xs transition-colors shadow-lg shadow-violet-500/20 disabled:opacity-50"
+                                    >
+                                        {isCheckingOut ? <Loader2 size={14} className="animate-spin" /> : null}
+                                        Check Out
                                     </button>
                                 )}
                                 {booking.status === "completed" && (
@@ -238,16 +257,20 @@ export default function TenantBookings() {
     const dispatch = useAppDispatch();
     const { tenantBookings, isLoading, error } = useAppSelector((s) => s.booking);
     const [expandedId, setExpandedId] = useState<string | null>(null);
-    const [filter, setFilter] = useState<"all" | "approved" | "pending" | "completed" | "cancelled" | "rejected" | "closed" | "expired">("all");
+    const [filter, setFilter] = useState<"all" | "approved" | "pending" | "completed" | "cancelled" | "rejected" | "closed" | "expired" | "checked_in">("all");
     const [cancellingId, setCancellingId] = useState<string | null>(null);
+    const [checkingOutId, setCheckingOutId] = useState<string | null>(null);
 
-    // Review Modal State
     const [reviewModalBooking, setReviewModalBooking] = useState<Booking | null>(null);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState("");
     const [submittingReview, setSubmittingReview] = useState(false);
     const [reviewError, setReviewError] = useState<string | null>(null);
     const [reviewSuccess, setReviewSuccess] = useState(false);
+
+    // Custom Alert/Confirm Modal States
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; message: string; onConfirm: (() => void) | null }>({ isOpen: false, message: "", onConfirm: null });
 
     useEffect(() => {
         dispatch(fetchTenantBookings());
@@ -292,6 +315,7 @@ export default function TenantBookings() {
     const filters: Array<{ key: typeof filter; label: string }> = [
         { key: "all", label: "All" },
         { key: "approved", label: "Confirmed" },
+        { key: "checked_in", label: "Checked In" },
         { key: "pending", label: "Pending" },
         { key: "completed", label: "Completed" },
         { key: "rejected", label: "Rejected" },
@@ -309,9 +333,39 @@ export default function TenantBookings() {
     ];
 
     const handleCancel = async (id: string) => {
-        setCancellingId(id);
-        await dispatch(cancelBooking(id));
-        setCancellingId(null);
+        setConfirmModal({
+            isOpen: true,
+            message: "Are you sure you want to cancel this booking request?",
+            onConfirm: async () => {
+                setCancellingId(id);
+                await dispatch(cancelBooking(id));
+                setCancellingId(null);
+            }
+        });
+    };
+
+    const handleCheckOut = async (id: string) => {
+        setConfirmModal({
+            isOpen: true,
+            message: "Are you sure you want to check out from this room stay?",
+            onConfirm: async () => {
+                try {
+                    setCheckingOutId(id);
+                    const { data } = await api.patch(`/bookings/${id}/checkout`);
+                    if (data?.success) {
+                        dispatch(fetchTenantBookings());
+                    }
+                } catch (err: any) {
+                    console.error("Failed to check out:", err);
+                    setAlertModal({
+                        isOpen: true,
+                        message: err.response?.data?.message ?? "Failed to check out"
+                    });
+                } finally {
+                    setCheckingOutId(null);
+                }
+            }
+        });
     };
 
     return (
@@ -381,6 +435,8 @@ export default function TenantBookings() {
                             onCancel={handleCancel}
                             isCancelling={cancellingId === booking.id}
                             onLeaveReview={setReviewModalBooking}
+                            onCheckOut={handleCheckOut}
+                            isCheckingOut={checkingOutId === booking.id}
                         />
                     ))}
                 </div>
@@ -469,6 +525,79 @@ export default function TenantBookings() {
                                     </button>
                                 </form>
                             )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Custom Confirm Modal */}
+            <AnimatePresence>
+                {confirmModal.isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4"
+                        onClick={() => setConfirmModal({ isOpen: false, message: "", onConfirm: null })}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`w-full max-w-md border rounded-2xl p-6 ${isDark ? "bg-[#131313] border-white/[0.08]" : "bg-white border-slate-200 shadow-2xl"}`}
+                        >
+                            <h3 className={`text-lg font-bold mb-4 ${textPrimary}`}>Confirm Action</h3>
+                            <p className={`text-sm mb-6 ${textVariant}`}>{confirmModal.message}</p>
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setConfirmModal({ isOpen: false, message: "", onConfirm: null })}
+                                    className={`px-4 py-2 rounded-xl border text-xs font-bold uppercase cursor-pointer ${isDark ? "border-[#484847] text-white hover:bg-white/5" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (confirmModal.onConfirm) confirmModal.onConfirm();
+                                        setConfirmModal({ isOpen: false, message: "", onConfirm: null });
+                                    }}
+                                    className="px-5 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase cursor-pointer shadow-lg hover:brightness-110 active:scale-95"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Custom Alert Modal */}
+            <AnimatePresence>
+                {alertModal.isOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-center justify-center p-4"
+                        onClick={() => setAlertModal({ isOpen: false, message: "" })}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.95, y: 20 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={`w-full max-w-md border rounded-2xl p-6 ${isDark ? "bg-[#131313] border-white/[0.08]" : "bg-white border-slate-200 shadow-2xl"}`}
+                        >
+                            <h3 className={`text-lg font-bold mb-4 text-red-400`}>Notification</h3>
+                            <p className={`text-sm mb-6 ${textVariant}`}>{alertModal.message}</p>
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => setAlertModal({ isOpen: false, message: "" })}
+                                    className="px-6 py-2 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white text-xs font-bold uppercase cursor-pointer shadow-lg hover:brightness-110 active:scale-95"
+                                >
+                                    OK
+                                </button>
+                            </div>
                         </motion.div>
                     </motion.div>
                 )}

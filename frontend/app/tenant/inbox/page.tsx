@@ -81,8 +81,13 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                     {booking.room?.title ?? "Room Booking"}
                 </h5>
                 <p className={`text-xs ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
-                    Rent Amount: <span className="font-extrabold text-[#a27cff]">PKR {booking.room?.rent_amount ?? "N/A"} / month</span>
+                    Rent Amount: <span className="font-extrabold text-[#a27cff]">PKR {(booking.rent_amount ?? booking.room?.rent_amount ?? 0).toLocaleString()} / month</span>
                 </p>
+                {booking.requested_date && (
+                    <p className={`text-xs ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                        Requested Move-In: <span className="font-bold text-[#a27cff]">{new Date(booking.requested_date).toLocaleDateString()}</span>
+                    </p>
+                )}
             </div>
 
             <div className={`p-3 rounded-xl ${isDark ? "bg-[#252233]" : "bg-white"} border ${isDark ? "border-white/5" : "border-slate-100"} text-xs space-y-1.5`}>
@@ -118,6 +123,41 @@ export default function TenantInboxPage() {
     const [newChatEmail, setNewChatEmail] = useState("");
     const [startChatError, setStartChatError] = useState("");
     const [isCreatingChat, setIsCreatingChat] = useState(false);
+
+    // Booking Offer/Request Modal states
+    const [showBookingOfferModal, setShowBookingOfferModal] = useState(false);
+    const [offerPrice, setOfferPrice] = useState("");
+    const [offerDate, setOfferDate] = useState("");
+    const [offerMessage, setOfferMessage] = useState("");
+    const [isSubmittingOffer, setIsSubmittingOffer] = useState(false);
+
+    const handleSendBookingOffer = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!activeConversation?.room?.id || isSubmittingOffer) return;
+        setIsSubmittingOffer(true);
+        try {
+            const res = await api.post(`/bookings/room/${activeConversation.room.id}`, {
+                message: offerMessage || `Booking request via chat`,
+                rent_amount: Number(offerPrice),
+                requested_date: offerDate,
+            });
+            if (res.data?.success && res.data?.data?.id) {
+                const bookingId = res.data.data.id;
+                await dispatch(sendMessage({
+                    conversationId: activeConversationId!,
+                    content: `[BOOKING_OFFER] booking_id: ${bookingId}`
+                }));
+                setShowBookingOfferModal(false);
+                setOfferPrice("");
+                setOfferDate("");
+                setOfferMessage("");
+            }
+        } catch (err) {
+            console.error("Failed to create booking offer:", err);
+        } finally {
+            setIsSubmittingOffer(false);
+        }
+    };
 
     const handleStartChatByEmail = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -237,17 +277,10 @@ export default function TenantInboxPage() {
             videoInputRef.current?.click();
         } else if (type === "offer") {
             if (!activeConversation?.room?.id) return;
-            try {
-                const res = await api.post(`/bookings/room/${activeConversation.room.id}`, {
-                    message: `Booking offer requested by ${user?.full_name} via chat`
-                });
-                if (res.data?.success && res.data?.data?.id) {
-                    const bookingId = res.data.data.id;
-                    setInputText(`[BOOKING_OFFER] booking_id: ${bookingId}`);
-                }
-            } catch (err) {
-                console.error("Failed to create booking offer:", err);
-            }
+            setOfferPrice((activeConversation.room as any).rent_amount?.toString() || (activeConversation.room as any).price?.toString() || "");
+            setOfferDate(new Date().toISOString().split("T")[0]);
+            setOfferMessage(`Booking request via chat.`);
+            setShowBookingOfferModal(true);
         }
     };
 
@@ -820,6 +853,114 @@ export default function TenantInboxPage() {
                                         </>
                                     ) : (
                                         "Start Chat"
+                                    )}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Booking Offer Modal */}
+            <AnimatePresence>
+                {showBookingOfferModal && activeConversation?.room && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className={`w-full max-w-md p-6 rounded-2xl border ${
+                                isDark
+                                    ? "bg-[#181818] border-white/5 text-white"
+                                    : "bg-white border-slate-200 text-slate-900"
+                            } shadow-2xl`}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-headline font-bold">Send Booking Request</h3>
+                                <button
+                                    onClick={() => { setShowBookingOfferModal(false); }}
+                                    className={`p-1.5 rounded-lg transition-colors ${
+                                        isDark
+                                            ? "hover:bg-white/5 text-zinc-400 hover:text-white"
+                                            : "hover:bg-slate-100 text-slate-500 hover:text-slate-900"
+                                    }`}
+                                >
+                                    <X size={16} />
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSendBookingOffer} className="space-y-4">
+                                <div className={`p-3.5 rounded-xl border mb-2 ${isDark ? "bg-[#121212] border-white/5" : "bg-slate-50 border-slate-100"}`}>
+                                    <h4 className="text-xs font-bold text-[#a27cff] uppercase tracking-wider mb-0.5">Selected Listing</h4>
+                                    <p className={`text-sm font-bold truncate ${textPrimary}`}>{activeConversation.room.title}</p>
+                                    <p className={`text-[11px] mt-0.5 ${textVariant}`}>
+                                        Listing Rent: <span className="font-semibold text-emerald-400">PKR {(activeConversation.room as any).rent_amount?.toLocaleString() ?? (activeConversation.room as any).price?.toLocaleString() ?? "N/A"}/mo</span>
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        Proposed Counter Rent (PKR/month)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        required
+                                        placeholder="e.g. 35000"
+                                        value={offerPrice}
+                                        onChange={(e) => setOfferPrice(e.target.value)}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                                            isDark
+                                                ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
+                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
+                                        }`}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        Requested Move-In Date
+                                    </label>
+                                    <input
+                                        type="date"
+                                        required
+                                        value={offerDate}
+                                        onChange={(e) => setOfferDate(e.target.value)}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                                            isDark
+                                                ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
+                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
+                                        }`}
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className={`block text-xs font-semibold uppercase tracking-wider mb-2 ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                                        Message to Landlord (Optional)
+                                    </label>
+                                    <textarea
+                                        placeholder="Add notes, e.g. visit hours request..."
+                                        value={offerMessage}
+                                        onChange={(e) => setOfferMessage(e.target.value)}
+                                        rows={3}
+                                        className={`w-full px-4 py-3 rounded-xl border text-sm outline-none resize-none transition-all ${
+                                            isDark
+                                                ? "bg-[#121212] border-white/5 text-white focus:ring-1 focus:ring-[#a27cff]/40"
+                                                : "bg-slate-100 border-slate-200 text-slate-900 focus:ring-1 focus:ring-[#a27cff]/40"
+                                        }`}
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isSubmittingOffer}
+                                    className="w-full py-3 bg-gradient-to-r from-[#a27cff] to-[#8d69e8] text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 shadow-[0_4px_14px_rgba(162,124,255,0.3)]"
+                                >
+                                    {isSubmittingOffer ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" /> Sending Request...
+                                        </>
+                                    ) : (
+                                        "Send Booking Request"
                                     )}
                                 </button>
                             </form>

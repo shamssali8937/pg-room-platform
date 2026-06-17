@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
     X, MapPin, Bed, Bath, Star, ShieldCheck, ChevronLeft, ChevronRight,
     Wifi, Wind, Car, Dumbbell, Video, Zap, Shield, MessageSquare, Heart,
-    Home, Maximize, Loader2, BadgeCheck
+    Home, Maximize, Loader2, BadgeCheck, Flag, ShieldAlert
 } from "lucide-react";
 import { type TenantListing } from "./mockData";
 import { useTenantTheme } from "@/context/TenantThemeContext";
@@ -61,6 +61,41 @@ export default function TenantListingDetailModal({
     const [galleryIdx, setGalleryIdx] = useState(0);
     const [reviewsList, setReviewsList] = useState<any[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(false);
+
+    // Report listing states
+    const [showReportForm, setShowReportForm] = useState(false);
+    const [reportReason, setReportReason] = useState("");
+    const [reportDesc, setReportDesc] = useState("");
+    const [submittingReport, setSubmittingReport] = useState(false);
+    const [reportSuccess, setReportSuccess] = useState(false);
+    const [reportError, setReportError] = useState("");
+
+    const handleReportSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!listing) return;
+        if (!reportReason) {
+            setReportError("Please select a reason");
+            return;
+        }
+        setSubmittingReport(true);
+        setReportError("");
+        try {
+            const { data } = await api.post(`/rooms/${listing.id}/report`, {
+                reason_code: reportReason,
+                description: reportDesc,
+            });
+            if (data?.success || data?.data) {
+                setReportSuccess(true);
+            } else {
+                setReportError(data?.message || "Failed to submit report. Please try again.");
+            }
+        } catch (err: any) {
+            console.error("Report listing error:", err);
+            setReportError(err.response?.data?.message || err.message || "Failed to submit report");
+        } finally {
+            setSubmittingReport(false);
+        }
+    };
 
     useEffect(() => {
         if (listing?.id) {
@@ -122,7 +157,7 @@ export default function TenantListingDetailModal({
                     exit={{ scale: 0.92, y: 30, opacity: 0 }}
                     transition={{ type: "spring", damping: 28, stiffness: 300 }}
                     onClick={(e) => e.stopPropagation()}
-                    className={`w-full max-w-3xl border rounded-3xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col max-h-[90dvh] ${modalBg}`}
+                    className={`w-full max-w-3xl border rounded-3xl overflow-hidden shadow-2xl shadow-black/60 flex flex-col max-h-[90dvh] relative ${modalBg}`}
                 >
                     <div className="overflow-y-auto flex-1">
                     {/* Gallery */}
@@ -139,6 +174,14 @@ export default function TenantListingDetailModal({
                                 className="w-full h-full object-cover"
                             />
                         </AnimatePresence>
+
+                        {listing.status === "occupied" && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                                <span className="px-6 py-3 border-4 border-rose-500 text-rose-500 font-black text-2xl uppercase tracking-[0.3em] rounded-xl transform -rotate-12 shadow-2xl bg-black/60 select-none animate-pulse">
+                                    Occupied
+                                </span>
+                            </div>
+                        )}
 
                         {gallery.length > 1 && (
                             <>
@@ -385,7 +428,7 @@ export default function TenantListingDetailModal({
                         <div className={`flex flex-col sm:flex-row gap-2 pt-2 border-t ${actionsBorder}`}>
                             <button
                                 onClick={() => onSendInquiry?.(listing)}
-                                disabled={isInquiring}
+                                disabled={isInquiring || listing.status === "occupied"}
                                 className="flex-1 py-3 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                             >
                                 {isInquiring ? (
@@ -393,7 +436,7 @@ export default function TenantListingDetailModal({
                                 ) : (
                                     <MessageSquare size={15} />
                                 )}
-                                Send Inquiry
+                                {listing.status === "occupied" ? "Occupied" : "Send Inquiry"}
                             </button>
                             <button
                                 onClick={() => onToggleFavorite(listing.id)}
@@ -402,12 +445,165 @@ export default function TenantListingDetailModal({
                                 <Heart size={15} className={isFav ? "fill-current" : ""} />
                                 {isFav ? "Saved" : "Save Listing"}
                             </button>
+                            <button
+                                onClick={() => setShowReportForm(true)}
+                                className="py-3 px-4 border border-rose-500/30 text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                <ShieldAlert size={15} />
+                                Report
+                            </button>
                             <button onClick={onClose} className={`py-3 px-6 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2 ${closeActionBg}`}>
                                 <X size={15} /> Close
                             </button>
                         </div>
                     </div>
                     </div>
+
+                    {/* Report Form Overlay */}
+                    <AnimatePresence>
+                        {showReportForm && (
+                            <motion.div
+                                initial={{ opacity: 0, y: "100%" }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: "100%" }}
+                                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                                className={`absolute inset-0 z-50 flex flex-col p-6 sm:p-8 rounded-3xl ${modalBg}`}
+                            >
+                                {/* Form Header */}
+                                <div className="flex items-center justify-between pb-4 border-b border-white/[0.08]">
+                                    <div>
+                                        <h3 className={`text-lg font-bold ${titleColor}`}>Report Listing</h3>
+                                        <p className={`text-xs mt-1 ${locationColor}`}>Help us keep our community safe. Tell us what is wrong with this listing.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setShowReportForm(false);
+                                            setReportReason("");
+                                            setReportDesc("");
+                                            setReportError("");
+                                            setReportSuccess(false);
+                                        }}
+                                        className={`p-2 rounded-full hover:bg-white/5 ${locationColor}`}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+
+                                {/* Form Body */}
+                                {!reportSuccess ? (
+                                    <form onSubmit={handleReportSubmit} className="flex-1 flex flex-col justify-between py-4 space-y-4">
+                                        <div className="space-y-4">
+                                            {/* Reason Dropdown / Buttons */}
+                                            <div>
+                                                <label className={`block text-xs uppercase tracking-widest font-semibold mb-2 ${metaLabel}`}>
+                                                    Reason Category
+                                                </label>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {[
+                                                        { code: "scam", label: "Scam / Fraud" },
+                                                        { code: "harassment", label: "Harassment" },
+                                                        { code: "inaccurate", label: "Inaccurate Info" },
+                                                        { code: "spam", label: "Spam" },
+                                                        { code: "other", label: "Other" }
+                                                    ].map((r) => (
+                                                        <button
+                                                            key={r.code}
+                                                            type="button"
+                                                            onClick={() => setReportReason(r.code)}
+                                                            className={`p-3 text-left rounded-xl border text-xs font-bold transition-all ${
+                                                                reportReason === r.code
+                                                                    ? "border-rose-500 bg-rose-500/10 text-rose-500"
+                                                                    : isDark
+                                                                        ? "border-white/[0.04] bg-[#201f1f] text-zinc-300 hover:bg-white/5"
+                                                                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                                                            }`}
+                                                        >
+                                                            {r.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Description textarea */}
+                                            <div>
+                                                <label className={`block text-xs uppercase tracking-widest font-semibold mb-2 ${metaLabel}`}>
+                                                    Additional Details
+                                                </label>
+                                                <textarea
+                                                    value={reportDesc}
+                                                    onChange={(e) => setReportDesc(e.target.value)}
+                                                    maxLength={500}
+                                                    rows={4}
+                                                    placeholder="Please provide specific details to help us investigate this listing (e.g. incorrect pricing, fake pictures, unreachable landlord)..."
+                                                    className={`w-full p-3.5 rounded-xl text-xs font-medium border outline-none resize-none transition-all ${
+                                                        isDark
+                                                            ? "bg-[#1a1919] border-white/[0.08] text-white focus:border-rose-500/60"
+                                                            : "bg-slate-50 border-slate-200 text-slate-800 focus:border-rose-400"
+                                                    }`}
+                                                />
+                                                <div className="flex justify-between items-center mt-1">
+                                                    <span className="text-[10px] text-red-400">{reportError}</span>
+                                                    <span className={`text-[10px] ${locationColor}`}>{reportDesc.length}/500</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Action buttons */}
+                                        <div className="flex gap-2 pt-4 border-t border-white/[0.08]">
+                                            <button
+                                                type="submit"
+                                                disabled={submittingReport || !reportReason}
+                                                className="flex-1 py-3 bg-gradient-to-r from-rose-500 to-red-600 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                {submittingReport ? (
+                                                    <Loader2 size={15} className="animate-spin" />
+                                                ) : (
+                                                    <Flag size={15} />
+                                                )}
+                                                Submit Report
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setShowReportForm(false);
+                                                    setReportReason("");
+                                                    setReportDesc("");
+                                                    setReportError("");
+                                                }}
+                                                className={`py-3 px-6 border text-xs font-bold uppercase tracking-widest rounded-xl transition-all ${closeActionBg}`}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="flex-1 flex flex-col items-center justify-center text-center space-y-4">
+                                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 animate-bounce">
+                                            <ShieldCheck size={36} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h4 className={`text-base font-bold ${titleColor}`}>Listing Reported</h4>
+                                            <p className={`text-xs max-w-sm ${locationColor}`}>
+                                                Thank you for reporting this listing. Our admin team will investigate it and take appropriate action.
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setShowReportForm(false);
+                                                setReportReason("");
+                                                setReportDesc("");
+                                                setReportError("");
+                                                setReportSuccess(false);
+                                            }}
+                                            className="px-6 py-2.5 bg-gradient-to-r from-[#a27cff] to-[#6e3bd7] text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:brightness-110 transition-all"
+                                        >
+                                            Back to Listing
+                                        </button>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </motion.div>
         </AnimatePresence>

@@ -9,10 +9,12 @@ export interface Booking {
     tenant_id: string;
     owner_id: string;
     request_type: string; // 'inquiry' | 'booking'
-    status: "pending" | "approved" | "rejected" | "cancelled" | "completed";
+    status: "pending" | "approved" | "rejected" | "cancelled" | "completed" | "checked_in";
     message: string | null;
     owner_note: string | null;
     expires_at: string | null;
+    requested_date: string | null;
+    rent_amount: number | null;
     created_at: string;
     updated_at: string;
     tenant?: {

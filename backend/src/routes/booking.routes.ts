@@ -12,6 +12,7 @@ router.use(authenticate);
 router.post("/room/:roomId", authorize("tenant"), validate(createBookingSchema), ctrl.createBooking);
 router.get("/tenant", authorize("tenant"), ctrl.getTenantBookings);
 router.patch("/:id/cancel", authorize("tenant"), ctrl.cancelBooking);
+router.patch("/:id/checkout", authorize("tenant"), ctrl.checkoutBooking);
 
 // Owner routes
 router.get("/owner", authorize("owner"), ctrl.getOwnerBookings);

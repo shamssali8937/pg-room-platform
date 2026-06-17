@@ -117,6 +117,7 @@ interface AdminState {
     recentPointsActivity: Array<{ id: string; amount: number; type: "earned" | "spent"; user: string; reason: string; icon: string }>;
     isLoading: boolean;
     error: string | null;
+    reportsSeen: boolean;
 }
 
 const initialState: AdminState = {
@@ -130,6 +131,7 @@ const initialState: AdminState = {
     recentPointsActivity: [],
     isLoading: false,
     error: null,
+    reportsSeen: false,
 };
 
 // ─── Async Thunks ─────────────────────────────────────────────────────────────
@@ -276,6 +278,9 @@ const adminSlice = createSlice({
         clearAdminError(state) {
             state.error = null;
         },
+        markReportsAsSeen(state) {
+            state.reportsSeen = true;
+        },
     },
     extraReducers: (builder) => {
         // Generic loading/error helpers
@@ -340,6 +345,12 @@ const adminSlice = createSlice({
         addLoadingCases(fetchAdminReports);
         builder.addCase(fetchAdminReports.fulfilled, (state, action) => {
             state.isLoading = false;
+            const oldPendingIds = new Set(state.reports.filter(r => r.status !== "resolved").map(r => r.id));
+            const newPending = action.payload.filter((r: any) => r.status !== "resolved");
+            const hasNewPending = newPending.some((r: any) => !oldPendingIds.has(r.id));
+            if (hasNewPending) {
+                state.reportsSeen = false;
+            }
             state.reports = action.payload;
         });
 
@@ -370,5 +381,5 @@ const adminSlice = createSlice({
     },
 });
 
-export const { clearAdminError } = adminSlice.actions;
+export const { clearAdminError, markReportsAsSeen } = adminSlice.actions;
 export default adminSlice.reducer;
