@@ -47,6 +47,9 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
     const router = useRouter();
     const conversations = useAppSelector((s) => s.chat.conversations);
     const totalUnread = conversations.reduce((sum, c) => sum + (c.unread_count ?? 0), 0);
+    const reports = useAppSelector((s) => s.admin.reports);
+    const reportsSeen = useAppSelector((s) => s.admin.reportsSeen);
+    const hasPendingReports = reports.some((r) => r.status !== "resolved") && !reportsSeen;
 
     const handleSignOut = async () => {
         await dispatch(logoutUser());
@@ -145,7 +148,7 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
                 <nav className="flex-1 px-4 space-y-1">
                     {navItems.map((item) => {
                         const isActive = item.id === activeId;
-                        const showBadge = item.id === "inbox" && totalUnread > 0;
+                        const showBadge = (item.id === "inbox" && totalUnread > 0) || (item.id === "reports" && hasPendingReports);
                         return (
                             <Link key={item.id} href={item.href} onClick={onClose}>
                                 <motion.div
@@ -156,17 +159,23 @@ export default function Sidebar({ activeId = "dashboard", isOpen = false, onClos
                                 >
                                     <div className="relative">
                                         <item.icon size={18} strokeWidth={isActive ? 2.2 : 1.8} />
-                                        {showBadge && (
+                                        {showBadge && item.id === "inbox" && (
                                             <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center px-0.5">
                                                 {totalUnread > 9 ? "9+" : totalUnread}
                                             </span>
                                         )}
+                                        {showBadge && item.id === "reports" && (
+                                            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border border-white dark:border-[#0e0e0e]" />
+                                        )}
                                     </div>
                                     <span>{item.label}</span>
-                                    {showBadge && (
+                                    {showBadge && item.id === "inbox" && (
                                         <span className="ml-auto min-w-[18px] h-[18px] bg-purple-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
                                             {totalUnread > 99 ? "99+" : totalUnread}
                                         </span>
+                                    )}
+                                    {showBadge && item.id === "reports" && (
+                                        <span className="ml-auto w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                                     )}
                                 </motion.div>
                             </Link>

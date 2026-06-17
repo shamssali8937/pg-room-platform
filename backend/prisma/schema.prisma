@@ -202,6 +202,8 @@ model Booking {
   message      String?
   owner_note   String?
   expires_at   DateTime?
+  requested_date DateTime?
+  rent_amount  Int?
   created_at   DateTime  @default(now())
   updated_at   DateTime  @updatedAt
   reviews      Review[]

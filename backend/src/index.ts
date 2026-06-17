@@ -19,6 +19,7 @@ import { startExpireBookingsScheduler } from "./jobs/expireBookings.js";
 import { startBookingRemindersScheduler } from "./jobs/bookingReminders.js";
 import { startExpirePointsScheduler } from "./jobs/expirePoints.js";
 import { startExpirePromotionsScheduler } from "./jobs/expirePromotions.js";
+import { startCheckInBookingsScheduler } from "./jobs/checkInBookings.js";
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -33,6 +34,7 @@ startExpireBookingsScheduler();
 startBookingRemindersScheduler();
 startExpirePointsScheduler();
 startExpirePromotionsScheduler();
+startCheckInBookingsScheduler();
 
 // ─── Start Server ─────────────────────────────────────────────────
 server.listen(PORT, () => {

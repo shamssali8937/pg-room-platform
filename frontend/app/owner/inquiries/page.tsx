@@ -101,8 +101,13 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                     {booking.room?.title ?? "Room Booking"}
                 </h5>
                 <p className={`text-xs ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
-                    Rent Amount: <span className="font-extrabold text-[#ba9eff]">PKR {booking.room?.rent_amount ?? "N/A"} / month</span>
+                    Rent Amount: <span className="font-extrabold text-[#ba9eff]">PKR {(booking.rent_amount ?? booking.room?.rent_amount ?? 0).toLocaleString()} / month</span>
                 </p>
+                {booking.requested_date && (
+                    <p className={`text-xs ${isDark ? "text-zinc-400" : "text-slate-500"}`}>
+                        Requested Move-In: <span className="font-bold text-[#ba9eff]">{new Date(booking.requested_date).toLocaleDateString()}</span>
+                    </p>
+                )}
             </div>
 
             <div className={`p-3 rounded-xl ${isDark ? "bg-[#252233]" : "bg-white"} border ${isDark ? "border-white/5" : "border-slate-100"} text-xs space-y-1.5`}>

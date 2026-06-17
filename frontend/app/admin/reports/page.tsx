@@ -34,7 +34,7 @@ import {
     type ReportTab,
 } from "@/components/admin/mockData";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { fetchAdminReports, resolveReport } from "@/store/slices/adminSlice";
+import { fetchAdminReports, resolveReport, markReportsAsSeen, updateUserStatus } from "@/store/slices/adminSlice";
 import api from "@/lib/api";
 
 // ── Priority config ──
@@ -71,6 +71,11 @@ export default function ReportsPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [filterPriority, setFilterPriority] = useState<ReportPriority | "all">("all");
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [selectedAction, setSelectedAction] = useState<"resolve" | "warn" | "ban" | "escalate">("resolve");
+
+    useEffect(() => {
+        setSelectedAction("resolve");
+    }, [selectedReport]);
 
     // Chat Log Inspection state (Phase 5)
     const [inspectedChat, setInspectedChat] = useState<any>(null);
@@ -95,6 +100,7 @@ export default function ReportsPage() {
 
     useEffect(() => {
         dispatch(fetchAdminReports());
+        dispatch(markReportsAsSeen());
     }, [dispatch]);
 
     const mappedReports = useMemo((): any[] => {
@@ -117,10 +123,10 @@ export default function ReportsPage() {
                 id: r.id,
                 targetId: r.target_id,
                 target: {
-                    name: r.target_type === "room" ? "Room Listing"
+                    name: (r as any).target_name ?? (r.target_type === "room" ? "Room Listing"
                         : r.target_type === "conversation" ? "Chat Conversation"
                         : r.target_type === "review" ? "User Review"
-                        : "Platform User",
+                        : "Platform User"),
                     type: r.target_type === "room" ? "listing"
                         : r.target_type === "conversation" ? "conversation"
                         : r.target_type === "review" ? "review"
@@ -130,6 +136,7 @@ export default function ReportsPage() {
                         : r.reporter?.profile_photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.reporter?.full_name ?? "U")}&background=ec4899&color=fff`,
                     subLabel: `ID: ${r.target_id}`,
                 },
+                targetOwnerId: (r as any).target_owner_id ?? null,
                 reason: cat,
                 priority,
                 time: new Date(r.created_at).toLocaleString(),
@@ -171,8 +178,8 @@ export default function ReportsPage() {
     const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
     // Actions
-    const resolveReportHandler = (id: string) => {
-        dispatch(resolveReport({ id, resolutionDetails: moderatorNote || "Resolved by Admin" })).then((res) => {
+    const resolveReportHandler = (id: string, details?: string) => {
+        dispatch(resolveReport({ id, resolutionDetails: details || moderatorNote || "Resolved by Admin" })).then((res) => {
             if (res.meta.requestStatus === "fulfilled") {
                 showToast(`Report ${id} resolved`, "success");
                 dispatch(fetchAdminReports());
@@ -186,6 +193,38 @@ export default function ReportsPage() {
 
     const escalateReportHandler = (id: string) => {
         showToast(`Report ${id} escalated (Mocked)`, "info");
+    };
+
+    const handleFinalizeResolution = () => {
+        if (!selectedReport) return;
+
+        const reportId = selectedReport.id;
+        const note = moderatorNote.trim() || "Resolved by Admin";
+
+        if (selectedAction === "resolve") {
+            resolveReportHandler(reportId, note);
+        } else if (selectedAction === "escalate") {
+            escalateReportHandler(reportId);
+            setSelectedReport(null);
+            setModeratorNote("");
+        } else if (selectedAction === "warn" || selectedAction === "ban") {
+            if (!selectedReport.targetOwnerId) {
+                showToast("No target user/owner found for this report", "error");
+                return;
+            }
+
+            const userId = selectedReport.targetOwnerId;
+            const status = selectedAction === "warn" ? "warned" : "suspended";
+
+            dispatch(updateUserStatus({ id: userId, status, reason: note })).then((res) => {
+                if (res.meta.requestStatus === "fulfilled") {
+                    showToast(`User ${selectedAction === "warn" ? "warned" : "suspended"} successfully`, "success");
+                    resolveReportHandler(reportId, `Action taken: ${selectedAction === "warn" ? "Warning" : "Suspension"}. Note: ${note}`);
+                } else {
+                    showToast(`Failed to ${selectedAction === "warn" ? "warn" : "suspend"} user`, "error");
+                }
+            });
+        }
     };
 
     // Stats computed from data
@@ -436,19 +475,49 @@ export default function ReportsPage() {
 
                                 {/* Quick Actions */}
                                 <div className="grid grid-cols-2 gap-2">
-                                    <button onClick={() => { resolveReportHandler(selectedReport.id); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-emerald-500/10 hover:text-emerald-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button
+                                        onClick={() => setSelectedAction("resolve")}
+                                        className={`flex flex-col items-center p-3 rounded-xl transition-all border ${
+                                            selectedAction === "resolve"
+                                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 font-bold"
+                                                : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:bg-zinc-700/60"
+                                        }`}
+                                    >
                                         <CheckCircle2 size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Resolve</span>
                                     </button>
-                                    <button onClick={() => { escalateReportHandler(selectedReport.id); setSelectedReport(null); }} className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-amber-500/10 hover:text-amber-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button
+                                        onClick={() => setSelectedAction("escalate")}
+                                        className={`flex flex-col items-center p-3 rounded-xl transition-all border ${
+                                            selectedAction === "escalate"
+                                                ? "bg-amber-500/20 text-amber-400 border-amber-500/30 font-bold"
+                                                : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:bg-zinc-700/60"
+                                        }`}
+                                    >
                                         <Flag size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Escalate</span>
                                     </button>
-                                    <button className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-red-500/10 hover:text-red-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button
+                                        onClick={() => setSelectedAction("ban")}
+                                        disabled={!selectedReport.targetOwnerId}
+                                        className={`flex flex-col items-center p-3 rounded-xl transition-all border disabled:opacity-30 disabled:hover:bg-transparent ${
+                                            selectedAction === "ban"
+                                                ? "bg-red-500/20 text-red-400 border-red-500/30 font-bold"
+                                                : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:bg-zinc-700/60"
+                                        }`}
+                                    >
                                         <Ban size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Ban User</span>
                                     </button>
-                                    <button className="flex flex-col items-center p-3 bg-zinc-800/60 rounded-xl hover:bg-purple-500/10 hover:text-purple-400 transition-all text-zinc-400 border border-white/[0.04]">
+                                    <button
+                                        onClick={() => setSelectedAction("warn")}
+                                        disabled={!selectedReport.targetOwnerId}
+                                        className={`flex flex-col items-center p-3 rounded-xl transition-all border disabled:opacity-30 disabled:hover:bg-transparent ${
+                                            selectedAction === "warn"
+                                                ? "bg-purple-500/20 text-purple-400 border-purple-500/30 font-bold"
+                                                : "bg-zinc-800/60 text-zinc-400 border-white/[0.04] hover:bg-zinc-700/60"
+                                        }`}
+                                    >
                                         <AlertTriangle size={20} />
                                         <span className="text-[10px] font-bold mt-1.5 uppercase tracking-widest">Warn</span>
                                     </button>
@@ -484,7 +553,7 @@ export default function ReportsPage() {
                                 className={`w-full rounded-xl text-sm py-3 px-4 resize-none focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-all mb-3 border ${isDark ? "bg-zinc-800/60 border-white/[0.04] text-white placeholder:text-zinc-600" : "bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"}`}
                             />
                             <button
-                                onClick={() => { if (selectedReport) { resolveReportHandler(selectedReport.id); setModeratorNote(""); } }}
+                                onClick={handleFinalizeResolution}
                                 className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:brightness-110 transition-all active:scale-[0.98]"
                             >
                                 Finalize Resolution

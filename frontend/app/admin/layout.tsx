@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchConversations } from "@/store/slices/chatSlice";
+import { fetchAdminReports, markReportsAsSeen } from "@/store/slices/adminSlice";
 import { useSocket } from "@/hooks/useSocket";
 
 // Map pathnames to active sidebar IDs
@@ -46,12 +47,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     // Global socket listener for real-time messages on any page
     useSocket(conversationIds);
 
-    // Fetch conversations globally so badges work on all pages
+    // Fetch conversations and reports globally so badges work on all pages
     useEffect(() => {
         if (isAuthenticated && user) {
             dispatch(fetchConversations());
+            dispatch(fetchAdminReports());
         }
     }, [isAuthenticated, user, dispatch]);
+
+    // Clear reports red dot immediately upon entering reports page
+    useEffect(() => {
+        if (pathname.includes("/admin/reports")) {
+            dispatch(markReportsAsSeen());
+        }
+    }, [pathname, dispatch]);
 
     const activeId = getActiveId(pathname);
     const placeholder = getPlaceholder(pathname);

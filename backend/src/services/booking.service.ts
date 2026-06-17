@@ -57,7 +57,7 @@ export const createBookingService = async (tenantId: string, roomId: string, dat
         where: {
             room_id: roomId,
             tenant_id: tenantId,
-            status: { in: ["pending", "approved", "confirmed"] }
+            status: { in: ["pending", "approved", "confirmed", "checked_in"] }
         },
         include: BOOKING_SELECT
     });
@@ -76,6 +76,8 @@ export const createBookingService = async (tenantId: string, roomId: string, dat
             status: "pending",
             // Phase 2: Populate expires_at so the auto-expiry scheduler can process it
             expires_at: new Date(Date.now() + 72 * 60 * 60 * 1000), // 72 hours from now
+            requested_date: data.requested_date ? new Date(data.requested_date) : (room.availability_date ? new Date(room.availability_date) : new Date()),
+            rent_amount: data.rent_amount ? Number(data.rent_amount) : null,
         },
         include: BOOKING_SELECT
     });
@@ -144,7 +146,7 @@ export const updateBookingStatusService = async (
     }
 
     // P2-C: Allowed status transitions for owner
-    const allowedStatuses = ["approved", "rejected", "completed", "closed"];
+    const allowedStatuses = ["approved", "rejected", "completed", "closed", "checked_in"];
     if (!allowedStatuses.includes(status)) {
         throw new Error(`Invalid status transition: "${status}". Allowed: ${allowedStatuses.join(", ")}`);
     }
@@ -152,6 +154,8 @@ export const updateBookingStatusService = async (
     // Update room availability based on new status
     if (status === "approved") {
         await prisma.room.update({ where: { id: booking.room_id }, data: { status: "booked" } });
+    } else if (status === "checked_in") {
+        await prisma.room.update({ where: { id: booking.room_id }, data: { status: "occupied" } });
     } else if (status === "rejected" || status === "closed") {
         await prisma.room.update({ where: { id: booking.room_id }, data: { status: "active" } });
     } else if (status === "completed") {
@@ -170,10 +174,11 @@ export const updateBookingStatusService = async (
 
     // P2-A: Notify the tenant about the status change
     const notifMap: Record<string, { title: string; body: string }> = {
-        approved:  { title: "Booking Approved! 🎉", body: `Your booking request for "${booking.room.title}" has been approved.` },
-        rejected:  { title: "Booking Rejected", body: `Your booking request for "${booking.room.title}" was not approved by the owner.` },
-        completed: { title: "Booking Completed", body: `Your stay at "${booking.room.title}" has been marked as completed.` },
-        closed:    { title: "Booking Closed", body: `Your booking request for "${booking.room.title}" has been closed.` },
+        approved:   { title: "Booking Approved! 🎉", body: `Your booking request for "${booking.room.title}" has been approved.` },
+        checked_in: { title: "Checked In! 🔑", body: `You have successfully checked in to "${booking.room.title}".` },
+        rejected:   { title: "Booking Rejected", body: `Your booking request for "${booking.room.title}" was not approved by the owner.` },
+        completed:  { title: "Booking Completed", body: `Your stay at "${booking.room.title}" has been marked as completed.` },
+        closed:     { title: "Booking Closed", body: `Your booking request for "${booking.room.title}" has been closed.` },
     };
     const notif = notifMap[status];
     if (notif) {
@@ -270,6 +275,87 @@ export const cancelBookingService = async (tenantId: string, bookingId: string) 
         }
     } catch (err) {
         console.error("[Email] Failed to send booking cancelled email:", err);
+    }
+
+    return updated;
+};
+
+export const checkoutBookingService = async (tenantId: string, bookingId: string) => {
+    const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: {
+            room: { select: { id: true, title: true } },
+            tenant: { select: { id: true, full_name: true } }
+        }
+    });
+    if (!booking || booking.tenant_id !== tenantId) {
+        throw NotFoundError("Booking");
+    }
+
+    if (booking.status !== "checked_in") {
+        throw new Error("You can only check out from an active, checked-in stay.");
+    }
+
+    // Update room status back to active (removes occupied watermark)
+    await prisma.room.update({ where: { id: booking.room_id }, data: { status: "active" } });
+
+    // Transition booking to completed
+    const updated = await prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+            status: "completed",
+            owner_note: "Tenant checked out manually"
+        },
+        include: BOOKING_SELECT
+    });
+
+    // Send notifications
+    await createNotification(
+        booking.owner_id,
+        "tenant_checked_out",
+        "Tenant Checked Out",
+        `The tenant has checked out of your room "${booking.room.title}".`,
+        `/owner/bookings`
+    );
+
+    await createNotification(
+        booking.tenant_id,
+        "booking_completed",
+        "Stay Completed 🎉",
+        `You have successfully checked out of "${booking.room.title}". Hope you had a great stay!`,
+        `/tenant/bookings`
+    );
+
+    // Award tenant points when booking is completed
+    try {
+        const existingPtsTx = await prisma.pointsTransaction.findFirst({
+            where: { owner_id: booking.tenant_id, reference_id: bookingId, reason_code: "booking_completed" }
+        });
+        if (!existingPtsTx) {
+            const currentPts = await prisma.pointsTransaction.aggregate({ where: { owner_id: booking.tenant_id }, _sum: { points: true } });
+            const balanceAfter = (currentPts._sum.points ?? 0) + 25;
+            await prisma.pointsTransaction.create({
+                data: {
+                    owner_id: booking.tenant_id,
+                    room_id: booking.room_id,
+                    transaction_type: "EARNED",
+                    points: 25,
+                    reason_code: "booking_completed",
+                    reference_id: bookingId,
+                    balance_after: balanceAfter,
+                    expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
+                }
+            });
+            await createNotification(booking.tenant_id, "points_credited", "Points Earned! 🪙", `You earned 25 points for completing your stay at "${booking.room.title}".`, `/tenant/bookings`);
+
+            // Send points email
+            const tenantForPts = await prisma.user.findUnique({ where: { id: booking.tenant_id }, select: { email: true, full_name: true } });
+            if (tenantForPts?.email) {
+                await sendEmail(tenantForPts.email, "Points Earned – PG Room", pointsEarnedEmail(tenantForPts.full_name ?? "User", 25, "Booking completed"));
+            }
+        }
+    } catch (err) {
+        console.error("[TenantPoints] Failed to award booking_completed points:", err);
     }
 
     return updated;

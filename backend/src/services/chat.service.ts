@@ -831,7 +831,8 @@ export const respondToBookingOfferService = async (
                 owner_id: offer.receiver_id, // The owner who accepted the offer
                 request_type: "booking",
                 message: `Booking created via accepted Chat Offer. Stay: ${offer.stay_duration} months, Rent: PKR ${offer.rent_amount}`,
-                status: "approved" // automatically approved since offer accepted!
+                status: "approved", // automatically approved since offer accepted!
+                requested_date: offer.move_in_date
             }
         });
 

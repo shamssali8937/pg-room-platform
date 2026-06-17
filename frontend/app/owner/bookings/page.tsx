@@ -20,6 +20,8 @@ interface Booking {
     status: string; // 'pending' | 'approved' | 'rejected' | 'cancelled'
     created_at: string;
     owner_note?: string | null;
+    requested_date?: string | null;
+    rent_amount?: number | null;
     tenant?: {
         id: string;
         full_name: string;
@@ -47,7 +49,7 @@ export default function OwnerBookingsPage() {
 
     // Filters and Search
     const [searchQuery, setSearchQuery] = useState("");
-    const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "cancelled" | "completed" | "closed" | "expired">("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "completed" | "closed" | "cancelled" | "expired" | "checked_in">("all");
 
     const fetchBookings = async () => {
         try {
@@ -164,7 +166,7 @@ export default function OwnerBookingsPage() {
 
                 {/* Filter tags */}
                 <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto shrink-0 py-1">
-                    {(["all", "pending", "approved", "rejected", "completed", "closed", "cancelled", "expired"] as const).map((filter) => {
+                    {(["all", "pending", "approved", "checked_in", "rejected", "completed", "closed", "cancelled", "expired"] as const).map((filter) => {
                         const isActive = statusFilter === filter;
                         return (
                             <button
@@ -219,9 +221,10 @@ export default function OwnerBookingsPage() {
                         {filteredBookings.map((booking) => {
                             const isPending = booking.status === "pending";
                             const isApproved = booking.status === "approved";
+                            const isCheckedIn = booking.status === "checked_in";
+                            const isCompleted = booking.status === "completed";
                             const isRejected = booking.status === "rejected";
                             const isCancelled = booking.status === "cancelled";
-                            const isCompleted = booking.status === "completed";
                             const isClosed = booking.status === "closed";
                             const isExpired = booking.status === "expired";
 
@@ -231,6 +234,9 @@ export default function OwnerBookingsPage() {
 
                             if (isApproved) {
                                 statusColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                                StatusIcon = CheckCircle;
+                            } else if (isCheckedIn) {
+                                statusColor = "bg-blue-500/10 text-[#699cff] border-blue-500/20";
                                 StatusIcon = CheckCircle;
                             } else if (isCompleted) {
                                 statusColor = "bg-purple-500/10 text-[#ba9eff] border-purple-500/20";
@@ -280,13 +286,18 @@ export default function OwnerBookingsPage() {
                                                         {booking.room?.title ?? "Unknown Room"}
                                                     </h3>
                                                     <p className="text-xs font-bold text-[#ba9eff] mt-0.5">
-                                                        PKR {booking.room?.rent_amount?.toLocaleString() ?? "0"} / month
+                                                        PKR {(booking.rent_amount ?? booking.room?.rent_amount ?? 0).toLocaleString()} / month
                                                     </p>
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         <span className="text-[9px] font-extrabold uppercase tracking-widest px-2 py-0.5 rounded bg-violet-500/10 text-violet-400">
                                                             {booking.request_type}
                                                         </span>
                                                     </div>
+                                                    {booking.requested_date && (
+                                                        <p className={`text-[10px] mt-1.5 ${textSecondary}`}>
+                                                            Requested Move-In: <span className="font-semibold text-violet-400">{new Date(booking.requested_date).toLocaleDateString()}</span>
+                                                        </p>
+                                                    )}
                                                 </div>
                                             </div>
 

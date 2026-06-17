@@ -52,3 +52,14 @@ export const cancelBooking = async (req: Request, res: Response, next: NextFunct
         next(error);
     }
 };
+
+export const checkoutBooking = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const id = req.params.id as string;
+        const data = await bookingService.checkoutBookingService(req.user!.id, id);
+        logger.info("Booking checked out", { bookingId: id, tenantId: req.user!.id, requestId: req.requestId });
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
