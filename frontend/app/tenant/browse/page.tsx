@@ -10,6 +10,7 @@ import { createConversation, sendMessage } from "@/store/slices/chatSlice";
 import type { Room } from "@/store/slices/roomSlice";
 import { useAuth } from "@/context/AuthContext";
 import TenantListingDetailModal from "@/components/tenant/TenantListingDetailModal";
+import AlertModal from "@/components/AlertModal";
 import {
     MapPin, Bed, Bath, Star, Heart, ShieldCheck, Search,
     Home, SlidersHorizontal, Eye, Loader2, AlertCircle, RefreshCw
@@ -77,9 +78,18 @@ export default function TenantBrowse() {
     const prevSearchQueryRef = useRef("");
 
     const [isInquiring, setIsInquiring] = useState(false);
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
 
     const handleSendInquiry = async (listing: any) => {
         if (!listing.ownerId || isInquiring) return;
+        const status = user?.account_status?.toLowerCase();
+        if (status === "suspended" || status === "banned") {
+            setAlertModal({
+                isOpen: true,
+                message: "Your account is suspended or banned. You cannot send inquiries."
+            });
+            return;
+        }
         setIsInquiring(true);
         try {
             const res = await dispatch(createConversation({
@@ -713,6 +723,13 @@ export default function TenantBrowse() {
                     isInquiring={isInquiring}
                 />
             )}
+
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                message={alertModal.message}
+                onClose={() => setAlertModal({ isOpen: false, message: "" })}
+                isDark={isDark}
+            />
         </div>
     );
 }

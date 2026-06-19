@@ -32,11 +32,9 @@ const filterTabs: { id: FilterTab; label: string }[] = [
 ];
 
 export default function ListingsPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { rooms: reduxRooms, isLoading } = useAppSelector((state) => state.admin);
-
-    const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<FilterTab>("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
@@ -195,9 +193,9 @@ export default function ListingsPage() {
             l.submittedAt
         ]);
 
-        const csvContent = "data:text/csv;charset=utf-8," 
+        const csvContent = "data:text/csv;charset=utf-8,"
             + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -269,8 +267,8 @@ export default function ListingsPage() {
                                     setCurrentPage(1);
                                 }}
                                 className={`px-4 sm:px-6 py-2 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-300 ${activeTab === tab.id
-                                        ? isDark ? "bg-zinc-800 text-white shadow-xl" : "bg-slate-100 text-slate-900 shadow"
-                                        : isDark ? "text-zinc-500 hover:text-white" : "text-slate-500 hover:text-slate-900"
+                                    ? isDark ? "bg-zinc-800 text-white shadow-xl" : "bg-slate-100 text-slate-900 shadow"
+                                    : isDark ? "text-zinc-500 hover:text-white" : "text-slate-500 hover:text-slate-900"
                                     }`}
                             >
                                 {tab.label}
@@ -327,10 +325,10 @@ export default function ListingsPage() {
                         )}
                     </p>
                     <div className="flex gap-2">
-                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}>
+                        {/* <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}>
                             <SlidersHorizontal size={14} />
                             <span className="hidden sm:inline">Advanced</span> Filters
-                        </button>
+                        </button> */}
                         <button
                             onClick={handleExportCSV}
                             className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${isDark ? "bg-zinc-800/60 border-white/5 text-white hover:bg-zinc-700/60" : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"}`}
@@ -406,8 +404,8 @@ export default function ListingsPage() {
                                     key={page}
                                     onClick={() => setCurrentPage(page)}
                                     className={`w-10 h-10 flex items-center justify-center rounded-xl text-sm font-bold transition-all ${page === currentPage
-                                            ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
-                                            : isDark ? "bg-zinc-900/60 border border-white/5 text-white hover:bg-white/10" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
+                                        ? "bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+                                        : isDark ? "bg-zinc-900/60 border border-white/5 text-white hover:bg-white/10" : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
                                         }`}
                                 >
                                     {page}

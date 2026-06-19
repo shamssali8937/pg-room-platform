@@ -8,10 +8,9 @@ import { useAdminTheme } from "@/context/AdminThemeContext";
 import { useAppSelector } from "@/store/hooks";
 
 export default function UsersPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const { users, isLoading } = useAppSelector((state) => state.admin);
 
-    const [searchQuery, setSearchQuery] = useState("");
     const [roleFilter, setRoleFilter] = useState<string>("All");
     const [statusFilter, setStatusFilter] = useState<string>("Any");
 
@@ -75,9 +74,9 @@ export default function UsersPage() {
             ];
         });
 
-        const csvContent = "data:text/csv;charset=utf-8," 
+        const csvContent = "data:text/csv;charset=utf-8,"
             + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-        
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
@@ -96,47 +95,47 @@ export default function UsersPage() {
 
     return (
         <main className="ml-0 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10 pb-20 min-h-screen">
-                {/* Header Section */}
-                <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
-                    <div>
-                        <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${headingColor}`} style={{ fontFamily: "Manrope, sans-serif" }}>
-                            User Management
-                        </h2>
-                        <p className={`max-w-lg text-sm ${subText}`}>
-                            Manage PG Nexus ecosystem participants. Review verification requests and handle account standing actions.
-                        </p>
-                    </div>
-                    <div className="flex gap-2 sm:gap-3 flex-shrink-0">
-                        <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}>
+            {/* Header Section */}
+            <section className="mb-8 lg:mb-12 flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
+                <div>
+                    <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tighter mb-2 ${headingColor}`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                        User Management
+                    </h2>
+                    <p className={`max-w-lg text-sm ${subText}`}>
+                        Manage PG Nexus ecosystem participants. Review verification requests and handle account standing actions.
+                    </p>
+                </div>
+                <div className="flex gap-2 sm:gap-3 flex-shrink-0">
+                    {/* <button className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}>
                             <Filter size={14} />
                             <span className="hidden sm:inline">Advanced</span> Filters
-                        </button>
-                        <button
-                            onClick={handleExportCSV}
-                            className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}
-                        >
-                            <Download size={14} />
-                            <span className="hidden sm:inline">Export</span> CSV
-                        </button>
-                    </div>
-                </section>
+                        </button> */}
+                    <button
+                        onClick={handleExportCSV}
+                        className={`flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-colors border ${btnClass}`}
+                    >
+                        <Download size={14} />
+                        <span className="hidden sm:inline">Export</span> CSV
+                    </button>
+                </div>
+            </section>
 
-                {/* Stats Bento Grid — real data from Redux */}
-                <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
-                    <StatsCard title="Total Users" value={isLoading ? "..." : String(total)} tag="All registered accounts" tagType="info" index={0} />
-                    <StatsCard title="Active Users" value={isLoading ? "..." : String(active)} tag="Currently active" tagType="secondary" index={1} />
-                    <StatsCard title="Property Owners" value={isLoading ? "..." : String(owners)} tag="Listing owners" tagType="tertiary" index={2} />
-                    <StatsCard title="Suspended" value={isLoading ? "..." : String(suspended)} tag="Policy violations" tagType="error" index={3} />
-                </section>
+            {/* Stats Bento Grid — real data from Redux */}
+            <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 lg:mb-10">
+                <StatsCard title="Total Users" value={isLoading ? "..." : String(total)} tag="All registered accounts" tagType="info" index={0} />
+                <StatsCard title="Active Users" value={isLoading ? "..." : String(active)} tag="Currently active" tagType="secondary" index={1} />
+                <StatsCard title="Property Owners" value={isLoading ? "..." : String(owners)} tag="Listing owners" tagType="tertiary" index={2} />
+                <StatsCard title="Suspended" value={isLoading ? "..." : String(suspended)} tag="Policy violations" tagType="error" index={3} />
+            </section>
 
-                {/* User Table */}
-                <UserTable
-                    searchQuery={searchQuery}
-                    roleFilter={roleFilter as any}
-                    setRoleFilter={setRoleFilter}
-                    statusFilter={statusFilter as any}
-                    setStatusFilter={setStatusFilter}
-                />
-            </main>
+            {/* User Table */}
+            <UserTable
+                searchQuery={searchQuery}
+                roleFilter={roleFilter as any}
+                setRoleFilter={setRoleFilter}
+                statusFilter={statusFilter as any}
+                setStatusFilter={setStatusFilter}
+            />
+        </main>
     );
 }

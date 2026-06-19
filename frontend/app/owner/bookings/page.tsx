@@ -76,6 +76,17 @@ export default function OwnerBookingsPage() {
     const handleUpdateStatus = async (bookingId: string, newStatus: "approved" | "rejected" | "completed" | "closed") => {
         const actionText = newStatus === "approved" ? "confirm" : newStatus === "completed" ? "complete" : newStatus === "closed" ? "close" : "reject";
         
+        if (["approved", "completed", "closed"].includes(newStatus)) {
+            const status = user?.account_status?.toLowerCase();
+            if (status === "suspended" || status === "banned") {
+                setAlertModal({
+                    isOpen: true,
+                    message: `Your account is suspended or banned. You cannot mark booking as ${newStatus === "approved" ? "approved" : newStatus === "completed" ? "completed" : "closed"}.`
+                });
+                return;
+            }
+        }
+
         setConfirmModal({
             isOpen: true,
             message: `Are you sure you want to ${actionText} this booking offer?`,

@@ -59,11 +59,9 @@ const tabs: { id: ReportTab; label: string }[] = [
 ];
 
 export default function ReportsPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { reports: reduxReports, isLoading } = useAppSelector((state) => state.admin);
-
-    const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<ReportTab>("active");
     const [selectedReport, setSelectedReport] = useState<any | null>(null);
     const [moderatorNote, setModeratorNote] = useState("");

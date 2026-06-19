@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import AlertModal from "@/components/AlertModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchConversations, fetchMessages, sendMessage,
@@ -21,9 +22,11 @@ import {
 import api from "@/lib/api";
 
 function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: boolean }) {
+    const { user } = useAuth();
     const [booking, setBooking] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
 
     useEffect(() => {
         let isMounted = true;
@@ -46,6 +49,14 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
 
     const handleAcceptBooking = async () => {
         if (!booking?.id) return;
+        const status = user?.account_status?.toLowerCase();
+        if (status === "suspended" || status === "banned") {
+            setAlertModal({
+                isOpen: true,
+                message: "Your account is suspended or banned. You cannot accept booking offers."
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const res = await api.patch(`/bookings/${booking.id}/status`, {
@@ -125,6 +136,13 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
                     {submitting ? <Loader2 size={14} className="animate-spin" /> : "Accept Offer to Confirm Booking"}
                 </button>
             )}
+
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                message={alertModal.message}
+                onClose={() => setAlertModal({ isOpen: false, message: "" })}
+                isDark={isDark}
+            />
         </div>
     );
 }

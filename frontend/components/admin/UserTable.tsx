@@ -167,18 +167,18 @@ export default function UserTable({
                         <div className="flex items-center gap-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${labelColor}`}>Role:</span>
                             <select value={roleFilter} onChange={(e) => handleRoleChange(e.target.value)} className={`border-none text-sm font-semibold cursor-pointer p-0 focus:ring-0 focus:outline-none ${selectColor}`}>
-                                <option value="All">All Roles</option>
-                                <option value="Tenant">Tenant</option>
-                                <option value="Owner">Owner</option>
+                                <option value="All" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>All Roles</option>
+                                <option value="Tenant" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Tenant</option>
+                                <option value="Owner" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Owner</option>
                             </select>
                         </div>
                         <div className="flex items-center gap-2">
                             <span className={`text-[10px] font-bold uppercase tracking-wider ${labelColor}`}>Status:</span>
                             <select value={statusFilter} onChange={(e) => handleStatusChange(e.target.value)} className={`border-none text-sm font-semibold cursor-pointer p-0 focus:ring-0 focus:outline-none ${selectColor}`}>
-                                <option value="Any">Any Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Suspended">Suspended</option>
-                                <option value="Warned">Warned</option>
+                                <option value="Any" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Any Status</option>
+                                <option value="Active" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Active</option>
+                                <option value="Suspended" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Suspended</option>
+                                <option value="Warned" className={isDark ? "bg-[#131313] text-white" : "bg-white text-slate-900"}>Warned</option>
                             </select>
                         </div>
                     </div>

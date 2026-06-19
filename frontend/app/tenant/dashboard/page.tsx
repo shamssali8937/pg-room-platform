@@ -151,6 +151,23 @@ export default function TenantDashboard() {
                 </button>
             </header>
 
+            {/* Suspended/Banned Warning Banner */}
+            {(user?.account_status === "suspended" || user?.account_status === "banned") && (
+                <div className={`p-4 rounded-2xl flex items-start gap-4 border ${
+                    isDark 
+                        ? "bg-red-500/10 border-red-500/20 text-red-200" 
+                        : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                    <AlertCircle className="shrink-0 text-red-500 mt-0.5" size={20} />
+                    <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm">Account Status: Suspended / Banned</h4>
+                        <p className="text-xs mt-1 leading-relaxed opacity-90">
+                            Your account is currently suspended or banned. You are restricted from sending room inquiries and creating booking offers. Please contact support if you believe this is an error.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Stats Row */}
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading

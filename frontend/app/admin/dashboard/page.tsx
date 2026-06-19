@@ -10,11 +10,9 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchAdminDashboard } from "@/store/slices/adminSlice";
 
 export default function DashboardPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { dashboardStats } = useAppSelector((state) => state.admin);
-
-    const [searchQuery] = useState("");
 
     useEffect(() => {
         dispatch(fetchAdminDashboard());

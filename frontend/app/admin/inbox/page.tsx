@@ -90,13 +90,12 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
 }
 
 export default function AdminInbox() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery, setSearchQuery } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { user } = useAuth();
     const { conversations, messages, activeConversationId, isLoading, isSending, error, typing } = useAppSelector((s) => s.chat);
 
     const [inputText, setInputText] = useState("");
-    const [searchQuery, setSearchQuery] = useState("");
     const [showHeaderDropdown, setShowHeaderDropdown] = useState(false);
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);

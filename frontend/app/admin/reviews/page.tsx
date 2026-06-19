@@ -39,10 +39,9 @@ interface Review {
 }
 
 export default function ReviewsPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>("all");
     const [filterRating, setFilterRating] = useState<string>("all");
