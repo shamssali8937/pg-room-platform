@@ -21,7 +21,14 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "https://pg-room-platform.vercel.app");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "PG Nexus — Find Your Perfect PG Room",
   description: "Discover, list, and book verified premium PG rooms across Pakistan. Experience high-end verified student & professional living spaces.",
   keywords: [
