@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAuth } from "@/context/AuthContext";
@@ -96,7 +96,7 @@ type FilterType = "all" | "active" | "pending" | "rejected" | "suspended";
 
 export default function OwnerListingsPage() {
     useSocket();
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery } = useOwnerTheme();
     const { user } = useAuth();
     const dispatch = useAppDispatch();
     const { ownerRooms, isLoading, error } = useAppSelector((s) => s.room);
@@ -122,7 +122,20 @@ export default function OwnerListingsPage() {
     const tabActive = isDark ? "bg-[#ba9eff]/15 text-[#ba9eff] border border-[#ba9eff]/20" : "bg-violet-100 text-violet-700 border border-violet-200";
     const tabInactive = isDark ? "text-[#adaaaa] hover:text-white hover:bg-white/5 border border-transparent" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent";
 
-    const filtered = filter === "all" ? ownerRooms : ownerRooms.filter((r) => r.status === filter);
+    const filtered = useMemo(() => {
+        let result = filter === "all" ? ownerRooms : ownerRooms.filter((r) => r.status === filter);
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (r) =>
+                    r.title?.toLowerCase().includes(q) ||
+                    r.locality?.toLowerCase().includes(q) ||
+                    r.city?.toLowerCase().includes(q) ||
+                    (r.price && String(r.price).includes(q))
+            );
+        }
+        return result;
+    }, [ownerRooms, filter, searchQuery]);
 
     const counts = {
         all: ownerRooms.length,

@@ -104,7 +104,7 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
 }
 
 export default function TenantInboxPage() {
-    const { isDark } = useTenantTheme();
+    const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
     const { user } = useAuth();
     const dispatch = useAppDispatch();
     const { conversations, messages, activeConversationId, isLoading, isSending, error, typing } = useAppSelector((s) => s.chat);
@@ -112,7 +112,6 @@ export default function TenantInboxPage() {
     const [inputText, setInputText] = useState("");
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const [showHeaderDropdown, setShowHeaderDropdown] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);

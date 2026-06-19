@@ -13,6 +13,7 @@ interface TopbarProps {
     onMenuToggle?: () => void;
     searchPlaceholder?: string;
     sidebarOpen?: boolean;
+    searchDisabled?: boolean;
 }
 
 interface TenantNotification {
@@ -38,7 +39,7 @@ const formatTime = (dateStr: string) => {
     }
 };
 
-export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities...", sidebarOpen = false }: TopbarProps) {
+export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search rooms, cities...", sidebarOpen = false, searchDisabled = false }: TopbarProps) {
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState<TenantNotification[]>([]);
     const [isMounted, setIsMounted] = useState(false);
@@ -169,7 +170,8 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                         placeholder={searchPlaceholder}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className={`w-full border-none rounded-xl py-2.5 pl-12 pr-10 text-sm focus:outline-none focus:ring-1 transition-all ${inputBg}`}
+                        disabled={searchDisabled}
+                        className={`w-full border-none rounded-xl py-2.5 pl-12 pr-10 text-sm focus:outline-none focus:ring-1 transition-all ${inputBg} ${searchDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
                     />
                     {searchQuery && (
                         <button onClick={() => setSearchQuery("")} className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors ${isDark ? "text-zinc-500 hover:text-white" : "text-slate-400 hover:text-slate-700"}`}>

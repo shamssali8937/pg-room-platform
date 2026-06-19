@@ -37,7 +37,7 @@ interface Booking {
 }
 
 export default function OwnerBookingsPage() {
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
     const { user } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,9 +46,6 @@ export default function OwnerBookingsPage() {
 
     const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; message: string; onConfirm: (() => void) | null }>({ isOpen: false, message: "", onConfirm: null });
-
-    // Filters and Search
-    const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "completed" | "closed" | "cancelled" | "expired" | "checked_in">("all");
 
     const fetchBookings = async () => {

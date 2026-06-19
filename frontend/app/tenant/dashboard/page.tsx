@@ -527,7 +527,7 @@ export default function TenantDashboard() {
 
                     {/* Points Mini */}
                     <section
-                        onClick={() => router.push("/tenant/preferences")}
+                        onClick={() => router.push("/tenant/points")}
                         className={`rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] relative overflow-hidden ${isDark ? "bg-gradient-to-br from-[#201f1f] to-[#0f0f0f] border border-[#484847]/15" : "bg-gradient-to-br from-violet-50 to-slate-50 border border-violet-100"}`}
                     >
                         <div className="absolute right-0 bottom-0 w-32 h-32 bg-[#a27cff]/10 rounded-full blur-[50px] -mr-10 -mb-10 pointer-events-none" />
@@ -544,7 +544,7 @@ export default function TenantDashboard() {
                             </div>
                         </div>
                         <div className={`mt-3 pt-3 border-t flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? "border-white/5 text-[#a27cff]" : "border-violet-100 text-violet-600"}`}>
-                            <TrendingUp size={11} /> View preferences <ArrowRight size={11} className="ml-auto" />
+                            <TrendingUp size={11} /> View points history <ArrowRight size={11} className="ml-auto" />
                         </div>
                     </section>
                 </div>

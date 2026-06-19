@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import OwnerSidebar from "@/components/owner/OwnerSidebar";
 import OwnerTopbar from "@/components/owner/OwnerTopbar";
@@ -11,9 +11,19 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchConversations } from "@/store/slices/chatSlice";
 import { useSocket } from "@/hooks/useSocket";
 
+// Map owner pathnames to search placeholder text
+function getOwnerPlaceholder(pathname: string): string {
+    if (pathname.includes("/owner/bookings")) return "Search bookings, tenants, rooms...";
+    if (pathname.includes("/owner/listings")) return "Search my listings, status, location...";
+    if (pathname.includes("/owner/inquiries")) return "Search inquiries, tenants...";
+    if (pathname.includes("/owner/wallet")) return "Search transactions, details...";
+    if (pathname.includes("/owner/settings")) return "Search disabled on this page";
+    return "Search Properties...";
+}
+
 function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
     const pathname = usePathname();
     const router = useRouter();
     const { user, isLoading, isAuthenticated } = useAuth();
@@ -30,6 +40,24 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
             dispatch(fetchConversations());
         }
     }, [isAuthenticated, user, dispatch]);
+
+    const prevPathnameRef = useRef(pathname);
+
+    // Clear global search query on page transition, EXCEPT when redirecting from dashboard to listings with search query
+    useEffect(() => {
+        const isSearchRedirect = prevPathnameRef.current === "/owner/dashboard" && pathname === "/owner/listings";
+        if (!isSearchRedirect) {
+            setSearchQuery("");
+        }
+        prevPathnameRef.current = pathname;
+    }, [pathname, setSearchQuery]);
+
+    // Redirection rule: if user types in search bar from dashboard, redirect to listings
+    useEffect(() => {
+        if (searchQuery && pathname === "/owner/dashboard") {
+            router.push("/owner/listings");
+        }
+    }, [searchQuery, pathname, router]);
 
     // ── Auth Guard ────────────────────────────────────────────────────────
     useEffect(() => {
@@ -73,6 +101,8 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
     else if (pathname?.includes("wallet")) activeId = "wallet";
     else if (pathname?.includes("dashboard")) activeId = "dashboard";
 
+    const placeholder = getOwnerPlaceholder(pathname);
+
     return (
         <div className={`min-h-screen font-body transition-colors ${bgClass} selection:bg-violet-500/30 selection:text-violet-200`}>
 
@@ -83,7 +113,12 @@ function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
             />
 
             <div className={`flex flex-col min-h-screen transition-all duration-300 ${mainMargin}`}>
-                <OwnerTopbar onMenuToggle={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
+                <OwnerTopbar 
+                    onMenuToggle={() => setSidebarOpen(true)} 
+                    sidebarOpen={sidebarOpen} 
+                    searchPlaceholder={placeholder}
+                    searchDisabled={pathname.includes("/owner/settings")}
+                />
                 {(() => {
                     const isChatPage = pathname?.includes("/inquiries");
                     const mainPadding = isChatPage

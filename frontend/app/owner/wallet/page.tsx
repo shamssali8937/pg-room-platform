@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -53,7 +53,7 @@ const promoCards = [
 ];
 
 export default function OwnerWalletPage() {
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery } = useOwnerTheme();
     const dispatch = useAppDispatch();
     const { points, pointTransactions, isLoading } = useAppSelector((s) => s.owner);
     const { ownerRooms } = useAppSelector((s) => s.room);
@@ -164,9 +164,21 @@ export default function OwnerWalletPage() {
     const tabActive = isDark ? "bg-[#ba9eff]/15 text-[#ba9eff] border border-[#ba9eff]/20" : "bg-violet-100 text-violet-700 border border-violet-200";
     const tabInactive = isDark ? "text-[#adaaaa] hover:text-white hover:bg-white/5 border border-transparent" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent";
 
-    const filtered = historyFilter === "All"
-        ? pointTransactions
-        : pointTransactions.filter((t) => t.type === historyFilter);
+    const filtered = useMemo(() => {
+        let result = historyFilter === "All"
+            ? pointTransactions
+            : pointTransactions.filter((t) => t.type === historyFilter);
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (t) =>
+                    t.description?.toLowerCase().includes(q) ||
+                    t.type?.toLowerCase().includes(q) ||
+                    (t.amount && String(t.amount).includes(q))
+            );
+        }
+        return result;
+    }, [pointTransactions, historyFilter, searchQuery]);
     const displayed = showAll ? filtered : filtered.slice(0, 4);
 
     const totalEarned = pointTransactions.filter((t) => t.type === "EARNED").reduce((a, t) => a + t.amount, 0);

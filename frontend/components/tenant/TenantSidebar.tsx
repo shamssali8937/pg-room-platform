@@ -28,6 +28,7 @@ const navItems = [
     { icon: LayoutDashboard, label: "Dashboard", id: "dashboard", href: "/tenant/dashboard" },
     { icon: Search, label: "Find Rooms", id: "browse", href: "/tenant/browse" },
     { icon: CalendarCheck, label: "My Bookings", id: "bookings", href: "/tenant/bookings" },
+    { icon: Gem, label: "Reward Points", id: "points", href: "/tenant/points" },
     { icon: MessageSquare, label: "Inbox", id: "inbox", href: "/tenant/inbox" },
     { icon: ShieldCheck, label: "Identity", id: "identity", href: "/tenant/identity" },
     { icon: SlidersHorizontal, label: "Preferences", id: "preferences", href: "/tenant/preferences" },
