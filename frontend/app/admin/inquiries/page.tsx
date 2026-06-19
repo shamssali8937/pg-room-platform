@@ -64,10 +64,9 @@ interface AdminInquiry {
 }
 
 export default function InquiriesPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const [inquiries, setInquiries] = useState<AdminInquiry[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
     const [activeTab, setActiveTab] = useState<string>("all");
     const [selectedInquiry, setSelectedInquiry] = useState<AdminInquiry | null>(null);
     const [adminNotes, setAdminNotes] = useState("");

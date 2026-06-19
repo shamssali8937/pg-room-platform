@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAuth } from "@/context/AuthContext";
+import AlertModal from "@/components/AlertModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
     fetchConversations, fetchMessages, sendMessage,
@@ -103,7 +104,7 @@ function BookingOfferCard({ bookingId, isDark }: { bookingId: string, isDark: bo
 }
 
 export default function TenantInboxPage() {
-    const { isDark } = useTenantTheme();
+    const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
     const { user } = useAuth();
     const dispatch = useAppDispatch();
     const { conversations, messages, activeConversationId, isLoading, isSending, error, typing } = useAppSelector((s) => s.chat);
@@ -111,13 +112,13 @@ export default function TenantInboxPage() {
     const [inputText, setInputText] = useState("");
     const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
     const [showHeaderDropdown, setShowHeaderDropdown] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const imageInputRef = useRef<HTMLInputElement>(null);
     const videoInputRef = useRef<HTMLInputElement>(null);
 
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [isSendingTyping, setIsSendingTyping] = useState(false);
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
 
     const [showStartChatModal, setShowStartChatModal] = useState(false);
     const [newChatEmail, setNewChatEmail] = useState("");
@@ -134,6 +135,14 @@ export default function TenantInboxPage() {
     const handleSendBookingOffer = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeConversation?.room?.id || isSubmittingOffer) return;
+        const status = user?.account_status?.toLowerCase();
+        if (status === "suspended" || status === "banned") {
+            setAlertModal({
+                isOpen: true,
+                message: "Your account is suspended or banned. You cannot send booking offers."
+            });
+            return;
+        }
         setIsSubmittingOffer(true);
         try {
             const res = await api.post(`/bookings/room/${activeConversation.room.id}`, {
@@ -277,6 +286,14 @@ export default function TenantInboxPage() {
             videoInputRef.current?.click();
         } else if (type === "offer") {
             if (!activeConversation?.room?.id) return;
+            const status = user?.account_status?.toLowerCase();
+            if (status === "suspended" || status === "banned") {
+                setAlertModal({
+                    isOpen: true,
+                    message: "Your account is suspended or banned. You cannot send booking offers."
+                });
+                return;
+            }
             setOfferPrice((activeConversation.room as any).rent_amount?.toString() || (activeConversation.room as any).price?.toString() || "");
             setOfferDate(new Date().toISOString().split("T")[0]);
             setOfferMessage(`Booking request via chat.`);
@@ -968,6 +985,13 @@ export default function TenantInboxPage() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                message={alertModal.message}
+                onClose={() => setAlertModal({ isOpen: false, message: "" })}
+                isDark={isDark}
+            />
         </div>
     );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import TenantSidebar from "@/components/tenant/TenantSidebar";
 import TenantTopbar from "@/components/tenant/TenantTopbar";
@@ -11,10 +11,20 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchConversations } from "@/store/slices/chatSlice";
 import { useSocket } from "@/hooks/useSocket";
 
+// Map tenant pathnames to search placeholder text
+function getTenantPlaceholder(pathname: string): string {
+    if (pathname.includes("/tenant/browse")) return "Search rooms, cities, rent...";
+    if (pathname.includes("/tenant/bookings")) return "Search my bookings, owners, location...";
+    if (pathname.includes("/tenant/inbox")) return "Search messages or rooms...";
+    if (pathname.includes("/tenant/points")) return "Search transactions, reasons...";
+    if (pathname.includes("/tenant/identity") || pathname.includes("/tenant/preferences")) return "Search disabled on this page";
+    return "Search rooms, cities...";
+}
+
 function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     const { user, isLoading, isAuthenticated } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { isDark } = useTenantTheme();
+    const { isDark, searchQuery, setSearchQuery } = useTenantTheme();
     const pathname = usePathname();
     const router = useRouter();
     const dispatch = useAppDispatch();
@@ -36,6 +46,24 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
             router.replace("/auth/signin");
         }
     }, [user, isLoading, isAuthenticated, router]);
+
+    const prevPathnameRef = useRef(pathname);
+
+    // Clear global search query on page transition, EXCEPT when redirecting from dashboard to browse with search query
+    useEffect(() => {
+        const isSearchRedirect = prevPathnameRef.current === "/tenant/dashboard" && pathname === "/tenant/browse";
+        if (!isSearchRedirect) {
+            setSearchQuery("");
+        }
+        prevPathnameRef.current = pathname;
+    }, [pathname, setSearchQuery]);
+
+    // Redirection rule: if user types in search bar from dashboard, redirect to browse
+    useEffect(() => {
+        if (searchQuery && pathname === "/tenant/dashboard") {
+            router.push("/tenant/browse");
+        }
+    }, [searchQuery, pathname, router]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -60,7 +88,7 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     }
 
     const bgClass = isDark
-        ? "bg-[#0f0f11] text-white"
+         ? "bg-[#0f0f11] text-white"
         : "bg-[#f8fafc] text-slate-900";
 
     const mainMargin = sidebarOpen ? "xl:ml-64" : "ml-0";
@@ -68,6 +96,7 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
     let activeId = "dashboard";
     if (pathname?.includes("browse")) activeId = "browse";
     else if (pathname?.includes("bookings")) activeId = "bookings";
+    else if (pathname?.includes("points")) activeId = "points";
     else if (pathname?.includes("inbox")) activeId = "inbox";
     else if (pathname?.includes("identity")) activeId = "identity";
     else if (pathname?.includes("preferences")) activeId = "preferences";
@@ -81,6 +110,8 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
         { id: "identity", icon: ShieldCheck, href: "/tenant/identity" },
     ];
 
+    const placeholder = getTenantPlaceholder(pathname);
+
     return (
         <div className={`min-h-screen font-body transition-colors ${bgClass} selection:bg-violet-500/30 selection:text-violet-200`}>
             <TenantSidebar
@@ -90,7 +121,12 @@ function TenantLayoutInner({ children }: { children: React.ReactNode }) {
             />
 
             <div className={`flex flex-col min-h-screen transition-all duration-300 ${mainMargin}`}>
-                <TenantTopbar onMenuToggle={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
+                <TenantTopbar 
+                    onMenuToggle={() => setSidebarOpen(true)} 
+                    sidebarOpen={sidebarOpen} 
+                    searchPlaceholder={placeholder}
+                    searchDisabled={pathname.includes("/tenant/identity") || pathname.includes("/tenant/preferences")}
+                />
                 {(() => {
                     const isChatPage = pathname?.includes("/inbox");
                     const mainPadding = isChatPage

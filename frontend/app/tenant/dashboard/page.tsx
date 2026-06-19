@@ -151,6 +151,23 @@ export default function TenantDashboard() {
                 </button>
             </header>
 
+            {/* Suspended/Banned Warning Banner */}
+            {(user?.account_status === "suspended" || user?.account_status === "banned") && (
+                <div className={`p-4 rounded-2xl flex items-start gap-4 border ${
+                    isDark 
+                        ? "bg-red-500/10 border-red-500/20 text-red-200" 
+                        : "bg-red-50 border-red-200 text-red-800"
+                }`}>
+                    <AlertCircle className="shrink-0 text-red-500 mt-0.5" size={20} />
+                    <div className="flex-1 min-w-0">
+                        <h4 className="font-bold text-sm">Account Status: Suspended / Banned</h4>
+                        <p className="text-xs mt-1 leading-relaxed opacity-90">
+                            Your account is currently suspended or banned. You are restricted from sending room inquiries and creating booking offers. Please contact support if you believe this is an error.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Stats Row */}
             <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {isLoading
@@ -510,7 +527,7 @@ export default function TenantDashboard() {
 
                     {/* Points Mini */}
                     <section
-                        onClick={() => router.push("/tenant/preferences")}
+                        onClick={() => router.push("/tenant/points")}
                         className={`rounded-2xl p-5 cursor-pointer transition-all hover:scale-[1.02] relative overflow-hidden ${isDark ? "bg-gradient-to-br from-[#201f1f] to-[#0f0f0f] border border-[#484847]/15" : "bg-gradient-to-br from-violet-50 to-slate-50 border border-violet-100"}`}
                     >
                         <div className="absolute right-0 bottom-0 w-32 h-32 bg-[#a27cff]/10 rounded-full blur-[50px] -mr-10 -mb-10 pointer-events-none" />
@@ -527,7 +544,7 @@ export default function TenantDashboard() {
                             </div>
                         </div>
                         <div className={`mt-3 pt-3 border-t flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? "border-white/5 text-[#a27cff]" : "border-violet-100 text-violet-600"}`}>
-                            <TrendingUp size={11} /> View preferences <ArrowRight size={11} className="ml-auto" />
+                            <TrendingUp size={11} /> View points history <ArrowRight size={11} className="ml-auto" />
                         </div>
                     </section>
                 </div>

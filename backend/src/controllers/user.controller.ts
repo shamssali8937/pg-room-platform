@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService, uploadDocumentService, getMyDocumentsService, saveCardService, getContactedOwnersService } from "../services/user.service.js";
+import { getMeService, updateMeService, getMyNotificationsService, markNotificationReadService, uploadDocumentService, getMyDocumentsService, saveCardService, getContactedOwnersService, getMyPointsService, getMyPointTransactionsService } from "../services/user.service.js";
 
 export const getMe = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -73,6 +73,24 @@ export const saveCard = async (req: Request, res: Response, next: NextFunction):
 export const getContactedOwners = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const data = await getContactedOwnersService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMyPoints = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await getMyPointsService(req.user!.id);
+        res.json({ success: true, data });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const getMyPointTransactions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+        const data = await getMyPointTransactionsService(req.user!.id);
         res.json({ success: true, data });
     } catch (error) {
         next(error);

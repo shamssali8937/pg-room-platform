@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTenantTheme } from "@/context/TenantThemeContext";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
@@ -253,7 +253,7 @@ function BookingCard({
 }
 
 export default function TenantBookings() {
-    const { isDark } = useTenantTheme();
+    const { isDark, searchQuery } = useTenantTheme();
     const dispatch = useAppDispatch();
     const { tenantBookings, isLoading, error } = useAppSelector((s) => s.booking);
     const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -324,7 +324,20 @@ export default function TenantBookings() {
         { key: "expired", label: "Expired" },
     ];
 
-    const filtered = filter === "all" ? tenantBookings : tenantBookings.filter((b) => b.status === filter);
+    const filtered = useMemo(() => {
+        let result = filter === "all" ? tenantBookings : tenantBookings.filter((b) => b.status === filter);
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (b) =>
+                    b.room?.title?.toLowerCase().includes(q) ||
+                    b.room?.locality?.toLowerCase().includes(q) ||
+                    b.room?.city?.toLowerCase().includes(q) ||
+                    (b.owner?.full_name && b.owner.full_name.toLowerCase().includes(q))
+            );
+        }
+        return result;
+    }, [tenantBookings, filter, searchQuery]);
 
     const stats = [
         { label: "Confirmed", value: tenantBookings.filter((b) => b.status === "approved").length, color: "text-emerald-400" },

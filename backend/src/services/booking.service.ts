@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { NotFoundError } from "../middleware/errorHandler.middleware.js";
+import { NotFoundError, ForbiddenError } from "../middleware/errorHandler.middleware.js";
 import { sendEmail } from "../utils/mail.js";
 import { bookingCreatedEmail, bookingStatusChangedEmail, bookingCancelledEmail, pointsEarnedEmail } from "../utils/emailTemplates.js";
 
@@ -47,6 +47,14 @@ const createNotification = async (
 // ─── Services ────────────────────────────────────────────────────────────────
 
 export const createBookingService = async (tenantId: string, roomId: string, data: any) => {
+    const user = await prisma.user.findUnique({
+        where: { id: tenantId },
+        select: { account_status: true }
+    });
+    if (user?.account_status === "suspended" || user?.account_status === "banned") {
+        throw ForbiddenError("Your account is suspended or banned. You cannot send inquiries.");
+    }
+
     const room = await prisma.room.findUnique({
         where: { id: roomId },
         include: { owner: { select: { id: true, full_name: true } } }
@@ -149,6 +157,16 @@ export const updateBookingStatusService = async (
     const allowedStatuses = ["approved", "rejected", "completed", "closed", "checked_in"];
     if (!allowedStatuses.includes(status)) {
         throw new Error(`Invalid status transition: "${status}". Allowed: ${allowedStatuses.join(", ")}`);
+    }
+
+    if (["approved", "completed", "closed"].includes(status)) {
+        const owner = await prisma.user.findUnique({
+            where: { id: ownerId },
+            select: { account_status: true }
+        });
+        if (owner?.account_status === "suspended" || owner?.account_status === "banned") {
+            throw ForbiddenError(`Your account is suspended or banned. You cannot mark booking as "${status}".`);
+        }
     }
 
     // Update room availability based on new status

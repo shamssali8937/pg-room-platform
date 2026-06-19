@@ -35,7 +35,7 @@ function LoginContent() {
     useEffect(() => {
         const verified = searchParams.get("verified");
         const queryError = searchParams.get("error");
-        
+
         if (verified === "true") {
             setSuccessMsg("Email verified successfully! You can now sign in.");
         }
@@ -48,7 +48,7 @@ function LoginContent() {
     const redirectByRole = (role: string) => {
         if (role === "admin") return router.push("/admin/dashboard");
         if (role === "owner") return router.push("/owner/dashboard");
-        return router.push("/tenant/dashboard");
+        return router.push("/tenant/browse");
     };
 
     // ─── Google OAuth handler ──────────────────────────────────────

@@ -6,6 +6,7 @@ import chatReducer from "@/store/slices/chatSlice";
 import ownerReducer from "@/store/slices/ownerSlice";
 import dashboardReducer from "@/store/slices/dashboardSlice";
 import adminReducer from "@/store/slices/adminSlice";
+import tenantReducer from "@/store/slices/tenantSlice";
 
 export const store = configureStore({
     reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
         owner: ownerReducer,
         dashboard: dashboardReducer,
         admin: adminReducer,
+        tenant: tenantReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
 });

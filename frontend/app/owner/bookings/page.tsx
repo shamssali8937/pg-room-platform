@@ -37,7 +37,7 @@ interface Booking {
 }
 
 export default function OwnerBookingsPage() {
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery, setSearchQuery } = useOwnerTheme();
     const { user } = useAuth();
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,9 +46,6 @@ export default function OwnerBookingsPage() {
 
     const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean; message: string; onConfirm: (() => void) | null }>({ isOpen: false, message: "", onConfirm: null });
-
-    // Filters and Search
-    const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "completed" | "closed" | "cancelled" | "expired" | "checked_in">("all");
 
     const fetchBookings = async () => {
@@ -76,6 +73,17 @@ export default function OwnerBookingsPage() {
     const handleUpdateStatus = async (bookingId: string, newStatus: "approved" | "rejected" | "completed" | "closed") => {
         const actionText = newStatus === "approved" ? "confirm" : newStatus === "completed" ? "complete" : newStatus === "closed" ? "close" : "reject";
         
+        if (["approved", "completed", "closed"].includes(newStatus)) {
+            const status = user?.account_status?.toLowerCase();
+            if (status === "suspended" || status === "banned") {
+                setAlertModal({
+                    isOpen: true,
+                    message: `Your account is suspended or banned. You cannot mark booking as ${newStatus === "approved" ? "approved" : newStatus === "completed" ? "completed" : "closed"}.`
+                });
+                return;
+            }
+        }
+
         setConfirmModal({
             isOpen: true,
             message: `Are you sure you want to ${actionText} this booking offer?`,

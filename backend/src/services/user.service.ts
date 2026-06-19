@@ -148,4 +148,23 @@ export const getContactedOwnersService = async (userId: string) => {
 
     // Map to simple distinct list of owners or conversations containing owner+room details
     return conversations;
+};
+
+export const getMyPointsService = async (userId: string) => {
+    const pointsResult = await prisma.pointsTransaction.aggregate({
+        where: { owner_id: userId },
+        _sum: { points: true },
+    });
+
+    const total = pointsResult._sum.points ?? 0;
+
+    return { points: total, total };
+};
+
+export const getMyPointTransactionsService = async (userId: string) => {
+    return prisma.pointsTransaction.findMany({
+        where: { owner_id: userId },
+        include: { room: { select: { id: true, title: true } } },
+        orderBy: { created_at: "desc" },
+    });
 };

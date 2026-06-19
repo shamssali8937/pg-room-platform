@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOwnerTheme } from "@/context/OwnerThemeContext";
+import { useAuth } from "@/context/AuthContext";
+import AlertModal from "@/components/AlertModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { fetchOwnerRooms, deleteRoom, submitRoom, boostRoom } from "@/store/slices/roomSlice";
 import type { Room } from "@/store/slices/roomSlice";
@@ -94,7 +96,8 @@ type FilterType = "all" | "active" | "pending" | "rejected" | "suspended";
 
 export default function OwnerListingsPage() {
     useSocket();
-    const { isDark } = useOwnerTheme();
+    const { isDark, searchQuery } = useOwnerTheme();
+    const { user } = useAuth();
     const dispatch = useAppDispatch();
     const { ownerRooms, isLoading, error } = useAppSelector((s) => s.room);
 
@@ -106,6 +109,7 @@ export default function OwnerListingsPage() {
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [boostingId, setBoostingId] = useState<string | null>(null);
     const [submittingId, setSubmittingId] = useState<string | null>(null);
+    const [alertModal, setAlertModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: "" });
 
     useEffect(() => {
         dispatch(fetchOwnerRooms());
@@ -118,7 +122,20 @@ export default function OwnerListingsPage() {
     const tabActive = isDark ? "bg-[#ba9eff]/15 text-[#ba9eff] border border-[#ba9eff]/20" : "bg-violet-100 text-violet-700 border border-violet-200";
     const tabInactive = isDark ? "text-[#adaaaa] hover:text-white hover:bg-white/5 border border-transparent" : "text-slate-500 hover:text-slate-900 hover:bg-slate-100 border border-transparent";
 
-    const filtered = filter === "all" ? ownerRooms : ownerRooms.filter((r) => r.status === filter);
+    const filtered = useMemo(() => {
+        let result = filter === "all" ? ownerRooms : ownerRooms.filter((r) => r.status === filter);
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            result = result.filter(
+                (r) =>
+                    r.title?.toLowerCase().includes(q) ||
+                    r.locality?.toLowerCase().includes(q) ||
+                    r.city?.toLowerCase().includes(q) ||
+                    (r.price && String(r.price).includes(q))
+            );
+        }
+        return result;
+    }, [ownerRooms, filter, searchQuery]);
 
     const counts = {
         all: ownerRooms.length,
@@ -129,6 +146,15 @@ export default function OwnerListingsPage() {
     };
 
     const handleDelete = async (id: string) => {
+        const status = user?.account_status?.toLowerCase();
+        if (status === "suspended" || status === "banned") {
+            setAlertModal({
+                isOpen: true,
+                message: "Your account is suspended or banned. You cannot delete listings."
+            });
+            setDeleteTarget(null);
+            return;
+        }
         setDeletingId(id);
         await dispatch(deleteRoom(id));
         setDeletingId(null);
@@ -179,7 +205,17 @@ export default function OwnerListingsPage() {
                         <div className={`text-[10px] uppercase tracking-widest font-bold ${textVariant}`}>Views</div>
                     </div>
                     <button
-                        onClick={() => setIsAddOpen(true)}
+                        onClick={() => {
+                            const status = user?.account_status?.toLowerCase();
+                            if (status === "suspended" || status === "banned") {
+                                setAlertModal({
+                                    isOpen: true,
+                                    message: "Your account is suspended or banned. You cannot post new listings."
+                                });
+                                return;
+                            }
+                            setIsAddOpen(true);
+                        }}
                         className="hidden sm:flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-blue-500 text-white font-bold text-xs uppercase tracking-wider shadow-[0_0_20px_rgba(138,92,246,0.4)] hover:brightness-110 transition-all"
                     >
                         <Plus size={16} /> Add Property
@@ -460,7 +496,17 @@ export default function OwnerListingsPage() {
 
             {/* FAB */}
             <button
-                onClick={() => setIsAddOpen(true)}
+                onClick={() => {
+                    const status = user?.account_status?.toLowerCase();
+                    if (status === "suspended" || status === "banned") {
+                        setAlertModal({
+                            isOpen: true,
+                            message: "Your account is suspended or banned. You cannot post new listings."
+                        });
+                        return;
+                    }
+                    setIsAddOpen(true);
+                }}
                 className="fixed bottom-24 lg:bottom-10 right-6 lg:right-10 w-14 h-14 bg-gradient-to-tr from-violet-500 to-blue-500 text-white rounded-full flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(138,92,246,0.8)] hover:scale-110 active:scale-95 transition-all z-40 group"
             >
                 <Plus size={24} strokeWidth={2.5} className="group-hover:rotate-90 transition-transform duration-300" />
@@ -540,6 +586,13 @@ export default function OwnerListingsPage() {
                     setIsAddOpen(false);
                     dispatch(fetchOwnerRooms());
                 }}
+            />
+
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                message={alertModal.message}
+                onClose={() => setAlertModal({ isOpen: false, message: "" })}
+                isDark={isDark}
             />
         </div>
     );

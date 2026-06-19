@@ -1,5 +1,5 @@
 import { prisma } from "../config/prisma.js";
-import { NotFoundError } from "../middleware/errorHandler.middleware.js";
+import { NotFoundError, ForbiddenError } from "../middleware/errorHandler.middleware.js";
 import { onlineUsers } from "../config/socket.js";
 
 // Normalize message database response for the client
@@ -752,6 +752,14 @@ export const createBookingOfferService = async (
         customMessage?: string;
     }
 ) => {
+    const user = await prisma.user.findUnique({
+        where: { id: tenantId },
+        select: { account_status: true }
+    });
+    if (user?.account_status === "suspended" || user?.account_status === "banned") {
+        throw ForbiddenError("Your account is suspended or banned. You cannot send booking offers.");
+    }
+
     const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
     if (!conversation) throw NotFoundError("Conversation");
     if (conversation.tenant_id !== tenantId) {
@@ -812,6 +820,16 @@ export const respondToBookingOfferService = async (
     // Only recipient can accept/reject or counter-offer
     if (offer.receiver_id !== userId) {
         throw new Error("You are not authorized to respond to this offer.");
+    }
+
+    if (action === "accept" || action === "counter") {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { account_status: true }
+        });
+        if (user?.account_status === "suspended" || user?.account_status === "banned") {
+            throw ForbiddenError("Your account is suspended or banned. You cannot perform this action.");
+        }
     }
 
     const conversationId = offer.conversation_id;

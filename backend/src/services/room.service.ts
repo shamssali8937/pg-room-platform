@@ -4,6 +4,7 @@ import { getIO } from "../config/socket.js";
 import { logger } from "../config/logger.js";
 import { getOrSet, invalidateCache } from "../utils/cache.js";
 import { redis } from "../config/redis.js";
+import { ForbiddenError } from "../middleware/errorHandler.middleware.js";
 
 // ─── Redis-backed cache for the public rooms listing ─────────────────────────
 // Replaces the previous in-memory Map — now survives server restarts and works
@@ -97,6 +98,14 @@ const transformRoom = (room: any) => ({
 });
 
 export const createRoomService = async (userId: string, data: any, files: any) => {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { account_status: true }
+    });
+    if (user?.account_status === "suspended" || user?.account_status === "banned") {
+        throw ForbiddenError("Your account is suspended or banned. You cannot post new listings.");
+    }
+
     const {
         amenities,
         title,
@@ -506,6 +515,14 @@ export const updateRoomService = async (userId: string, roomId: string, data: an
 };
 
 export const deleteRoomService = async (userId: string, roomId: string) => {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { account_status: true }
+    });
+    if (user?.account_status === "suspended" || user?.account_status === "banned") {
+        throw ForbiddenError("Your account is suspended or banned. You cannot delete listings.");
+    }
+
     const room = await prisma.room.findUnique({ where: { id: roomId } });
     if (!room) throw new Error("Room not found");
     if (room.owner_id !== userId) throw new Error("Unauthorized");

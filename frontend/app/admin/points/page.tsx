@@ -41,11 +41,9 @@ const statusBadge = (isDark: boolean): Record<string, { bg: string; text: string
 });
 
 export default function PointsPage() {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery } = useAdminTheme();
     const dispatch = useAppDispatch();
     const { pointsTransactions: reduxTransactions, isLoading } = useAppSelector((state) => state.admin);
-
-    const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [toast, setToast] = useState<{ message: string; type: "success" | "error" | "info" } | null>(null);
     const [showAdjustForm, setShowAdjustForm] = useState(false);

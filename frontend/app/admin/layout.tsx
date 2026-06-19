@@ -36,11 +36,10 @@ function getPlaceholder(pathname: string): string {
 }
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
-    const { isDark } = useAdminTheme();
+    const { isDark, searchQuery, setSearchQuery } = useAdminTheme();
     const pathname = usePathname();
     const { user, isAuthenticated } = useAuth();
     const [sidebarOpen, setSidebarOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState("");
     const dispatch = useAppDispatch();
     const conversations = useAppSelector((s) => s.chat.conversations);
     const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
@@ -61,6 +60,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             dispatch(markReportsAsSeen());
         }
     }, [pathname, dispatch]);
+
+    // Clear global search query on page transition
+    useEffect(() => {
+        setSearchQuery("");
+    }, [pathname, setSearchQuery]);
 
     const activeId = getActiveId(pathname);
     const placeholder = getPlaceholder(pathname);
