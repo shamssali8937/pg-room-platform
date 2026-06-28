@@ -6,10 +6,11 @@ import LandpageFooter from "@/components/LandpageFooter";
 import ParticleBg from "@/components/ParticleBg";
 import Link from "next/link";
 import api from "@/lib/api";
+import LandingRoomDetailModal, { type LandingRoom } from "@/components/LandingRoomDetailModal";
 
 // React Icons
 import { HiOutlineLocationMarker, HiOutlineSearch } from "react-icons/hi";
-import { RiMoneyDollarCircleLine, RiHotelBedLine, RiShieldCheckLine, RiCustomerService2Line } from "react-icons/ri";
+import { RiHotelBedLine, RiShieldCheckLine, RiCustomerService2Line } from "react-icons/ri";
 import { FiArrowRight, FiPlusCircle, FiLock, FiEyeOff } from "react-icons/fi";
 import { MdVerified } from "react-icons/md";
 
@@ -64,6 +65,7 @@ const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1502672260266-1c1ef
 export default function Home() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState({ city: "", budget: "", type: "" });
+  const [selectedRoom, setSelectedRoom] = useState<LandingRoom | null>(null);
 
   // Fetch real listings from the backend
   const [listings, setListings] = useState<any[]>([]);
@@ -199,7 +201,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
             {featuredListing && (
               <div className="md:col-span-2 group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
-                   onClick={() => router.push("/auth/signin")}>
+                   onClick={() => setSelectedRoom(featuredListing)}>
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                      src={featuredListing.images?.[0]?.url ?? featuredListing.image ?? PLACEHOLDER_IMAGE} alt={featuredListing.title} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -218,12 +220,16 @@ export default function Home() {
                     <HiOutlineLocationMarker className="text-[#699cff]" /> {featuredListing.location ?? `${featuredListing.locality ?? ""}, ${featuredListing.city ?? ""}`}
                   </p>
                 </div>
+                {/* Click hint */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/10">
+                  View Details
+                </div>
               </div>
             )}
 
             {verticalListing && (
               <div className="group relative h-[300px] sm:h-[400px] md:h-[520px] rounded-[1.5rem] sm:rounded-[2rem] md:rounded-[2.5rem] overflow-hidden cursor-pointer border border-white/5"
-                   onClick={() => router.push("/auth/signin")}>
+                   onClick={() => setSelectedRoom(verticalListing)}>
                 <img className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
                      src={verticalListing.images?.[0]?.url ?? verticalListing.image ?? PLACEHOLDER_IMAGE} alt={verticalListing.title} />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
@@ -236,17 +242,24 @@ export default function Home() {
                     <HiOutlineLocationMarker className="text-[#699cff]" /> {verticalListing.location ?? `${verticalListing.locality ?? ""}, ${verticalListing.city ?? ""}`}
                   </p>
                 </div>
+                {/* Click hint */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-full border border-white/10">
+                  View Details
+                </div>
               </div>
             )}
 
             {gridListings.map((item: any) => (
-              <div key={item.id} onClick={() => router.push("/auth/signin")}
+              <div key={item.id} onClick={() => setSelectedRoom(item)}
                    className="backdrop-blur-sm bg-white/[0.02] rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 border border-white/5 hover:bg-white/[0.05] transition-all group cursor-pointer">
                 <div className="relative h-56 rounded-2xl overflow-hidden mb-6">
                   <img className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                        src={item.images?.[0]?.url ?? item.image ?? PLACEHOLDER_IMAGE} alt={item.title} />
                   <div className="absolute bottom-4 right-4 backdrop-blur-md bg-black/60 px-4 py-1.5 rounded-xl text-xs font-bold text-white border border-white/10">
                     ₨ {(item.price ?? item.rent_amount ?? 0).toLocaleString()}
+                  </div>
+                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full border border-white/10">
+                    View Details
                   </div>
                 </div>
                 <h4 className="text-xl font-bold text-white mb-2 group-hover:text-[#ba9eff] transition-colors">{item.title}</h4>
@@ -307,6 +320,14 @@ export default function Home() {
 
         <LandpageFooter />
       </div>
+
+      {/* Room Detail Modal */}
+      {selectedRoom && (
+        <LandingRoomDetailModal
+          room={selectedRoom}
+          onClose={() => setSelectedRoom(null)}
+        />
+      )}
     </main>
   );
 }
