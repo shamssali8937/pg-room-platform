@@ -68,7 +68,7 @@ export default function Footer() {
                         <ul className="space-y-2 text-sm">
                             {[
                                 { label: "Privacy Policy", href: "/general/privacypolicy", icon: ShieldCheck },
-                                { label: "Terms & Conditions", href: "/general/termsandcondition", icon: FileText },
+                                { label: "Terms & Conditions", href: "/general/terms-and-conditions", icon: FileText },
                                 { label: "About Us", href: "/general/aboutus", icon: Users },
                             ].map((link) => (
                                 <li key={link.label}>

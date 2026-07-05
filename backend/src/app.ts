@@ -40,18 +40,66 @@ const app: Application = express();
 // Trust reverse proxy (Render, Heroku, Cloudflare etc.)
 app.set("trust proxy", 1);
 
-// ─── Security Headers ─────────────────────────────────────
-app.use(
-    helmet({
-        crossOriginResourcePolicy: { policy: "cross-origin" },
-    })
-);
-
-// ─── CORS ─────────────────────────────────────────────────
+// ─── Allowed Origins ──────────────────────────────────────
 const allowedOrigins = (
     process.env.ALLOWED_ORIGINS ?? "http://localhost:3000"
 ).split(",").map((o) => o.trim());
 
+// ─── Security Headers ─────────────────────────────────────
+app.use(
+    helmet({
+        crossOriginResourcePolicy: { policy: "cross-origin" },
+        // ─── Content-Security-Policy ─────────────────────────────
+        // Prevents browsers from executing injected scripts (XSS mitigation).
+        // 'unsafe-inline' is required for Next.js client-side hydration scripts.
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: [
+                    "'self'",
+                    "'unsafe-inline'",    // Required for Next.js inline hydration
+                    "https://cdnjs.cloudflare.com",
+                ],
+                styleSrc: [
+                    "'self'",
+                    "'unsafe-inline'",    // Required for Tailwind/inline styles
+                    "https://fonts.googleapis.com",
+                ],
+                fontSrc: [
+                    "'self'",
+                    "https://fonts.gstatic.com",
+                    "data:",
+                ],
+                imgSrc: [
+                    "'self'",
+                    "data:",
+                    "blob:",
+                    "https://res.cloudinary.com",     // Cloudinary uploaded images
+                    "https://ui-avatars.com",          // Avatar placeholders
+                    "https://images.unsplash.com",     // Room listing placeholders
+                ],
+                connectSrc: [
+                    "'self'",
+                    ...allowedOrigins,
+                    "wss:",   // WebSocket connections (socket.io)
+                    "ws:",
+                ],
+                objectSrc: ["'none'"],
+                frameAncestors: ["'none'"],            // Prevents clickjacking
+                upgradeInsecureRequests: [],
+            },
+        },
+        // Prevent browsers from MIME-sniffing (blocks script injection via wrong content-type)
+        noSniff: true,
+        // Prevent clickjacking via old browsers that ignore CSP frame-ancestors
+        frameguard: { action: "deny" },
+        // Remove X-Powered-By: Express header
+        hidePoweredBy: true,
+    })
+);
+
+
+// ─── CORS ─────────────────────────────────────────────────
 app.use(
     cors({
         origin: (origin, callback) => {

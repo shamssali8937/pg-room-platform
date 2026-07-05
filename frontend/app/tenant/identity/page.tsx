@@ -207,7 +207,7 @@ export default function TenantIdentity() {
     const identityScore = Math.round((identityChecks.filter((c) => c.done).length / identityChecks.length) * 100);
 
     return (
-        <div className="max-w-[1000px] mx-auto space-y-6 pb-24 lg:pb-4">
+        <div className="max-w-[1000px] mx-auto space-y-6 pb-24 lg:pb-4 px-4 sm:px-0">
             {/* Header */}
             <header>
                 <p className="text-[#a27cff] font-bold tracking-[0.25em] text-[10px] uppercase mb-1.5">Account Security</p>
@@ -216,11 +216,11 @@ export default function TenantIdentity() {
             </header>
 
             {/* Verification Score */}
-            <section className={`rounded-2xl p-6 relative overflow-hidden ${isDark ? "bg-gradient-to-br from-[#1a1919] to-[#0f0f0f] border border-[#484847]/15" : "bg-gradient-to-br from-violet-50 to-slate-50 border border-violet-100"}`}>
+            <section className={`rounded-2xl p-5 sm:p-6 relative overflow-hidden ${isDark ? "bg-gradient-to-br from-[#1a1919] to-[#0f0f0f] border border-[#484847]/15" : "bg-gradient-to-br from-violet-50 to-slate-50 border border-violet-100"}`}>
                 <div className="absolute right-0 top-0 w-48 h-48 bg-[#a27cff]/5 rounded-full blur-[60px] -mr-16 -mt-16 pointer-events-none" />
-                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-6">
-                    <div className="relative w-24 h-24 shrink-0">
-                        <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
+                <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 shrink-0">
+                        <svg className="w-20 h-20 sm:w-24 sm:h-24 -rotate-90" viewBox="0 0 96 96">
                             <circle cx="48" cy="48" r="40" fill="none" strokeWidth="8" stroke={isDark ? "#262626" : "#e2e8f0"} />
                             <circle
                                 cx="48" cy="48" r="40" fill="none" strokeWidth="8"
@@ -238,18 +238,18 @@ export default function TenantIdentity() {
                             </defs>
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <p className={`text-xl font-black ${textPrimary}`}>{identityScore}%</p>
+                            <p className={`text-lg sm:text-xl font-black ${textPrimary}`}>{identityScore}%</p>
                         </div>
                     </div>
-                    <div className="flex-1">
-                        <h3 className={`text-lg font-headline font-bold ${textPrimary}`}>
+                    <div className="flex-1 min-w-0">
+                        <h3 className={`text-base sm:text-lg font-headline font-bold ${textPrimary}`}>
                             {identityScore < 50 ? "Get Started" : identityScore < 75 ? "Good Progress" : identityScore === 100 ? "Fully Verified" : "Almost There"}
                         </h3>
                         <div className="flex flex-wrap gap-2 mt-3">
                             {identityChecks.map((check, i) => (
                                 <span
                                     key={i}
-                                    className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${check.done ? STATUS_UI.verified.badge : STATUS_UI.not_uploaded.badge}`}
+                                    className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 ${check.done ? STATUS_UI.verified.badge : STATUS_UI.not_uploaded.badge}`}
                                 >
                                     {check.done ? <CheckCircle2 size={10} /> : <AlertCircle size={10} />} {check.label}
                                 </span>
@@ -272,16 +272,16 @@ export default function TenantIdentity() {
                         {docs.map((doc) => {
                             const ui = STATUS_UI[doc.status];
                             return (
-                                <div key={doc.id} className={`p-5 flex items-center gap-4 transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/50"}`}>
+                                <div key={doc.id} className={`px-4 sm:px-5 py-4 flex flex-wrap items-start sm:items-center gap-3 sm:gap-4 transition-colors ${isDark ? "hover:bg-white/[0.02]" : "hover:bg-slate-50/50"}`}>
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isDark ? "bg-[#1a1919]" : "bg-slate-100"}`}>
                                         <span className={doc.status === "verified" ? "text-emerald-400" : doc.status === "pending" ? "text-amber-400" : textVariant}>
                                             {doc.icon}
                                         </span>
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-0.5">
+                                        <div className="flex flex-wrap items-center gap-2 mb-0.5">
                                             <p className={`text-sm font-bold ${textPrimary}`}>{doc.label}</p>
-                                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${ui.badge}`}>
+                                            <span className={`flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${ui.badge}`}>
                                                 {ui.icon} {ui.label}
                                             </span>
                                         </div>
@@ -291,7 +291,7 @@ export default function TenantIdentity() {
                                         <button
                                             onClick={() => handleUploadClick(doc.id)}
                                             disabled={uploadingId === doc.id}
-                                            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#a27cff]/10 text-[#a27cff] text-xs font-bold hover:bg-[#a27cff]/20 transition-colors disabled:opacity-60"
+                                            className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[#a27cff]/10 text-[#a27cff] text-xs font-bold hover:bg-[#a27cff]/20 transition-colors disabled:opacity-60 whitespace-nowrap"
                                         >
                                             {uploadingId === doc.id ? (
                                                 <span className="w-3 h-3 border-2 border-[#a27cff]/30 border-t-[#a27cff] rounded-full animate-spin" />

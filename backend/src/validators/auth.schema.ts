@@ -3,13 +3,14 @@
  * Applied via the `validate` middleware to all auth endpoints.
  */
 import { z } from "zod";
+import { sanitizeString } from "../utils/sanitize.util.js";
 
 export const signupSchema = z.object({
     body: z.object({
         email: z.email("Invalid email address"),
         password: z.string().min(8, "Password must be at least 8 characters"),
-        full_name: z.string().min(2, "Full name must be at least 2 characters").max(100),
-        mobile_number: z.string().min(10, "Mobile number must be at least 10 digits").optional(),
+        full_name: z.string().min(2, "Full name must be at least 2 characters").max(100).transform(sanitizeString),
+        mobile_number: z.string().min(10, "Mobile number must be at least 10 digits").transform(sanitizeString).optional(),
         role: z.enum(["tenant", "owner"]).optional(),
     }),
 });
