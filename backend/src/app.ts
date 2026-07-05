@@ -77,6 +77,7 @@ app.use(
                     "https://res.cloudinary.com",     // Cloudinary uploaded images
                     "https://ui-avatars.com",          // Avatar placeholders
                     "https://images.unsplash.com",     // Room listing placeholders
+                    "https://*.tile.openstreetmap.org", // Leaflet map tiles
                 ],
                 connectSrc: [
                     "'self'",

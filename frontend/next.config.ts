@@ -50,7 +50,7 @@ const nextConfig: NextConfig = {
               `script-src ${scriptSrc.join(" ")}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com data:",
-              "img-src 'self' data: blob: https://res.cloudinary.com https://ui-avatars.com https://images.unsplash.com",
+              "img-src 'self' data: blob: https://res.cloudinary.com https://ui-avatars.com https://images.unsplash.com https://*.tile.openstreetmap.org",
               "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ?? "http://localhost:5000") + " wss: ws:",
               "object-src 'none'",
               "frame-ancestors 'none'",
