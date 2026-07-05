@@ -178,10 +178,10 @@ export default function OwnerSettingsPage() {
     return (
         <div className="max-w-6xl mx-auto xl:px-8 relative">
             {/* Hero Header */}
-            <section className="mb-12 lg:mb-16 flex flex-col md:flex-row md:items-end gap-6 md:gap-8">
+            <section className="mb-8 sm:mb-12 lg:mb-16 flex flex-col md:flex-row md:items-end gap-6 md:gap-8">
                 <div className={`relative group shrink-0 ${isEditing ? "cursor-pointer" : ""}`} onClick={() => isEditing && fileInputRef.current?.click()}>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageUpload} />
-                    <div className="h-28 w-28 md:h-32 md:w-32 rounded-3xl overflow-hidden shadow-2xl relative">
+                    <div className="h-24 w-24 md:h-32 md:w-32 rounded-3xl overflow-hidden shadow-2xl relative">
                         <img
                             src={profileImage || `https://ui-avatars.com/api/?name=Owner&background=ba9eff&color=fff`}
                             alt="Owner Profile"
@@ -200,15 +200,15 @@ export default function OwnerSettingsPage() {
                     )}
                 </div>
 
-                <div className="flex-1">
-                    <h2 className={`text-3xl md:text-4xl font-headline font-extrabold tracking-tight mb-2 ${textPrimary}`}>{user?.full_name ?? "Your Name"}</h2>
-                    <p className={`text-base md:text-lg max-w-xl ${textVariant}`}>
+                <div className="flex-1 min-w-0">
+                    <h2 className={`text-2xl sm:text-3xl md:text-4xl font-headline font-extrabold tracking-tight mb-2 break-words ${textPrimary}`}>{user?.full_name ?? "Your Name"}</h2>
+                    <p className={`text-sm sm:text-base md:text-lg max-w-xl ${textVariant}`}>
                         {user?.city ? `Based in ${user.city}. ` : ""}Property owner on PG Nexus.
                     </p>
                     {saveError && <p className="text-red-400 text-sm mt-2">{saveError}</p>}
                 </div>
 
-                <div className="flex space-x-3 md:space-x-4 mt-6 md:mt-0 w-full md:w-auto">
+                <div className="flex space-x-3 md:space-x-4 mt-2 md:mt-0 w-full md:w-auto">
                     {isEditing ? (
                         <>
                             <button
@@ -238,32 +238,34 @@ export default function OwnerSettingsPage() {
             </section>
 
             {/* Bento Grid Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6">
 
                 {/* Verification Status Card */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`col-span-12 md:col-span-5 lg:col-span-4 rounded-3xl p-6 md:p-8 space-y-8 ${surfaceLow} ${ghostBorder}`}>
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className={`col-span-12 md:col-span-5 lg:col-span-4 rounded-3xl p-5 sm:p-6 md:p-8 space-y-6 md:space-y-8 ${surfaceLow} ${ghostBorder}`}>
                     <div>
-                        <h3 className={`text-xs md:text-sm font-headline font-bold uppercase tracking-widest mb-6 ${primaryColor}`}>Verification Tiers</h3>
-                        <div className="space-y-6">
+                        <h3 className={`text-xs md:text-sm font-headline font-bold uppercase tracking-widest mb-5 md:mb-6 ${primaryColor}`}>Verification Tiers</h3>
+                        <div className="space-y-5 md:space-y-6">
 
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
                                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${surfaceHigh}`}>
                                         <Mail className={primaryColor} size={20} />
                                     </div>
-                                    <div className="truncate pr-4">
+                                    <div className="min-w-0">
                                         <p className={`text-sm font-bold ${textPrimary}`}>Email Address</p>
-                                        <p className={`text-xs truncate ${textVariant}`}>{user?.email ?? "—"}</p>
+                                        <p className={`text-xs truncate max-w-[140px] sm:max-w-[180px] ${textVariant}`}>{user?.email ?? "—"}</p>
                                     </div>
                                 </div>
-                                {user?.email_verified_at
-                                    ? <CheckCircle2 className={primaryColor} size={20} fill="currentColor" />
-                                    : <span className="text-xs text-amber-400 font-bold">Unverified</span>
-                                }
+                                <div className="shrink-0">
+                                    {user?.email_verified_at
+                                        ? <CheckCircle2 className={primaryColor} size={20} fill="currentColor" />
+                                        : <span className="text-xs text-amber-400 font-bold">Unverified</span>
+                                    }
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
                                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${surfaceHigh}`}>
                                         <Smartphone className={primaryColor} size={20} />
                                     </div>
@@ -272,14 +274,16 @@ export default function OwnerSettingsPage() {
                                         <p className={`text-xs ${textVariant}`}>{user?.mobile_number ?? "Not set"}</p>
                                     </div>
                                 </div>
-                                {user?.mobile_verified_at
-                                    ? <CheckCircle2 className={primaryColor} size={20} fill="currentColor" />
-                                    : <span className="text-xs text-amber-400 font-bold">Unverified</span>
-                                }
+                                <div className="shrink-0">
+                                    {user?.mobile_verified_at
+                                        ? <CheckCircle2 className={primaryColor} size={20} fill="currentColor" />
+                                        : <span className="text-xs text-amber-400 font-bold">Unverified</span>
+                                    }
+                                </div>
                             </div>
 
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center space-x-3 md:space-x-4 min-w-0">
                                     <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${surfaceHigh}`}>
                                         <IdCard className={primaryColor} size={20} />
                                     </div>
@@ -300,7 +304,7 @@ export default function OwnerSettingsPage() {
                                 {(!identityStatus || identityStatus === "rejected") && (
                                     <button
                                         onClick={() => setIsVerifyOpen(true)}
-                                        className={`text-[10px] md:text-xs font-bold uppercase tracking-tighter underline decoration-2 underline-offset-4 transition-opacity cursor-pointer ${secondaryColor} hover:opacity-80`}
+                                        className={`text-[10px] md:text-xs font-bold uppercase tracking-tighter underline decoration-2 underline-offset-4 transition-opacity cursor-pointer shrink-0 ${secondaryColor} hover:opacity-80`}
                                     >
                                         Upload
                                     </button>
@@ -497,14 +501,14 @@ export default function OwnerSettingsPage() {
                                 </div>
                             </div>
 
-                            <div className="pt-2 flex justify-between items-center">
+                            <div className="pt-2 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                 <span className="text-[10px] text-zinc-500 font-semibold flex items-center gap-1">
                                     <BadgeCheck className="text-emerald-400" size={14} /> Mock bank connection active
                                 </span>
                                 <button
                                     onClick={handleSaveCard}
                                     disabled={isSavingCard}
-                                    className={`px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                                    className={`w-full sm:w-auto px-6 py-2.5 rounded-xl font-headline font-bold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                                         cardSaveSuccess
                                             ? "bg-emerald-500 text-white"
                                             : isDark
@@ -520,7 +524,7 @@ export default function OwnerSettingsPage() {
 
                         {/* Glassmorphic Card Preview */}
                         <div className="lg:col-span-6 flex justify-center items-center">
-                            <div className="w-[340px] h-[200px] rounded-2xl p-6 relative overflow-hidden bg-gradient-to-tr from-violet-600/90 via-purple-600/80 to-blue-500/70 border border-white/20 shadow-2xl flex flex-col justify-between text-white shrink-0">
+                            <div className="w-full max-w-[340px] h-[200px] rounded-2xl p-5 sm:p-6 relative overflow-hidden bg-gradient-to-tr from-violet-600/90 via-purple-600/80 to-blue-500/70 border border-white/20 shadow-2xl flex flex-col justify-between text-white">
                                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent)]" />
                                 <div className="flex justify-between items-start z-10">
                                     <div>

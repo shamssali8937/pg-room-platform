@@ -2,6 +2,7 @@
  * Room validation schemas using Zod.
  */
 import { z } from "zod";
+import { sanitizeString } from "../utils/sanitize.util.js";
 
 const coerceNumber = (fallback: number, schema: z.ZodNumber, minVal?: number) =>
     z.preprocess((val) => {
@@ -14,12 +15,12 @@ const coerceNumber = (fallback: number, schema: z.ZodNumber, minVal?: number) =>
 
 export const createRoomSchema = z.object({
     body: z.object({
-        title: z.string().min(5, "Title must be at least 5 characters").max(150),
-        description: z.string().min(20, "Description must be at least 20 characters").max(2000).optional(),
-        city: z.string().min(2, "City is required"),
-        locality: z.string().min(2, "Locality is required").optional(),
-        address: z.string().optional(),
-        landmark: z.string().optional(),
+        title: z.string().min(5, "Title must be at least 5 characters").max(150).transform(sanitizeString),
+        description: z.string().min(20, "Description must be at least 20 characters").max(2000).transform(sanitizeString).optional(),
+        city: z.string().min(2, "City is required").transform(sanitizeString),
+        locality: z.string().min(2, "Locality is required").transform(sanitizeString).optional(),
+        address: z.string().transform(sanitizeString).optional(),
+        landmark: z.string().transform(sanitizeString).optional(),
         room_type: z.string().min(1, "Room type is required"),
         furnished_status: z.enum(["furnished", "semi-furnished", "unfurnished"]).optional(),
         beds: coerceNumber(1, z.number().int().min(1).max(20)).optional(),
@@ -44,12 +45,12 @@ export const createRoomSchema = z.object({
 
 export const updateRoomSchema = z.object({
     body: z.object({
-        title: z.string().min(5).max(150).optional(),
-        description: z.string().min(20).max(2000).optional(),
-        city: z.string().min(2).optional(),
-        locality: z.string().optional(),
-        address: z.string().optional(),
-        landmark: z.string().optional(),
+        title: z.string().min(5).max(150).transform(sanitizeString).optional(),
+        description: z.string().min(20).max(2000).transform(sanitizeString).optional(),
+        city: z.string().min(2).transform(sanitizeString).optional(),
+        locality: z.string().transform(sanitizeString).optional(),
+        address: z.string().transform(sanitizeString).optional(),
+        landmark: z.string().transform(sanitizeString).optional(),
         room_type: z.string().optional(),
         furnished_status: z.enum(["furnished", "semi-furnished", "unfurnished"]).optional(),
         beds: coerceNumber(1, z.number().int().min(1).max(20)).optional(),
