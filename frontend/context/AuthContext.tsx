@@ -29,9 +29,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const dispatch = useAppDispatch();
     const { user, isAuthenticated, isLoading } = useAppSelector((s) => s.auth);
 
-    // Rehydrate by verifying session cookie with the backend
+    // Rehydrate by verifying session cookie with the backend if indicator exists
     useEffect(() => {
-        dispatch(hydrateAuth());
+        const cookies = typeof document !== "undefined" ? document.cookie : "";
+        const hasSession = cookies.split("; ").some((item) => item.trim().startsWith("hasSession="));
+
+        if (hasSession) {
+            dispatch(hydrateAuth());
+        } else {
+            dispatch(clearUser());
+        }
 
         // Listen for session expiry event from Axios interceptor
         const handleAuthExpired = () => {

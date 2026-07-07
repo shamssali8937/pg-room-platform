@@ -54,15 +54,23 @@ const trackError = (err: Error, req?: Request): void => {
     const isOperational = err instanceof AppError && err.isOperational;
 
     if (isOperational) {
-        logger.warn("Operational error tracked", {
+        const appErr = err as AppError;
+        const logData = {
             message: err.message,
-            code: (err as AppError).code,
-            statusCode: (err as AppError).statusCode,
+            code: appErr.code,
+            statusCode: appErr.statusCode,
             requestId: req?.requestId,
             method: req?.method,
             path: req?.path,
             userId: (req as any)?.user?.id ?? null,
-        });
+        };
+
+        // Don't clutter logs with standard 401 (Unauthorized) or 404 (Not Found) warnings
+        if (appErr.statusCode === 401 || appErr.statusCode === 404) {
+            logger.info("Operational error (client):", logData);
+        } else {
+            logger.warn("Operational error tracked", logData);
+        }
     } else {
         // Programming / unexpected errors — highest severity
         logger.error("💥 Unexpected error tracked", {
