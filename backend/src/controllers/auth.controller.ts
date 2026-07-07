@@ -65,6 +65,12 @@ export const login = async (
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
 
+        res.cookie("hasSession", "true", {
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
         res.json({ success: true, user: data.user });
     } catch (error) {
         next(error);
@@ -98,10 +104,17 @@ export const refreshSession = async (
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
 
+        res.cookie("hasSession", "true", {
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+        });
+
         res.json({ success: true, message: "Session refreshed" });
     } catch (error) {
         res.clearCookie("accessToken");
         res.clearCookie("refreshToken");
+        res.clearCookie("hasSession");
         res.status(401).json({ success: false, message: "Session expired" });
     }
 };
@@ -168,6 +181,7 @@ export const logout = async (
         }
         res.clearCookie("accessToken");
         res.clearCookie("refreshToken");
+        res.clearCookie("hasSession");
         
         logger.info("User logged out", {
             userId: req.user?.id,
@@ -313,6 +327,12 @@ export const googleLoginCallback = async (
 
         res.cookie("refreshToken", data.refreshToken, {
             httpOnly: true,
+            secure: isProd,
+            sameSite: isProd ? "none" : "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
+        res.cookie("hasSession", "true", {
             secure: isProd,
             sameSite: isProd ? "none" : "lax",
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
