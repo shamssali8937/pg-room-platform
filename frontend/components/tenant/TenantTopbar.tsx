@@ -246,8 +246,11 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                     </AnimatePresence>
                 </div>
 
-                {/* Profile */}
-                <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
+                {/* Profile — click to open sidebar */}
+                <button
+                    onClick={onMenuToggle}
+                    className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6 cursor-pointer select-none group`}
+                >
                     <div className="text-right hidden sm:block">
                         <p className={`text-xs font-bold tracking-tight ${isDark ? "text-white" : "text-slate-900"}`}>{user?.full_name ?? "Tenant User"}</p>
                         <p className={`text-[10px] ${isDark ? "text-zinc-500" : "text-slate-500"}`}>{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Tenant"}</p>
@@ -256,14 +259,14 @@ export default function TenantTopbar({ onMenuToggle, searchPlaceholder = "Search
                         <img
                             src={user.image}
                             alt="Tenant avatar"
-                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-[#a27cff]/50 transition-all"
                         />
                     ) : (
-                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-[#a27cff]/10 text-[#a27cff]`}>
+                        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-[#a27cff]/10 text-[#a27cff] ring-2 ring-transparent group-hover:ring-[#a27cff]/50 transition-all`}>
                             {user?.full_name?.[0] ?? "?"}
                         </div>
                     )}
-                </div>
+                </button>
             </div>
         </header>
 

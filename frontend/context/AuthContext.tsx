@@ -29,16 +29,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const dispatch = useAppDispatch();
     const { user, isAuthenticated, isLoading } = useAppSelector((s) => s.auth);
 
-    // Rehydrate by verifying session cookie with the backend if indicator exists
+    // Always attempt to rehydrate from the backend on mount.
+    // We do NOT rely on the `hasSession` indicator cookie because in cross-origin
+    // deployments (e.g. Vercel frontend + separate backend) that cookie may not be
+    // visible in document.cookie due to browser SameSite policies.
+    // The backend is the single source of truth — if the session cookie is valid
+    // it returns the user, otherwise we get a 401 and clear state.
     useEffect(() => {
-        const cookies = typeof document !== "undefined" ? document.cookie : "";
-        const hasSession = cookies.split("; ").some((item) => item.trim().startsWith("hasSession="));
-
-        if (hasSession) {
-            dispatch(hydrateAuth());
-        } else {
-            dispatch(clearUser());
-        }
+        dispatch(hydrateAuth());
 
         // Listen for session expiry event from Axios interceptor
         const handleAuthExpired = () => {
