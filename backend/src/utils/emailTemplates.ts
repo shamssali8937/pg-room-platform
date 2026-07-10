@@ -98,3 +98,26 @@ export const pointsEarnedEmail = (userName: string, points: number, reason: stri
          <p style="color: #9ca3af;"><strong>Reason:</strong> ${reason}</p>
          <p style="color: #9ca3af;">Check your wallet for the updated balance.</p>`
     );
+
+// ─── Signup Email OTP ────────────────────────────────────────────────────────
+
+export const signupOtpEmailHtml = (otp: string, name: string): string =>
+    wrapTemplate(
+        "Verify your email ✉️",
+        `<p style="color: #9ca3af; margin-bottom: 16px;">
+            Hi <strong style="color:#fff;">${name}</strong>, welcome to PG Nexus!
+         </p>
+         <p style="color: #9ca3af; margin-bottom: 24px;">
+            Use the one-time code below to verify your email address. It expires in <strong style="color:#fff;">10 minutes</strong>.
+         </p>
+         <div style="background: #1a1a2e; border: 2px solid #7c3aed; border-radius: 16px; padding: 32px; text-align: center; margin-bottom: 24px; letter-spacing: 16px;">
+             <span style="font-size: 48px; font-weight: 900; color: #a78bfa; font-family: 'Courier New', monospace;">${otp}</span>
+         </div>
+         <p style="color: #6b7280; font-size: 13px; margin-bottom: 8px;">
+            ⚠️ Do not share this code with anyone. PG Nexus staff will never ask for it.
+         </p>
+         <p style="color: #6b7280; font-size: 13px;">
+            If you did not create an account, you can safely ignore this email.
+         </p>`
+    );
+

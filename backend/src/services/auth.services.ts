@@ -2,6 +2,8 @@ import { prisma } from "../config/prisma.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
 import { generateAccessToken, generateRefreshToken, verifyToken } from "../utils/jwt.js";
 import { sendEmail } from "../utils/mail.js";
+import { sendResendEmail } from "../utils/resend.js";
+import { signupOtpEmailHtml } from "../utils/emailTemplates.js";
 import crypto from "crypto";
 import { generateOTP, getOTPExpiry } from "../utils/otp.js";
 import { redis } from "../config/redis.js";
@@ -9,6 +11,7 @@ import { redis } from "../config/redis.js";
 // ─── Redis key helpers ────────────────────────────────────────────────────────
 const OTP_PHONE_KEY = (mobile: string) => `otp:phone:${mobile}`;
 const OTP_RESET_KEY = (email: string) => `otp:reset:${email}`;
+const OTP_EMAIL_VERIFY_KEY = (email: string) => `otp:email-verify:${email}`;
 const RESET_TOKEN_KEY = (token: string) => `reset:token:${token}`;
 
 const setRedisKey = async (key: string, ttlSeconds: number, value: string): Promise<void> => {
@@ -33,44 +36,51 @@ export const signupService = async (data: any) => {
         where: { email },
     });
 
-    if (existingUser) {
+    if (existingUser && existingUser.email_verified_at) {
         throw new Error("User already exists");
+    }
+
+    // If user exists but is unverified, delete and recreate (re-signup scenario)
+    if (existingUser && !existingUser.email_verified_at) {
+        await prisma.user.delete({ where: { id: existingUser.id } });
     }
 
     const hashedPassword = await hashPassword(password);
 
-    const emailToken = crypto.randomBytes(32).toString("hex");
-
-    const user = await prisma.user.create({
+    await prisma.user.create({
         data: {
             email,
             password_hash: hashedPassword,
             full_name,
             mobile_number,
             role: safeRole,
-            email_verify_token: emailToken,
         },
     });
 
-    const apiUrl = process.env.API_URL || "http://localhost:5000/api";
-    const verifyLink = `${apiUrl}/auth/verify-email?token=${emailToken}`;
+    // Generate 6-digit OTP and store in Redis with 10-minute TTL
+    const otp = generateOTP();
+    await setRedisKey(OTP_EMAIL_VERIFY_KEY(email), 600, otp);
 
-    // Print verification link to console as a convenient developer fallback
+    // Developer fallback — print OTP to console
     console.log("\n==========================================");
-    console.log("📨 VERIFICATION LINK:", verifyLink);
+    console.log("📨 SIGNUP EMAIL OTP:", otp);
     console.log("==========================================\n");
 
     try {
-        await sendEmail(
+        await sendResendEmail(
             email,
-            "Verify your email",
-            `<h3>Click to verify:</h3><a href="${verifyLink}">${verifyLink}</a>`
+            "Your PG Nexus verification code",
+            signupOtpEmailHtml(otp, full_name)
         );
     } catch (err: any) {
-        console.warn("Verification email sending failed during signup:", err.message || err);
+        console.warn("Signup OTP email sending failed:", err.message || err);
+        // Don't throw — OTP is still stored in Redis; user can request resend
     }
 
-    return { message: "Signup successful. Please verify your email using the link sent." };
+    return {
+        message: "Account created! Enter the 6-digit code sent to your email.",
+        email,
+    };
 };
 export const loginService = async (email: string, password: string) => {
     // login user
@@ -289,6 +299,55 @@ export const verifyEmailService = async (token: string) => {
         message: "Email verified successfully",
         userId: updatedUser.id,
     };
+};
+
+// ─── Email OTP Verification (signup flow) ─────────────────────────────────────
+
+export const verifyEmailOTPService = async (email: string, otp: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new Error("No account found for this email.");
+    if (user.email_verified_at) throw new Error("Email is already verified.");
+
+    const storedOtp = await getRedisKey(OTP_EMAIL_VERIFY_KEY(email));
+    if (!storedOtp || storedOtp !== otp) {
+        throw new Error("Invalid or expired OTP. Please request a new one.");
+    }
+
+    // OTP valid — verify the user and clear Redis entry
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { email_verified_at: new Date() },
+    });
+
+    await delRedisKey(OTP_EMAIL_VERIFY_KEY(email));
+
+    return { message: "Email verified successfully! You can now sign in." };
+};
+
+export const resendEmailOTPService = async (email: string) => {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw new Error("No account found for this email.");
+    if (user.email_verified_at) throw new Error("Email is already verified.");
+
+    const otp = generateOTP();
+    await setRedisKey(OTP_EMAIL_VERIFY_KEY(email), 600, otp);
+
+    console.log("\n==========================================");
+    console.log("📨 RESEND SIGNUP OTP:", otp);
+    console.log("==========================================\n");
+
+    try {
+        await sendResendEmail(
+            email,
+            "Your new PG Nexus verification code",
+            signupOtpEmailHtml(otp, user.full_name)
+        );
+    } catch (err: any) {
+        console.warn("Resend OTP email failed:", err.message || err);
+        throw new Error("Failed to send OTP email. Please try again.");
+    }
+
+    return { message: "A new OTP has been sent to your email." };
 };
 
 export const forgotPasswordService = async (email: string) => {

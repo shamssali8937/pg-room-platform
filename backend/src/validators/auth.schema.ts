@@ -69,3 +69,17 @@ export const resetPasswordWithOTPSchema = z.object({
     }),
 });
 
+// ─── Signup Email OTP ─────────────────────────────────────────────────────────
+
+export const verifyEmailOTPSchema = z.object({
+    body: z.object({
+        email: z.email("Invalid email address"),
+        otp: z.string().length(6, "OTP must be 6 digits"),
+    }),
+});
+
+export const resendEmailOTPSchema = z.object({
+    body: z.object({
+        email: z.email("Invalid email address"),
+    }),
+});

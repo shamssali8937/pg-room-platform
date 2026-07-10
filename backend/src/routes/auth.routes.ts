@@ -10,6 +10,8 @@ import {
     getCsrfToken,
     googleLoginInitiate,
     googleLoginCallback,
+    verifyEmailOTP,
+    resendEmailOTP,
 } from "../controllers/auth.controller.js";
 import * as authController from "../controllers/auth.controller.js";
 import { authenticate } from "../middleware/auth.middleware.js";
@@ -25,6 +27,8 @@ import {
     requestPasswordOTPSchema,
     verifyPasswordOTPSchema,
     resetPasswordWithOTPSchema,
+    verifyEmailOTPSchema,
+    resendEmailOTPSchema,
 } from "../validators/auth.schema.js";
 
 const router: Router = Router();
@@ -50,5 +54,9 @@ router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), a
 router.post("/forgot-password-otp", otpRateLimiter, validate(requestPasswordOTPSchema), authController.requestPasswordOTP);
 router.post("/verify-reset-otp", validate(verifyPasswordOTPSchema), authController.verifyPasswordOTP);
 router.post("/reset-password-otp", authRateLimiter, validate(resetPasswordWithOTPSchema), authController.resetPasswordWithOTP);
+
+// Signup email OTP verification
+router.post("/verify-email-otp", otpRateLimiter, validate(verifyEmailOTPSchema), verifyEmailOTP);
+router.post("/resend-email-otp", otpRateLimiter, validate(resendEmailOTPSchema), resendEmailOTP);
 
 export default router;
