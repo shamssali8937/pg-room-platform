@@ -237,8 +237,11 @@ export default function OwnerTopbar({
                         </div>
                     </div>
 
-                    {/* Profile */}
-                    <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
+                    {/* Profile — click to open sidebar */}
+                    <button
+                        onClick={onMenuToggle}
+                        className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6 cursor-pointer select-none group`}
+                    >
                         <div className="text-right hidden sm:block">
                             <p className={`text-xs font-bold tracking-tight ${profileName}`}>{user?.full_name ?? "Owner User"}</p>
                             <p className={`text-[10px] ${profileSub}`}>{user?.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Owner"}</p>
@@ -247,14 +250,14 @@ export default function OwnerTopbar({
                             <img
                                 src={user.image}
                                 alt="Owner avatar"
-                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover"
+                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-transparent group-hover:ring-violet-500/50 transition-all"
                             />
                         ) : (
-                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400`}>
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400 ring-2 ring-transparent group-hover:ring-violet-500/50 transition-all`}>
                                 {user?.full_name?.[0] ?? "?"}
                             </div>
                         )}
-                    </div>
+                    </button>
                 </div>
             </header>
 

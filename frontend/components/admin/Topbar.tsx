@@ -230,8 +230,11 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
                         </button> */}
                     </div>
 
-                    {/* Profile */}
-                    <div className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6`}>
+                    {/* Profile — click to open sidebar */}
+                    <button
+                        onClick={onMenuToggle}
+                        className={`flex items-center gap-3 sm:gap-4 border-l ${profileBorder} pl-3 sm:pl-6 cursor-pointer select-none group`}
+                    >
                         <div className="text-right hidden sm:block">
                             <p className={`text-xs font-bold tracking-tight ${profileName}`}>{user?.full_name ?? "Admin User"}</p>
                             <p className={`text-[10px] ${profileSub}`}>{user?.role ? user.role.toUpperCase() : "Admin"}</p>
@@ -240,14 +243,14 @@ export default function Topbar({ searchQuery, onSearchChange, searchPlaceholder 
                             <img
                                 src={user.image}
                                 alt="Admin avatar"
-                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-purple-500/20"
+                                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-purple-500/20 ring-2 ring-transparent group-hover:ring-purple-500/50 transition-all"
                             />
                         ) : (
-                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400 border-2 border-purple-500/20`}>
+                            <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs font-black bg-purple-500/10 text-purple-400 border-2 border-purple-500/20 ring-2 ring-transparent group-hover:ring-purple-500/50 transition-all`}>
                                 {user?.full_name?.[0] ?? "?"}
                             </div>
                         )}
-                    </div>
+                    </button>
                 </div>
             </header>
 
