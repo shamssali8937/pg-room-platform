@@ -15,6 +15,7 @@ export interface SignupPayload {
 export interface SignupResponse {
     success: boolean;
     message: string;
+    email: string;
 }
 
 export interface LoginPayload {
@@ -92,5 +93,22 @@ export const resetPasswordWithOTPApi = async (
     newPassword: string
 ): Promise<{ success: boolean; message: string }> => {
     const { data } = await api.post("/auth/reset-password-otp", { email, otp, newPassword });
+    return data;
+};
+
+// ─── Signup Email OTP ────────────────────────────────────────────────────────
+
+export const verifyEmailOtpApi = async (
+    email: string,
+    otp: string
+): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post("/auth/verify-email-otp", { email, otp });
+    return data;
+};
+
+export const resendEmailOtpApi = async (
+    email: string
+): Promise<{ success: boolean; message: string }> => {
+    const { data } = await api.post("/auth/resend-email-otp", { email });
     return data;
 };

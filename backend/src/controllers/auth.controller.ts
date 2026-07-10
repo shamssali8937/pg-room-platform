@@ -13,6 +13,8 @@ import {
     requestPasswordOTPService,
     verifyPasswordOTPService,
     resetPasswordWithOTPService,
+    verifyEmailOTPService,
+    resendEmailOTPService,
 } from "../services/auth.services.js";
 import { generateToken as generateCsrf } from "../config/csrf.js";
 import { logger } from "../config/logger.js";
@@ -256,6 +258,38 @@ export const resetPasswordWithOTP = async (
     try {
         const { email, otp, newPassword } = req.body;
         const result = await resetPasswordWithOTPService(email, otp, newPassword);
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ─── Signup Email OTP Verification ───────────────────────────────────────────────────────────────
+
+export const verifyEmailOTP = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { email, otp } = req.body;
+        const result = await verifyEmailOTPService(email, otp);
+        logger.info("Email OTP verified (signup)", { email, requestId: req.requestId });
+        res.json({ success: true, ...result });
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const resendEmailOTP = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+): Promise<void> => {
+    try {
+        const { email } = req.body;
+        const result = await resendEmailOTPService(email);
+        logger.info("Signup OTP resent", { email, requestId: req.requestId });
         res.json({ success: true, ...result });
     } catch (error) {
         next(error);
